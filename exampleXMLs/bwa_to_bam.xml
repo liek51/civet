@@ -19,27 +19,18 @@
 		sorted, indexed BAM file.
 	</description>
 
-	<option name="fasta" id="in_3" />
 	<option name="algorithm" command_text="-a" value="bwtsw" />
 
 	<!--
 		We wouldn't really run index as part of the pipeline, but
 		would use pre-built indices. I think. It runs for hours.
 	-->
-	<command>bwa index {algorithm} {fasta}</command>
+	<command>bwa index {algorithm} {in_3}</command>
 
-	<!--
-		Question:  Should we be able to reference file ids directly
-		in the command line, without having to specify them in an option?
-	-->
 	<tempfile id="sai_1" />
 	<tempfile id="sai_2" />
-	<option name="sai_1" id="sai_1" />
-	<option name="sai_2" id="sai_2" />
 
 	<option name="maxDiff" command_text="-n" value="4" />
-	<option name="end1_fq" id="in_1" />
-	<option name="end2_fq" id="in_2" />
 
 	<!--
 		Only options that need to be overridable via env variables
@@ -47,13 +38,13 @@
 		Options that are fixed (e.g., -t 8, below) can be encoded
 		directly in the command line.
 	-->
-	<command>bwa aln {maxDiff} -t 8 {fasta} {end1_fq} > {sai_1}</command>
-	<command>bwa aln {maxDiff} -t 8 {fasta} {end2_fq} > {sai_2}</command>
+	<command>bwa aln {maxDiff} -t 8 {in_3} {in_1} > {sai_1}</command>
+	<command>bwa aln {maxDiff} -t 8 {in_3} {in_2} > {sai_2}</command>
 
 	<tempfile id="sam" />
 	<option name="maxIns" command_text="-a" value="700" />
 	<command stdout_id="sam">
-		bwa sampe {maxIns} {fasta} {sai_1} {sai_2} {end1_fq} {end2_fq}
+		bwa sampe {maxIns} {in_3} {sai_1} {sai_2} {end1_fq} {end2_fq}
 	</command>
 
 	<tempfile id="unsorted_bam" />
@@ -69,9 +60,11 @@
 		it on for size.  Comments welcome. (And I know it is a sed
 		command, not a real regex. So sue me. If we want to do this for
 		real, we'll do regexps.)
+		
+		Have to figure out how to link this in, now that we reference
+		files directly in the command, and don't have an option involved.
 	-->
-	<option name="unsort_bam" id="unsorted_bam" />
-	<option name="out_bam" id="out_1" file_regex="s/.bam//" />
-	<command>samtools sort {unsorted} {out_bam}</command>
-	<command>samtools index {out_bam}.bam</command>
+	<!--<option name="out_bam" id="out_1" file_regex="s/.bam//" />-->
+	<command>samtools sort {unsorted_bam} {out_1}</command>
+	<command>samtools index {out_1}.bam</command>
 </tool>

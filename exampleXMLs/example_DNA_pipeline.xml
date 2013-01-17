@@ -57,7 +57,7 @@
 			to perform file conversions.
 		-->
 		<input id="end1_fq" type="fastq" />
-		<input id="end2_f2" type="fastq" />
+		<input id="end2_fq" type="fastq" />
 		<output id="end1_fq_qc" type="fastq" />
 		<output id="end2_fq_qc" type="fastq" />
 		
