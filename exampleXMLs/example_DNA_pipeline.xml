@@ -47,6 +47,7 @@
 		really reflect the calling sequence for Glen's pipeline.  I'm
 		making it up.
 	-->
+<!--
 	<process name="QC">
 		<!--
 			The input and output specifications in a process constitute
@@ -78,6 +79,7 @@
 			output="end1_fq_qc,end2_fq_qc,outdir"
 			description="glen_qc_tool.xml" />
 	</process>
+-->
 	
 	<!--
 		Processes are invoked in lexical order.  So the Alignment process
