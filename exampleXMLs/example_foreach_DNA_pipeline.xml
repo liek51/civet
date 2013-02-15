@@ -46,23 +46,24 @@
             files matching the glob pattern *_R1_*.fastq. We'll identify
             the other input and output files via regex's on this filename.
         -->
-        <file id=”end1” pattern=”.*_R1_.*fastq” />
+
+        <file id="end1" pattern=".*_R1_.*fastq" />
 
         <!--
             Now identify the related files.
         -->
-        <related id=”end2” inout=”in”
-            pattern=”(.*)_R1_(.*fastq)”
-            replace=”\1_R2_\2” />
-        <related id=”end1_fq_qc” inout=”out”
+        <related id="end2" inout="in"
+            pattern="(.*)_R1_(.*fastq)"
+            replace="\1_R2_\2" />
+        <related id="end1_fq_qc" inout="out"
             pattern="(.*)\.fastq"
             replace="\1_qc.fastq" />
-        <related id=”end2_fq_qc” inout=”out”
+        <related id="end2_fq_qc" inout="out"
             pattern="(.*)_R1_(.*)\.fastq"
             replace="\1_R2_\2_qc.fastq" />
-        <related id=”bam” inout=”out”
-            pattern=”(.*)_R1_(.*)fastq”
-            replace=”\1_\2bam” />        
+        <related id="bam" inout="out"
+            pattern="(.*)_R1_(.*)fastq"
+            replace="\1_\2bam" />        
         
         <!--
             Steps are simply logical phases of the pipeline.  A pipeline step
@@ -77,7 +78,6 @@
             Temporarily disable the QC step for framework testing because I 
             don't have the required XML coded for it yet.
         <step name="QC">		
-            <!-- 
                 Note about the output line below: end1_fq_qc and end2_fq_qc
                 will be materialized as the full file path.  We include
                 the ID outdir because the QC tool we're invoking will create
@@ -88,7 +88,6 @@
                 
                 The actual invocation of the QC tool is described in
                 glen_qc_tool.xml, not in this file.
-            - - >
             <tool name="Glen's Wonder QC Pipeline"
                 input="end1_fq,end2_fq"
                 output="end1_fq_qc,end2_fq_qc,outdir"
@@ -113,6 +112,6 @@
                 input="end1_fq_qc,end2_fq_qc,reference"
                 output="bam"
                 description="bwa_to_bam.xml" />
-        </process>
+        </step>
     </foreach>
 </pipeline>

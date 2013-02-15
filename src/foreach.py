@@ -1,3 +1,10 @@
+# Standard imports
+import re
+
+# Pipeline components
+from step import *
+from pipeline_file import *
+
 class ForEach():
     validTags = [
         'file',
@@ -9,7 +16,7 @@ class ForEach():
         self.steps = []
         self.pipelineFiles = pipelineFiles
         att = e.attrib
-        assert 'name' in att, 'the foreach tag must specify a dir attribute'
+        assert 'dir' in att, 'the foreach tag must specify a dir attribute'
         self.dir = att['dir']
         for child in e:
             t = child.tag
@@ -18,9 +25,9 @@ class ForEach():
                 self.steps.append(Step(child, pipelineFiles))
             elif t == 'file':
                 assert not self.file, 'the foreach tag must contain exactly one file tag.'
-                self.file = ForEachFile(child, relatedFiles, pipelineFiles)
+                self.file = ForEachFile(child, self.pipelineFiles)
             else:
-                self.files.append(ForEachRelated(child, self.relatedFiles, pipelineFiles))
+                ForEachRelated(child, self.relatedFiles, pipelineFiles)
         assert self.file, 'the foreach tag must contain a file tag'
         assert self.file.id not in self.relatedFiles, "a foreach file's id must not be the same as a related file's id" + self.id
         pass
@@ -32,18 +39,23 @@ class ForEach():
             # register file and related in pipeline files list
             # execute step(s)
             # clean up files from pipeline files list
-        allFiles = os.listdir(self.dir)
+        allFiles = os.listdir(self.pipelineFiles[self.dir].path)
         for fn in allFiles:
             if self.file.pattern.match(fn):
+                print "Matched:", self.file.id, fn
                 cleanups = []
                 PipelineFile.fromFilename(self.file.id, os.path.join(self.dir, fn), True, self.pipelineFiles)
                 cleanups.append(self.file.id)
-                for rel in self.relatedFiles:
+                for relid in self.relatedFiles:
+                    rel = self.relatedFiles[relid]
                     rfn = rel.pattern.sub(rel.replace, fn)
                     PipelineFile.fromFilename(rel.id, rfn, rel.inout, self.pipelineFiles)
                     cleanups.append(rel.id)
+                    print 'Related:', rel.id, rfn
+                print self.steps
                 for step in self.steps:
                     print 'foreach executing step:', step.name
+                    step.execute()
                 for id in cleanups:
                     del self.pipelineFiles[id]
         pass

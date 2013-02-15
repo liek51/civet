@@ -6,7 +6,7 @@
 -->
 <tool 
 	name="BWA to BAM PE" 
-	env_prefix="BWA.ALIGN"
+	tool_config_prefix="BWA.ALIGN"
 	threads="8">
 	<!--
 		The process hands us two input fastq files, the reference and 
@@ -25,7 +25,7 @@
 		We wouldn't really run index as part of the pipeline, but
 		would use pre-built indices. I think. It runs for hours.
 	-->
-	<command>bwa index {algorithm} {in_3}</command>
+	<command program="bwa">index {algorithm} {in_3}</command>
 
 	<tempfile id="sai_1" />
 	<tempfile id="sai_2" />
@@ -38,17 +38,17 @@
 		Options that are fixed (e.g., -t 8, below) can be encoded
 		directly in the command line.
 	-->
-	<command>bwa aln {maxDiff} -t 8 {in_3} {in_1} > {sai_1}</command>
-	<command>bwa aln {maxDiff} -t 8 {in_3} {in_2} > {sai_2}</command>
+	<command program="bwa"> aln {maxDiff} -t 8 {in_3} {in_1} > {sai_1}</command>
+	<command program="bwa"> aln {maxDiff} -t 8 {in_3} {in_2} > {sai_2}</command>
 
 	<tempfile id="sam" />
 	<option name="maxIns" command_text="-a" value="700" />
-	<command stdout_id="sam">
-		bwa sampe {maxIns} {in_3} {sai_1} {sai_2} {end1_fq} {end2_fq}
+	<command stdout_id="sam" program="bwa">
+        sampe {maxIns} {in_3} {sai_1} {sai_2} {end1_fq} {end2_fq}
 	</command>
 
 	<tempfile id="unsorted_bam" />
-	<command stdout_id="unsorted_bam">samtools view -bS {sam}</command>
+	<command stdout_id="unsorted_bam" program="samtools">view -bS {sam}</command>
 
 	<!--
 		EXTENSION NEEDED????
@@ -65,6 +65,6 @@
 		files directly in the command, and don't have an option involved.
 	-->
 	<!--<option name="out_bam" id="out_1" file_regex="s/.bam//" />-->
-	<command>samtools sort {unsorted_bam} {out_1}</command>
-	<command>samtools index {out_1}.bam</command>
+	<command program="samtools">sort {unsorted_bam} {out_1}</command>
+	<command program="samtools">index {out_1}.bam</command>
 </tool>
