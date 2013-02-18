@@ -108,9 +108,18 @@
             <!--
                 An alignment process built using bwa.
             -->
+            <!--
+                This step has a file contract with the tools that implement it:
+                Three input files:
+                    end1 fastq
+                    end2 fastq
+                    reference
+                One output bam file and
+                One output directory (for placing temp files in.)
+            -->
             <tool name="BWA Align to BAM"
                 input="end1_fq_qc,end2_fq_qc,reference"
-                output="bam"
+                output="bam, outdir"
                 description="bwa_to_bam.xml" />
         </step>
     </foreach>

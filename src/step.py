@@ -12,7 +12,7 @@ class Step():
         for child in e:
             t = child.tag
             # print 'Step child:', t, child.attrib
-            assert t in Step.validTags, 'Illegal tag in step'
+            assert t in Step.validTags, 'Illegal tag in step: ' + t
             self.tools.append(PipelineTool(child, files))
 
     def execute(self):

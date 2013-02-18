@@ -67,10 +67,13 @@ class Pipeline():
                     sys.exit(1)
                 f.path = params[f.path - 1]
                 f.isPath = True
-                #print ' path is:', f.path
 
     def execute(self):
         print 'Executing pipeline', self.name
+        
+        # FIXME!
+        # We should check that all the input files and input directories
+        # exist before going farther.  Fail early.
         for step in self.steps:
             print >> sys.stderr, step
             step.execute()
