@@ -38,31 +38,15 @@
 	<output id="bam"        type="bam"   filespec="sorted.bam" />
 	
 	<!--
-		Processes are simply logical steps in the pipeline, and should not
-		be confused with operating system processes.  A pipeline process
-		may be implemented in one or many OS processes. (Maybe I should
-		rename this tag?)
+		Steps are simply logical steps in the pipeline.
 		
 		The first step in the pipeline is to run QC.  No, this doesn't
 		really reflect the calling sequence for Glen's pipeline.  I'm
 		making it up.
 	-->
 <!--
-	<process name="QC">
-		<!--
-			The input and output specifications in a process constitute
-			the "contract" with the rest of the pipeline.  If a user
-			(researcher) wants to substitute another (set of) tool(s)
-			in a process, the inputs and outputs of the overall process
-			must stay the same.  This may involve invoking other tools
-			to perform file conversions.
-		-->
-		<input id="end1_fq" type="fastq" />
-		<input id="end2_fq" type="fastq" />
-		<output id="end1_fq_qc" type="fastq" />
-		<output id="end2_fq_qc" type="fastq" />
-		
-		<!-- 
+	<step name="QC">
+		&lt; ! - -  
 			Note about the output line below: end1_fq_qc and end2_fq_qc
 			will be materialized as the full file path.  We include
 			the ID outdir because the QC tool we're invoking will create
@@ -73,16 +57,16 @@
 			
 			The actual invocation of the QC tool is described in
 			glen_qc_tool.xml, not in this file.
-		-->
+		- - >
 		<tool name="Glen's Wonder QC Pipeline"
 			input="end1_fq,end2_fq"
 			output="end1_fq_qc,end2_fq_qc,outdir"
 			description="glen_qc_tool.xml" />
-	</process>
+	</step>
 -->
 	
 	<!--
-		Processes are invoked in lexical order.  So the Alignment process
+		Steps are invoked in lexical order.  So the Alignment process
 		will run after the QC process completes.
 		
 		There is an opportunity here for optimization by file dependency
@@ -90,18 +74,13 @@
 		files are ready.  Probably will NOT DO this in the first release.
 	-->
 
-	<process name="Alignment">
+	<step name="Alignment">
 		<!--
 			An alignment process built using bwa.
-		-->
-		<input  id="end1_fq_qc" type="fastq" />
-		<input  id="end2_fq_qc" type="fastq" />
-		<input  id="reference"  type="fasta" />
-		<output id="bam"        type="bam" />
-		
+		-->		
 		<tool name="BWA Align to BAM"
 			input="end1_fq_qc,end2_fq_qc,reference"
 			output="bam"
 			description="bwa_to_bam.xml" />
-	</process>
+	</step>
 </pipeline>

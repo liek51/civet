@@ -38,13 +38,13 @@
 		Options that are fixed (e.g., -t 8, below) can be encoded
 		directly in the command line.
 	-->
-	<command program="bwa"> aln {maxDiff} -t 8 {in_3} {in_1} > {sai_1}</command>
-	<command program="bwa"> aln {maxDiff} -t 8 {in_3} {in_2} > {sai_2}</command>
+	<command program="bwa" stdout_id = "sai_1"> aln {maxDiff} -t 8 {in_3} {in_1}</command>
+	<command program="bwa" stdout_id = "sai_2"> aln {maxDiff} -t 8 {in_3} {in_2}</command>
 
 	<tempfile id="sam" />
 	<option name="maxIns" command_text="-a" value="700" />
 	<command stdout_id="sam" program="bwa">
-        sampe {maxIns} {in_3} {sai_1} {sai_2} {end1_fq} {end2_fq}
+        sampe {maxIns} {in_3} {sai_1} {sai_2} {in_1} {in_2}
 	</command>
 
 	<tempfile id="unsorted_bam" />
