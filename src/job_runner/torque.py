@@ -19,10 +19,6 @@ import string
 DEFAULT_DEPEND_TYPE = "afterany"
 DEFAULT_WALLTIME = "01:00:00"
 
-def get_default_walltime():
-    return DEFAULT_WALLTIME
-    
-    
 
 
 """
