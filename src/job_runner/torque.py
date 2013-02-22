@@ -66,7 +66,7 @@ class BatchJob(object):
             for c in name:
                 if c not in string.digits + string.letters + "_-.":
                     raise Exception("Invalid job name: {0}".format(name))
-            self._name = name
+        self._name = name
     
     def get_name(self):
         return self._name
