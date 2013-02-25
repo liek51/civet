@@ -23,13 +23,31 @@ DEFAULT_WALLTIME = "01:00:00"
 
 """
     a container for a batch job
+    cmd - a string containing the command (with arguments) to execute
+    workdir - the job's working directory (default is current working directory)
+    nodes - number of nodes to request from resource manager
+    ppn - processors per node to request from resource manager
+    walltime - walltime to request
+    modules - modules to load, pass a list to load multiple module files
+    depends_on - list of job IDs that this job has a dependency on
+    name - name for batch job
+    stdout_path - path to final location for job's stdout spool (default = resource manager default)
+    stderr_path - path to final location for job's stderr spool (default = resource manager default)
+    prologue - path to optional job prologue script. Will run before cmd, job 
+               will abort if prologue does not return 0. Note that this parameter 
+               allows the flexiblity of calling an external prologue scrip or 
+               multiple lines of bash code can be passed in for the prologue code
+               to be self-contained within the batch script. If passing in bash
+               code directly, the caller must make sure the last command executed
+               returns 0 on success of the entire prologue block
+    
 """
 class BatchJob(object):
 
 
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None):
+                 name=None, stdout_path=None, stderr_path=None, prologue=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -40,6 +58,7 @@ class BatchJob(object):
         self.workdir = workdir
         self.walltime = walltime
         self.name = name
+        self.prologue = prologue
         
     
     # setter for workdir, sets to the current working directory a directory is 
@@ -118,11 +137,25 @@ class PBSJobRunner(object):
     script_template = textwrap.dedent("""\
         #!/bin/bash
         
+        # sleep to overcome any issues with NFS file attribute cacheing
+        sleep 60
+        
         $MODULE_LOAD_CMDS
         
         cd $$PBS_O_WORKDIR
         
-        $CMD
+        
+        #run any user supplied checks
+        $PROLOGUE
+        #end job prologue
+        #save return code for later use
+        $$PROLOGUE_RETURN=$$?
+        
+        if [ $$PROLOGUE_RETURN -eq 0 ]; then 
+            $CMD
+        else
+            echo "command not run, prologue returned non-zero value"
+        fi
     
     """)
     
@@ -230,6 +263,7 @@ class PBSJobRunner(object):
         pbs.pbs_disconnect(connection)
 
         return rval
+ 
     
     """
         generate a batch script based on our template and return as a string
@@ -254,7 +288,15 @@ class PBSJobRunner(object):
                 for module in batch_job.modules:
                     tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)
             
+        
+        if batch_job.prologue:
+            tokens['PROLOGUE'] = batch_job.prologue
+        else:
+            #force "empty" prologue to return 0
+            tokens['PROLOGUE'] = "true"
+        
         return string.Template(self.script_template).substitute(tokens)
+
 
     """
     strerror - look up the string associated with a given pbs error code
@@ -352,11 +394,6 @@ def main():
     if status:
         print "Status of job is " + status.state
     
-    print "Deleting job from server"    
-    job_runner.delete_job(id)
-    status = job_runner.query_job(id)
-    if status:
-        print "Status of job is " + status.state
     
     
 if __name__ == '__main__': 
