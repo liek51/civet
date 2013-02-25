@@ -221,6 +221,15 @@ class PBSJobRunner(object):
         else:
             return None
 
+    """
+        call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
+    """
+    def delete_job(self, id, server=None):
+        connection = self._connect_to_server(server)
+        rval = pbs.pbs_deljob(connection, id, '' )
+        pbs.pbs_disconnect(connection)
+
+        return rval
     
     """
         generate a batch script based on our template and return as a string
@@ -246,6 +255,14 @@ class PBSJobRunner(object):
                     tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)
             
         return string.Template(self.script_template).substitute(tokens)
+
+    """
+    strerror - look up the string associated with a given pbs error code
+    NOTE: Until the pbs_python developers update their source, most of these
+    strings are out of sync with the integer error codes
+    """
+    def strerror(self, e):
+        return pbs.errors_txt[e]
 
 
     """
@@ -319,7 +336,7 @@ class PBSJobRunner(object):
 def main():
     job_runner = PBSJobRunner()
 
-    job = BatchJob("hostname", walltime="00:01:00", name="test_job", 
+    job = BatchJob("sleep 600", walltime="00:11:00", name="test_job", 
                    modules=["python"])
 
     
@@ -331,6 +348,12 @@ def main():
     
     print id
     
+    status = job_runner.query_job(id)
+    if status:
+        print "Status of job is " + status.state
+    
+    print "Deleting job from server"    
+    job_runner.delete_job(id)
     status = job_runner.query_job(id)
     if status:
         print "Status of job is " + status.state
