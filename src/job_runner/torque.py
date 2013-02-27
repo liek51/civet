@@ -132,6 +132,7 @@ class JobStatus(object):
 
     #TODO: implement more getters (like for resources_used.walltime)
 
+
 """
    TorqueJobRunner is a class that encapsulates the functionality of submitting
    jobs to a TORQUE cluster
@@ -154,19 +155,28 @@ class TorqueJobRunner(object):
         $PROLOGUE
         #end job prologue
         #save return code for later use
-        $$PROLOGUE_RETURN=$$?
+        PROLOGUE_RETURN=$$?
         
         if [ $$PROLOGUE_RETURN -eq 0 ]; then 
             $CMD
+            if [ $$? -ne 0 ]; then
+                #TODO call cleanup script
+                echo "command returned non-zero value.  abort pipeline"
+            fi
         else
+            #TODO change this to write to log file
             echo "command not run, prologue returned non-zero value"
+            
+            #TODO call cleanup script
         fi
     
     """)
+  
     
-    def __init__(self, submit_with_hold=True):
+    def __init__(self, log_dir="log", submit_with_hold=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
+  
         
     """
       queue_job - queue a BatchJob.
@@ -194,8 +204,7 @@ class TorqueJobRunner(object):
             
         if batch_job.depends_on:
             job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
-    
-    
+       
         pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
         
         # populate pbs_attrs
@@ -210,8 +219,7 @@ class TorqueJobRunner(object):
             pbs_attrs[attr_idx].name = attribute
             pbs_attrs[attr_idx].value = val
             attr_idx += 1
-    
-        
+            
         # we've initialized pbs_attrs with all the attributes we need to set
         # now we can connect to the server and submit the job
         connection = self._connect_to_server(server)
@@ -267,7 +275,7 @@ class TorqueJobRunner(object):
         connection = self._connect_to_server(server)
         rval = pbs.pbs_deljob(connection, id, '' )
         pbs.pbs_disconnect(connection)
-
+        
         return rval
  
     
@@ -374,7 +382,6 @@ class TorqueJobRunner(object):
         else:
             #not a string, assume list of job ids to join
             return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
-
 
 
 """
