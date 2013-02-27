@@ -204,6 +204,8 @@ class TorqueJobRunner(object):
             
         if batch_job.depends_on:
             job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
+        elif self.submit_with_hold:
+            job_attributes[pbs.ATTR_h] = 'u'
        
         pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
         
@@ -245,7 +247,9 @@ class TorqueJobRunner(object):
             raise Exception("Error submitting job.  {0}: {1}".format(e, e_msg))
        
         pbs.pbs_disconnect(connection)
-                
+        
+        if self.submit_with_hold and not batch_job.depends_on:
+            self.held_jobs.append((id,server))        
         return id
 
         
@@ -278,6 +282,29 @@ class TorqueJobRunner(object):
         
         return rval
  
+    
+    """
+        release_job - release a user hold from a held batch job
+        id : job id to release (short form not allowed)
+        server : optional hostname for pbs_server
+    """
+    def release_job(self, id, server=None):
+        connection = self._connect_to_server(server)
+        rval = pbs.pbs_rlsjob(connection, id, 'u', '')
+        pbs.pbs_disconnect(connection)
+        
+        if rval == 0:
+            self.held_jobs.remove((id,server))
+        return rval
+    
+    
+    """
+        release_all - release all jobs in self.held_jobs
+    """
+    def release_all(self):
+        jobs = list(self.held_jobs)  #copy the list of held jobs to iterate over because release_job mutates self.held_jobs
+        for id,server in jobs:
+            self.release_job(id, server)
     
     """
         generate a batch script based on our template and return as a string
@@ -384,6 +411,7 @@ class TorqueJobRunner(object):
             return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
 
 
+
 """
    simple main function that tests some functionality if we run this script
    directly rather than import it
@@ -391,7 +419,7 @@ class TorqueJobRunner(object):
 def main():
     job_runner = TorqueJobRunner()
 
-    job = BatchJob("sleep 600", walltime="00:11:00", name="test_job", 
+    job = BatchJob("sleep 100", walltime="00:02:00", name="test_job", 
                    modules=["python"])
 
     
@@ -406,8 +434,12 @@ def main():
     status = job_runner.query_job(id)
     if status:
         print "Status of job is " + status.state
+        
     
-    
+    job_runner.release_all()
+    status = job_runner.query_job(id)
+    if status:
+        print "Status of job is " + status.state
     
 if __name__ == '__main__': 
     main() 
