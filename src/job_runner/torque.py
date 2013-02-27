@@ -7,13 +7,17 @@ provide functionality for queueing and querying jobs on a TORQUE cluster
 
 """
 
-import pbs
-import PBSQuery
+
 import textwrap
 import os
 import socket
 from tempfile import mkstemp
 import string
+
+import pbs
+import PBSQuery
+
+
 
 #TODO: make dependency type settable per job
 DEFAULT_DEPEND_TYPE = "afterany"
@@ -23,17 +27,17 @@ DEFAULT_WALLTIME = "01:00:00"
 
 """
     a container for a batch job
-    cmd - a string containing the command (with arguments) to execute
-    workdir - the job's working directory (default is current working directory)
-    nodes - number of nodes to request from resource manager
-    ppn - processors per node to request from resource manager
-    walltime - walltime to request
-    modules - modules to load, pass a list to load multiple module files
-    depends_on - list of job IDs that this job has a dependency on
-    name - name for batch job
-    stdout_path - path to final location for job's stdout spool (default = resource manager default)
-    stderr_path - path to final location for job's stderr spool (default = resource manager default)
-    prologue - path to optional job prologue script. Will run before cmd, job 
+    cmd     : a string containing the command (with arguments) to execute
+    workdir : the job's working directory (default is current working directory)
+    nodes   : number of nodes to request from resource manager
+    ppn     : processors per node to request from resource manager
+    walltime : walltime to request
+    modules  : modules to load, pass a list to load multiple module files
+    depends_on  : list of job IDs that this job has a dependency on
+    name        : name for batch job
+    stdout_path : path to final location for job's stdout spool (default = resource manager default)
+    stderr_path : path to final location for job's stderr spool (default = resource manager default)
+    prologue    : path to optional job prologue script. Will run before cmd, job 
                will abort if prologue does not return 0. Note that this parameter 
                allows the flexiblity of calling an external prologue scrip or 
                multiple lines of bash code can be passed in for the prologue code
@@ -90,9 +94,10 @@ class BatchJob(object):
 
 
 """
-    JobStatus is a class that holds the dictionary-like object returned by 
+    JobStatus - a class that holds the dictionary-like object returned by 
     PBSQuery.getjob, and knows how to parse that output to get the information 
     we are interested in.  This is what PBSJobRunner.query_job() returns.
+    status : TORQUE job status as returned by PBSQueryJob
 """
 class JobStatus(object):
 
@@ -128,10 +133,10 @@ class JobStatus(object):
     #TODO: implement more getters (like for resources_used.walltime)
 
 """
-   PBSJobRunner is a class that encapsulates the functionality of submitting
+   TorqueJobRunner is a class that encapsulates the functionality of submitting
    jobs to a TORQUE cluster
 """        
-class PBSJobRunner(object):
+class TorqueJobRunner(object):
     
     #the template script, which will be customized for each job
     script_template = textwrap.dedent("""\
@@ -159,9 +164,10 @@ class PBSJobRunner(object):
     
     """)
     
-    #def __init__(self):
-        #right now we don't have anything to do, PBSJobRunner is stateless
-    
+    def __init__(self, submit_with_hold=True):
+        self.held_jobs = []
+        self.submit_with_hold = submit_with_hold
+        
     """
       queue_job - queue a BatchJob.
       batch_job : description of the job to queue
@@ -376,7 +382,7 @@ class PBSJobRunner(object):
    directly rather than import it
 """
 def main():
-    job_runner = PBSJobRunner()
+    job_runner = TorqueJobRunner()
 
     job = BatchJob("sleep 600", walltime="00:11:00", name="test_job", 
                    modules=["python"])
