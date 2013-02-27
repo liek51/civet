@@ -13,6 +13,7 @@ import os
 import socket
 from tempfile import mkstemp
 import string
+import errno
 
 import pbs
 import PBSQuery
@@ -23,7 +24,12 @@ import PBSQuery
 DEFAULT_DEPEND_TYPE = "afterany"
 DEFAULT_WALLTIME = "01:00:00"
 
-
+def _make_sure_path_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
 
 """
     a container for a batch job
@@ -38,12 +44,7 @@ DEFAULT_WALLTIME = "01:00:00"
     stdout_path : path to final location for job's stdout spool (default = resource manager default)
     stderr_path : path to final location for job's stderr spool (default = resource manager default)
     prologue    : path to optional job prologue script. Will run before cmd, job 
-               will abort if prologue does not return 0. Note that this parameter 
-               allows the flexiblity of calling an external prologue scrip or 
-               multiple lines of bash code can be passed in for the prologue code
-               to be self-contained within the batch script. If passing in bash
-               code directly, the caller must make sure the last command executed
-               returns 0 on success of the entire prologue block
+                  will abort if prologue does not return 0. 
     
 """
 class BatchJob(object):
@@ -176,6 +177,9 @@ class TorqueJobRunner(object):
     def __init__(self, log_dir="log", submit_with_hold=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
+        self.log_dir = log_dir
+        
+        _make_sure_path_exists(self.log_dir)
   
         
     """
@@ -410,8 +414,7 @@ class TorqueJobRunner(object):
             #not a string, assume list of job ids to join
             return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
 
-
-
+ 
 """
    simple main function that tests some functionality if we run this script
    directly rather than import it
@@ -419,7 +422,7 @@ class TorqueJobRunner(object):
 def main():
     job_runner = TorqueJobRunner()
 
-    job = BatchJob("sleep 100", walltime="00:02:00", name="test_job", 
+    job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
                    modules=["python"])
 
     
@@ -436,6 +439,7 @@ def main():
         print "Status of job is " + status.state
         
     
+    print "calling job_runner.release_all()"
     job_runner.release_all()
     status = job_runner.query_job(id)
     if status:
