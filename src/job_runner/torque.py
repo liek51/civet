@@ -284,15 +284,10 @@ class TorqueJobRunner(object):
     """
         call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
     """
-    def delete_job(self, id, server=None, conn=None):
-        if conn:
-            connection = conn
-        else:
-            connection = self._connect_to_server(server)
-        rval = pbs.pbs_deljob(connection, id, '' )
-        
-        if not conn:
-            pbs.pbs_disconnect(connection)
+    def delete_job(self, id, server=None):
+        connection = self._connect_to_server(server)
+        rval = pbs.pbs_deljob(connection, id, '' )        
+        pbs.pbs_disconnect(connection)
         
         return rval
  
