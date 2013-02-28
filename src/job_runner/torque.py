@@ -148,8 +148,13 @@ class TorqueJobRunner(object):
         
         #define some useful functions
         function abort_pipeline {
+            # just iterate over all of the job ids in this pipeline and try to 
+            # qdel them.  We don't care what the state is, or even if they still exit
+            
+            echo "Aborting pipeline" > $LOG_DIR/abort.log
             while read ID; do
                 if [ "$$ID" != "$$PBS_JOBID" ]; then
+                    echo "calling qdel on $$PBS_JOBID" >> $LOG_DIR/abort.log
                     qdel $$ID >>$LOG_DIR/abort.log 2>&1
                 fi
             done < $LOG_DIR/id_list.txt
@@ -196,7 +201,7 @@ class TorqueJobRunner(object):
           
         self._id_log = open(os.path.join(log_dir, "id_list.txt"), 'w')
         
-        
+        self._default_server = pbs.pbs_default()
   
     @property
     def log_dir(self):
@@ -403,7 +408,7 @@ class TorqueJobRunner(object):
     """    
     def _connect_to_server(self, server=None):        
         if not server:
-            server = pbs.pbs_default()
+            server = self._default_server
         
         connection = pbs.pbs_connect(server)
         
