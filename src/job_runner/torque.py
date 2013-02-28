@@ -136,7 +136,12 @@ class JobStatus(object):
 
 """
    TorqueJobRunner is a class that encapsulates the functionality of submitting
-   jobs to a TORQUE cluster
+   jobs to a TORQUE cluster.
+   
+   attributes
+    held_jobs  : a list of job_id,server pairs that were submitted with a user hold
+    submit_with_hold : if True any root job (job with no dependency) will be submitted with a user hold
+    log_dir : directory to store log files, will be created if it doesn't exist
 """        
 class TorqueJobRunner(object):
     
@@ -279,10 +284,15 @@ class TorqueJobRunner(object):
     """
         call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
     """
-    def delete_job(self, id, server=None):
-        connection = self._connect_to_server(server)
+    def delete_job(self, id, server=None, conn=None):
+        if conn:
+            connection = conn
+        else:
+            connection = self._connect_to_server(server)
         rval = pbs.pbs_deljob(connection, id, '' )
-        pbs.pbs_disconnect(connection)
+        
+        if not conn:
+            pbs.pbs_disconnect(connection)
         
         return rval
  
@@ -291,11 +301,19 @@ class TorqueJobRunner(object):
         release_job - release a user hold from a held batch job
         id : job id to release (short form not allowed)
         server : optional hostname for pbs_server
+        conn   : optinal connection to a pbs_server, if not passed release_job
+                 will establish a new connection 
     """
-    def release_job(self, id, server=None):
-        connection = self._connect_to_server(server)
-        rval = pbs.pbs_rlsjob(connection, id, 'u', '')
-        pbs.pbs_disconnect(connection)
+    def release_job(self, id, server=None, connection=None):
+        if connection:
+            c = connection
+        else:
+            c = self._connect_to_server(server)
+        
+        rval = pbs.pbs_rlsjob(c, id, 'u', '')
+        
+        if not connection:
+            pbs.pbs_disconnect(c)
         
         if rval == 0:
             self.held_jobs.remove((id,server))
@@ -303,12 +321,21 @@ class TorqueJobRunner(object):
     
     
     """
-        release_all - release all jobs in self.held_jobs
+        release_all - Release all jobs in self.held_jobs list reusing connections.  
     """
     def release_all(self):
         jobs = list(self.held_jobs)  #copy the list of held jobs to iterate over because release_job mutates self.held_jobs
+        connection_pool = {}
         for id,server in jobs:
-            self.release_job(id, server)
+            if server in connection_pool:
+                c = connection_pool[server]
+            else:
+                c = self._connect_to_server(server)
+                connection_pool[server] = c
+            self.release_job(id, server, connection=c)
+            
+        for c in connection_pool.itervalues():
+            pbs.pbs_disconnect(c)
     
     """
         generate a batch script based on our template and return as a string
