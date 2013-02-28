@@ -348,6 +348,7 @@ class TorqueJobRunner(object):
         connection = self._connect_to_server()
         for id in jobs:
             self.release_job(id, connection)
+        pbs.pbs_disconnect(connection)
 
     
     """
