@@ -192,7 +192,7 @@ class TorqueJobRunner(object):
     """)
   
     
-    def __init__(self, log_dir="log", submit_with_hold=True):
+    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self._log_dir = log_dir      
@@ -201,7 +201,10 @@ class TorqueJobRunner(object):
           
         self._id_log = open(os.path.join(log_dir, "id_list.txt"), 'w')
         
-        self._default_server = pbs.pbs_default()
+        if pbs_server:
+            self._server = pbs_server
+        else:
+            self._server = pbs.pbs_default()
   
     @property
     def log_dir(self):
@@ -211,9 +214,8 @@ class TorqueJobRunner(object):
       queue_job - queue a BatchJob.
       batch_job : description of the job to queue
       queue     : optional destination queue, uses server default if none is passed
-      server    : optional destination server, used default server if none passed
     """
-    def queue_job(self, batch_job, queue=None, server=None):
+    def queue_job(self, batch_job, queue=None):
         job_attributes = {}
         job_resources = {}
         
@@ -253,7 +255,7 @@ class TorqueJobRunner(object):
             
         # we've initialized pbs_attrs with all the attributes we need to set
         # now we can connect to the server and submit the job
-        connection = self._connect_to_server(server)
+        connection = self._connect_to_server()
 
         #connected to pbs_server
         
@@ -278,7 +280,7 @@ class TorqueJobRunner(object):
         pbs.pbs_disconnect(connection)
         
         if self.submit_with_hold and not batch_job.depends_on:
-            self.held_jobs.append((id,server))
+            self.held_jobs.append(id)
             
         self._id_log.write(id + "\n")
         self._id_log.flush()
@@ -291,8 +293,8 @@ class TorqueJobRunner(object):
         None if the job does not exist on the server, otherwise it will return
         a JobStatus object.
     """    
-    def query_job(self, id, server=None):
-        pbsq = PBSQuery.PBSQuery(server=server)
+    def query_job(self, id):
+        pbsq = PBSQuery.PBSQuery(server=self._server)
         job_status =  pbsq.getjob(id)
         
         # check to see if the job existed.  this is kind of lame, but we can't
@@ -307,8 +309,8 @@ class TorqueJobRunner(object):
     """
         call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
     """
-    def delete_job(self, id, server=None):
-        connection = self._connect_to_server(server)
+    def delete_job(self, id):
+        connection = self._connect_to_server()
         rval = pbs.pbs_deljob(connection, id, '' )        
         pbs.pbs_disconnect(connection)
         
@@ -322,11 +324,11 @@ class TorqueJobRunner(object):
         conn   : optinal connection to a pbs_server, if not passed release_job
                  will establish a new connection 
     """
-    def release_job(self, id, server=None, connection=None):
+    def release_job(self, id, connection=None):
         if connection:
             c = connection
         else:
-            c = self._connect_to_server(server)
+            c = self._connect_to_server()
         
         rval = pbs.pbs_rlsjob(c, id, 'u', '')
         
@@ -334,7 +336,7 @@ class TorqueJobRunner(object):
             pbs.pbs_disconnect(c)
         
         if rval == 0:
-            self.held_jobs.remove((id,server))
+            self.held_jobs.remove(id)
         return rval
     
     
@@ -343,17 +345,10 @@ class TorqueJobRunner(object):
     """
     def release_all(self):
         jobs = list(self.held_jobs)  #copy the list of held jobs to iterate over because release_job mutates self.held_jobs
-        connection_pool = {}
-        for id,server in jobs:
-            if server in connection_pool:
-                c = connection_pool[server]
-            else:
-                c = self._connect_to_server(server)
-                connection_pool[server] = c
-            self.release_job(id, server, connection=c)
-            
-        for c in connection_pool.itervalues():
-            pbs.pbs_disconnect(c)
+        connection = self._connect_to_server()
+        for id in jobs:
+            self.release_job(id, connection)
+
     
     """
         generate a batch script based on our template and return as a string
@@ -406,11 +401,8 @@ class TorqueJobRunner(object):
         to the default server.  Will raise an exception if a connection can 
         not be established.
     """    
-    def _connect_to_server(self, server=None):        
-        if not server:
-            server = self._default_server
-        
-        connection = pbs.pbs_connect(server)
+    def _connect_to_server(self):        
+        connection = pbs.pbs_connect(self._server)
         
         if connection <= 0:
             e, e_msg = pbs.error()
