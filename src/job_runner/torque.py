@@ -105,33 +105,29 @@ class JobStatus(object):
     def __init__(self, status):
         self.status = status
 
-        
-    def get_state(self):
+    @property    
+    def state(self):
         return self.status.get_value('job_state')[0]
-    
-    state = property(get_state)
-    
-    def get_error_path(self):
+      
+    @property
+    def error_path(self):
         return self.status['Error_Path'][0]
         
-    error_path = property(get_error_path)
-    
-    def get_stdout_path(self):
+    @property
+    def stdout_path(self):
         return self.status['Output_Path'][0]
-        
-    stdout_path = property(get_stdout_path)
-    
+            
     # retrun the exit_status attribute if it exists, if it does not exist
     # return None.  Should only exist if the job is in the "C" state.
-    def get_exit_status(Self):
+    @property
+    def exit_status(Self):
         if 'exit_status' in self.status:
             return self.status['exit_status'][0]
         else:
             return None
             
-    exit_status = property(get_exit_status)
 
-    #TODO: implement more getters (like for resources_used.walltime)
+    #TODO: implement more properties (like for resources_used.walltime)
 
 
 """
@@ -146,8 +142,19 @@ class JobStatus(object):
 class TorqueJobRunner(object):
     
     #the template script, which will be customized for each job
+    # $VAR will be subsituted before job submission, $$VAR will become $VAR after subsitution
     script_template = textwrap.dedent("""\
         #!/bin/bash
+        
+        #define some useful functions
+        function abort_pipeline {
+            while read ID; do
+                if [ "$$ID" != "$$PBS_JOBID" ]; then
+                    qdel $$ID >>$LOG_DIR/abort.log 2>&1
+                fi
+            done < $LOG_DIR/id_list.txt
+            exit $$1
+        }
         
         # sleep to overcome any issues with NFS file attribute cacheing
         sleep 60
@@ -165,15 +172,16 @@ class TorqueJobRunner(object):
         
         if [ $$PROLOGUE_RETURN -eq 0 ]; then 
             $CMD
-            if [ $$? -ne 0 ]; then
-                #TODO call cleanup script
+            CMD_EXIT_STATUS=$$?
+            if [ $$CMD_EXIT_STATUS -ne 0 ]; then
                 echo "command returned non-zero value.  abort pipeline"
+                abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
             #TODO change this to write to log file
             echo "command not run, prologue returned non-zero value"
+            abort_pipeline $$PROLOGUE_RETURN
             
-            #TODO call cleanup script
         fi
     
     """)
@@ -182,11 +190,18 @@ class TorqueJobRunner(object):
     def __init__(self, log_dir="log", submit_with_hold=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
-        self.log_dir = log_dir
+        self._log_dir = log_dir      
         
-        _make_sure_path_exists(self.log_dir)
+        _make_sure_path_exists(log_dir)
+          
+        self._id_log = open(os.path.join(log_dir, "id_list.txt"), 'w')
+        
+        
   
-        
+    @property
+    def log_dir(self):
+        return self._log_dir
+            
     """
       queue_job - queue a BatchJob.
       batch_job : description of the job to queue
@@ -258,7 +273,10 @@ class TorqueJobRunner(object):
         pbs.pbs_disconnect(connection)
         
         if self.submit_with_hold and not batch_job.depends_on:
-            self.held_jobs.append((id,server))        
+            self.held_jobs.append((id,server))
+            
+        self._id_log.write(id + "\n")
+        self._id_log.flush()
         return id
 
         
@@ -343,6 +361,10 @@ class TorqueJobRunner(object):
         tokens = {}
         
         tokens['CMD'] = batch_job.cmd
+        
+        #expand log_dir to absolute path because a job can have a different
+        #working directory
+        tokens['LOG_DIR'] = os.path.abspath(self.log_dir) 
         
         tokens['MODULE_LOAD_CMDS'] = ""
         
