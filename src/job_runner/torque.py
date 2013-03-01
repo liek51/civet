@@ -23,6 +23,7 @@ import PBSQuery
 #TODO: make dependency type settable per job
 DEFAULT_DEPEND_TYPE = "afterany"
 DEFAULT_WALLTIME = "01:00:00"
+_BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
 def _make_sure_path_exists(path):
     try:
@@ -159,7 +160,7 @@ class TorqueJobRunner(object):
                     echo "calling qdel on $$PBS_JOBID" >> $LOG_DIR/abort.log
                     qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
-            done < $LOG_DIR/id_list.txt
+            done < $LOG_DIR/$ID_FILE
             echo "$$1" > $LOG_DIR/$${PBS_JOBID}-status.txt
             exit $$1
         }
@@ -215,7 +216,7 @@ class TorqueJobRunner(object):
         
         _make_sure_path_exists(log_dir)
           
-        self._id_log = open(os.path.join(log_dir, "pipeline_batch_id_list.txt"), 'w')
+        self._id_log = open(os.path.join(log_dir, _BATCH_ID_LOG), 'w')
         
         if pbs_server:
             self._server = pbs_server
@@ -382,6 +383,7 @@ class TorqueJobRunner(object):
         #expand log_dir to absolute path because a job can have a different
         #working directory
         tokens['LOG_DIR'] = os.path.abspath(self.log_dir) 
+        tokens['ID_FILE'] = _BATCH_ID_LOG
         
         tokens['MODULE_LOAD_CMDS'] = ""
         
