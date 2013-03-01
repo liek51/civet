@@ -66,7 +66,7 @@ class BatchJob(object):
         self.prologue = prologue
         
     
-    # setter for workdir, sets to the current working directory a directory is 
+    # setter for workdir, sets to the current working directory if a directory is 
     # not passed   
     def set_workdir(self, dir):
         if dir:
@@ -85,7 +85,7 @@ class BatchJob(object):
         if name:
             for c in name:
                 if c not in string.digits + string.letters + "_-.":
-                    raise Exception("Invalid job name: {0}".format(name))
+                    raise ValueError("Invalid job name: {0}".format(name))
         self._name = name
     
     def get_name(self):
