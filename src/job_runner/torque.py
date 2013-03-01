@@ -141,7 +141,7 @@ class JobStatus(object):
 """        
 class TorqueJobRunner(object):
     
-    #the template script, which will be customized for each job
+    # the template script, which will be customized for each job
     # $VAR will be subsituted before job submission, $$VAR will become $VAR after subsitution
     script_template = textwrap.dedent("""\
         #!/bin/bash
@@ -171,7 +171,7 @@ class TorqueJobRunner(object):
         
         #run any user supplied checks
         $PROLOGUE
-        #end job prologue
+
         #save return code for later use
         PROLOGUE_RETURN=$$?
         
@@ -179,15 +179,14 @@ class TorqueJobRunner(object):
             $CMD
             CMD_EXIT_STATUS=$$?
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-                echo "command returned non-zero value.  abort pipeline"
+                echo "Command returned non-zero value.  abort pipeline" 1>&2
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            #TODO change this to write to log file
-            echo "command not run, prologue returned non-zero value"
-            abort_pipeline $$PROLOGUE_RETURN
-            
+            echo "Command not run, prologue returned non-zero value. Abort pipeline!"  1>&2
+            abort_pipeline $$PROLOGUE_RETURN            
         fi
+
     
     """)
   
