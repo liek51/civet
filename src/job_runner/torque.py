@@ -52,7 +52,8 @@ class BatchJob(object):
 
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None, prologue=None):
+                 name=None, stdout_path=None, stderr_path=None, prologue=None, 
+                 epilogue=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -64,6 +65,7 @@ class BatchJob(object):
         self.walltime = walltime
         self.name = name
         self.prologue = prologue
+        self.epilogue = epilogue
         
     
     # setter for workdir, sets to the current working directory if a directory is 
@@ -155,9 +157,10 @@ class TorqueJobRunner(object):
             while read ID; do
                 if [ "$$ID" != "$$PBS_JOBID" ]; then
                     echo "calling qdel on $$PBS_JOBID" >> $LOG_DIR/abort.log
-                    qdel $$ID >>$LOG_DIR/abort.log 2>&1
+                    qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
             done < $LOG_DIR/id_list.txt
+            echo "$$1" > $LOG_DIR/$${PBS_JOBID}-status.txt
             exit $$1
         }
         
@@ -169,7 +172,7 @@ class TorqueJobRunner(object):
         cd $$PBS_O_WORKDIR
         
         
-        #run any user supplied checks
+        #run any supplied pre-job checks
         $PROLOGUE
 
         #save return code for later use
@@ -183,10 +186,24 @@ class TorqueJobRunner(object):
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            echo "Command not run, prologue returned non-zero value. Abort pipeline!"  1>&2
+            echo "Command not run, prologue returned non-zero value. Aborting pipeline!"  1>&2
             abort_pipeline $$PROLOGUE_RETURN            
         fi
-
+        
+        #run supplied post-job checks
+        $EPILOGUE
+        
+        #save return code for later use
+        EPILOGUE_RETURN=$$?
+        
+        if [ $$EPILOGUE_RETURN -ne 0 ]; then
+            echo "Post job sanity check failed. Aborting pipeline!" 1>&2
+            abort_pipeline $$EPILOGUE_RETURN
+        else
+            # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
+            echo "0" > $LOG_DIR/$${PBS_JOBID}-status.txt
+    
+        fi
     
     """)
   
@@ -198,7 +215,7 @@ class TorqueJobRunner(object):
         
         _make_sure_path_exists(log_dir)
           
-        self._id_log = open(os.path.join(log_dir, "id_list.txt"), 'w')
+        self._id_log = open(os.path.join(log_dir, "pipeline_batch_id_list.txt"), 'w')
         
         if pbs_server:
             self._server = pbs_server
@@ -383,6 +400,12 @@ class TorqueJobRunner(object):
         else:
             #force "empty" prologue to return 0
             tokens['PROLOGUE'] = "true"
+            
+        if batch_job.epilogue:
+            tokens['EPILOGUE'] = batch_job.epilogue
+        else:
+            #force empty epilogue to return 0
+            tokens['EPILOGUE'] = "true"
         
         return string.Template(self.script_template).substitute(tokens)
 
