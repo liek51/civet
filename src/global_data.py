@@ -1,1 +1,1 @@
-globalData = {}
+global_data = {}
