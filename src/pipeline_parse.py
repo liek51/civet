@@ -5,15 +5,24 @@
 
 import sys
 import re
+import datetime
 import xml.etree.ElementTree as ET
 from foreach import *
 from global_data import *
 from tool import *
 from tool_logger import *
 from pipeline_file import *
+from torque import *
+
+
 
 class Pipeline():
-    validTags = [
+    """
+    """
+    
+    instance = None
+
+    valid_ags = [
         'input',
         'inputdir',
         'foreach',
@@ -32,11 +41,18 @@ class Pipeline():
         # The outermost tag must be pipeline; it must have a name
         # and must not have text
         assert pipe.tag == 'pipeline'
-        self.name = pipe.attrib['name']
+        self._name = pipe.attrib['name']
         assert not pipe.text.strip()
 
-        self.steps = []
-        self.files = {}
+        self._steps = []
+        self._files = {}
+
+        # An output directory where log files and rul files will be
+        # written, if not otherwise specified.  Defaults to '.'.
+        self._output_dir = None
+
+        self._job_runner = None
+        
         # Walk the child tags.
         for child in pipe:
             # a pipeline can only contain step, input, output, 
@@ -44,22 +60,48 @@ class Pipeline():
             t = child.tag
             assert t in Pipeline.validTags, ' illegal tag:' + t
             if t == 'step':
-                self.steps.append(Step(child, self.files))
+                self._steps.append(Step(child, self._files))
             elif t == 'foreach':
-                self.steps.append(ForEach(child, self.files))
+                self._steps.append(ForEach(child, self._files))
             else:
-                PipelineFile.parseXML(child, self.files)
+                PipelineFile.parseXML(child, self._files)
         
         # Here we have finished parsing the pipeline XML Time to fix up 
         # the file paths that were passed in as positional...
-        self.fixupPositionalFiles(params)
+        self.fixup_positional_files(params)
+        
+        # Register ourself for later retrieval
+        if Pipeline.instance:
+            raise Exception('Pipeline already initialized.')
+        Pipeline.instance = self
 
-    def fixupPositionalFiles(self, params):
+    @property
+    def output_dir(self):
+        if not self._output_dir:
+            for f in files:
+                if f.is_output_dir():
+                    self._output_dir = f.path
+                    break
+            self._output_dir = '.'
+        return self._output_dir
+        
+    @property
+    def log_dir(self):
+        if not self._log_dir:
+            self._log_dir = os.path.join(self.output_dir, 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%m%S'))
+        return self._log_dir
+        
+    def fixup_positional_files(self, params):
+        """
+        Some files in the XML file are identified by their position on the
+        command line.  Turn them into real file names.
+        """
+        
         pLen = len(params)
         #print 'params len is ', pLen, ':', params
-        #print self.files
-        for fid in self.files:
-            f = self.files[fid]
+        #print self._files
+        for fid in self._files:
+            f = self._files[fid]
             if not f.isPath:
                 #print 'Fixing up', fid, 'path index is', f.path,
                 if f.path > pLen:
@@ -68,15 +110,30 @@ class Pipeline():
                 f.path = params[f.path - 1]
                 f.isPath = True
 
+    def log_dir(self):
+        """
+        Creates an output log directory for the pipeline run, based on 
+        the pipeline name and current date and time.
+        """
+        self._logdir
+        
     def execute(self):
-        print 'Executing pipeline', self.name
+        print 'Executing pipeline', self._name
         
         # FIXME!
         # We should check that all the input files and input directories
         # exist before going farther.  Fail early.
-        for step in self.steps:
+        
+        for step in self._steps:
             print >> sys.stderr, step
             step.execute()
+
+    @property
+    def job_runner(self):
+        # The pipeline will use a single Torque job runner.
+        if not self._job_runner:
+            self._job_runner =  TorqueJobRunner(Pipeline.instance.log_dir)
+        return self._job_runner
 
 
 def dumpElement(element, indent):

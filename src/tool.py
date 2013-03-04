@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 
 # pipeline components
 from global_data import *
+from job_runner.torque import *
 
 class Tool():
     # This script parses all of a tool definition.  Tools may be invoked
@@ -18,21 +19,29 @@ class Tool():
     # the ins and outs file id lists.
     # 
     # Each tool definition will create a temporary script which will be submitted to the
-    # cluster.
+    # cluster as a single job.  This is performed in the torque component.
     #
     validTags = [
         'command',
         'description',
         'option',
-        'tempfile' ]
+        'tempfile',
+        'validate',
+        'module',
+        ]
+
     validAtts = [
         'name',
+        'threads',
         'tool_config_prefix',
-        'threads' ]
-        
+        'wallclock',
+        ]
+
     def __init__(self, xmlfile, ins, outs, pipelineFiles):
         self.options = {}
         self.commands = []
+        self.modules = []
+        self.verify_files = ['python']
         self.toolFiles = {}
         self.pipelineFiles = pipelineFiles
         for n in range(len(ins)):
@@ -61,6 +70,10 @@ class Tool():
             self.threads = atts['threads']
         else:
             self.threads = '1'
+        if 'walltime' in atts:
+            self.walltime = atts['walltime']
+        else:
+            self.walltime = '01:00:00'
 
         # Now process our child tags
         for child in tool:
@@ -77,6 +90,10 @@ class Tool():
             elif t == 'tempfile':
                 # Register the tempfile in the tool's file dictionary
                 self.tempFile(child)
+            elif t == 'module':
+                self.modules.append(child.text)
+            elif t == 'validate':
+                self.validate_files.append(child.text)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
 
@@ -85,10 +102,13 @@ class Tool():
         #
         for c in self.commands:
             c.fixupOptionsFiles()
-        with open (self.name + '_tool_script.sh', 'w') as of:
-            print >> of, '#! /bin/bash'
-            for c in self.commands:
-                print >> of, c.realCommand
+            # Add the command names to the verify_files list
+            verify_files.append(c.program)
+
+        #with open (self.name + '_tool_script.sh', 'w') as of:
+        #    print >> of, '#! /bin/bash'
+        #    for c in self.commands:
+        #        print >> of, c.realCommand
 
 
     def tempFile(self, e):
@@ -126,11 +146,46 @@ class Tool():
         # Determine whether this tool is unchanged from those that were certified for CLIA.
         pass
 
-    def execute(self):
-        # actually run the tool
-        for c in self.commands:
-            print '            executing command:', c.realCommand
+    def submit(self, depends_on, name_prefix):
+        """
+        Submit the commands that comprise the tool as a single cluster job.
 
+        Args:
+            depends_on: a list of previously submitted job ids which must
+                complete before this job can run.
+            name_prefix: a string, which when combined with this tool's
+                name attribute, will result in a unique (to the pipeline)
+                job name for the cluster.
+        Returns:
+            job_id: a value which can be passed in as a depends_on list 
+                element in a subsequent tool sumbission.
+        """
+        # actually run the tool
+        multi_command_list = []
+        for c in self.commands:
+            print '            executing command:', c.real_command
+            multi_command_list.append(c.real_command)
+        multi_command = '\n'.join(multi_command_list)
+        pipeline = Pipeline.instance
+        print 'Batch Job:'
+        print '    cmd:', multi_command
+        print '    workdir:', pipeline.output_dir
+        print '    files_to_verify:', self.verify_files
+        print '    ppn:', self.threads
+        print '    walltime:', self.walltime
+        print '    modules:', self.modules
+        print '    depends_on:', depends_on
+        print '    name:', name_prefix + self.name
+        """
+        batch_job = BatchJob(
+            multi_command, workdir=pipeline.output_dir, files_to_verify=self.verify_files, 
+            ppn=self.threads, walltime = self.walltime, modules=self.modules,
+            depends_on=depends_on, name=name_prefix + self.name)
+    
+        return pipeline.job_runner.queue_job(batch_job)
+        """
+        return 1
+        
     def getCommand(self):
         # return the command as a string
         pass
