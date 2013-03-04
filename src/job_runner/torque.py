@@ -23,6 +23,7 @@ import PBSQuery
 #TODO: make dependency type settable per job
 DEFAULT_DEPEND_TYPE = "afterany"
 DEFAULT_WALLTIME = "01:00:00"
+_BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
 def _make_sure_path_exists(path):
     try:
@@ -52,7 +53,8 @@ class BatchJob(object):
 
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None, prologue=None):
+                 name=None, stdout_path=None, stderr_path=None, prologue=None, 
+                 epilogue=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -64,9 +66,10 @@ class BatchJob(object):
         self.walltime = walltime
         self.name = name
         self.prologue = prologue
+        self.epilogue = epilogue
         
     
-    # setter for workdir, sets to the current working directory a directory is 
+    # setter for workdir, sets to the current working directory if a directory is 
     # not passed   
     def set_workdir(self, dir):
         if dir:
@@ -85,7 +88,7 @@ class BatchJob(object):
         if name:
             for c in name:
                 if c not in string.digits + string.letters + "_-.":
-                    raise Exception("Invalid job name: {0}".format(name))
+                    raise ValueError("Invalid job name: {0}".format(name))
         self._name = name
     
     def get_name(self):
@@ -141,7 +144,7 @@ class JobStatus(object):
 """        
 class TorqueJobRunner(object):
     
-    #the template script, which will be customized for each job
+    # the template script, which will be customized for each job
     # $VAR will be subsituted before job submission, $$VAR will become $VAR after subsitution
     script_template = textwrap.dedent("""\
         #!/bin/bash
@@ -155,9 +158,10 @@ class TorqueJobRunner(object):
             while read ID; do
                 if [ "$$ID" != "$$PBS_JOBID" ]; then
                     echo "calling qdel on $$PBS_JOBID" >> $LOG_DIR/abort.log
-                    qdel $$ID >>$LOG_DIR/abort.log 2>&1
+                    qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
-            done < $LOG_DIR/id_list.txt
+            done < $LOG_DIR/$ID_FILE
+            echo "$$1" > $LOG_DIR/$${PBS_JOBID}-status.txt
             exit $$1
         }
         
@@ -169,9 +173,9 @@ class TorqueJobRunner(object):
         cd $$PBS_O_WORKDIR
         
         
-        #run any user supplied checks
+        #run any supplied pre-job checks
         $PROLOGUE
-        #end job prologue
+
         #save return code for later use
         PROLOGUE_RETURN=$$?
         
@@ -179,14 +183,27 @@ class TorqueJobRunner(object):
             $CMD
             CMD_EXIT_STATUS=$$?
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-                echo "command returned non-zero value.  abort pipeline"
+                echo "Command returned non-zero value.  abort pipeline" 1>&2
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            #TODO change this to write to log file
-            echo "command not run, prologue returned non-zero value"
-            abort_pipeline $$PROLOGUE_RETURN
-            
+            echo "Command not run, prologue returned non-zero value. Aborting pipeline!"  1>&2
+            abort_pipeline $$PROLOGUE_RETURN            
+        fi
+        
+        #run supplied post-job checks
+        $EPILOGUE
+        
+        #save return code for later use
+        EPILOGUE_RETURN=$$?
+        
+        if [ $$EPILOGUE_RETURN -ne 0 ]; then
+            echo "Post job sanity check failed. Aborting pipeline!" 1>&2
+            abort_pipeline $$EPILOGUE_RETURN
+        else
+            # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
+            echo "0" > $LOG_DIR/$${PBS_JOBID}-status.txt
+    
         fi
     
     """)
@@ -199,7 +216,7 @@ class TorqueJobRunner(object):
         
         _make_sure_path_exists(log_dir)
           
-        self._id_log = open(os.path.join(log_dir, "id_list.txt"), 'w')
+        self._id_log = open(os.path.join(log_dir, _BATCH_ID_LOG), 'w')
         
         if pbs_server:
             self._server = pbs_server
@@ -366,6 +383,7 @@ class TorqueJobRunner(object):
         #expand log_dir to absolute path because a job can have a different
         #working directory
         tokens['LOG_DIR'] = os.path.abspath(self.log_dir) 
+        tokens['ID_FILE'] = _BATCH_ID_LOG
         
         tokens['MODULE_LOAD_CMDS'] = ""
         
@@ -384,6 +402,12 @@ class TorqueJobRunner(object):
         else:
             #force "empty" prologue to return 0
             tokens['PROLOGUE'] = "true"
+            
+        if batch_job.epilogue:
+            tokens['EPILOGUE'] = batch_job.epilogue
+        else:
+            #force empty epilogue to return 0
+            tokens['EPILOGUE'] = "true"
         
         return string.Template(self.script_template).substitute(tokens)
 
