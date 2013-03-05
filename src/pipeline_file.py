@@ -32,10 +32,6 @@ class PipelineFile():
             # Register this file in the files/options namespace
             files[self._id] = self
             
-        if me:
-            raise Exception('Pipeline already initialized.')
-        Pipeline.me = self
-        
     @staticmethod
     def get_instance():
         return me

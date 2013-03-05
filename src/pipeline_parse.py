@@ -12,17 +12,14 @@ from global_data import *
 from tool import *
 from tool_logger import *
 from pipeline_file import *
-from torque import *
+from job_runner.torque import *
 
 
 
 class Pipeline():
     """
     """
-    
-    instance = None
-
-    valid_ags = [
+    valid_tags = [
         'input',
         'inputdir',
         'foreach',
@@ -36,7 +33,7 @@ class Pipeline():
         
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
-        globalData['masterXMLdir'] = os.path.split(xmlfile)[0]
+        global_data['masterXMLdir'] = os.path.split(xmlfile)[0]
         
         # The outermost tag must be pipeline; it must have a name
         # and must not have text
@@ -58,21 +55,19 @@ class Pipeline():
             # a pipeline can only contain step, input, output, 
             # outputdir or tempfile
             t = child.tag
-            assert t in Pipeline.validTags, ' illegal tag:' + t
+            assert t in Pipeline.valid_tags, ' illegal tag:' + t
             if t == 'step':
                 self._steps.append(Step(child, self._files))
             elif t == 'foreach':
                 self._steps.append(ForEach(child, self._files))
             else:
-                PipelineFile.parseXML(child, self._files)
+                PipelineFile.parse_XML(child, self._files)
         
         # Here we have finished parsing the pipeline XML Time to fix up 
         # the file paths that were passed in as positional...
         self.fixup_positional_files(params)
         
         # Register ourself for later retrieval
-        if Pipeline.instance:
-            raise Exception('Pipeline already initialized.')
         Pipeline.instance = self
 
     @property
@@ -102,7 +97,7 @@ class Pipeline():
         #print self._files
         for fid in self._files:
             f = self._files[fid]
-            if not f.isPath:
+            if not f._isPath:
                 #print 'Fixing up', fid, 'path index is', f.path,
                 if f.path > pLen:
                     print >> sys.stderr, 'You did not specify enough files for this pipeline. Exiting.'
@@ -117,16 +112,18 @@ class Pipeline():
         """
         self._logdir
         
-    def execute(self):
+    def submit(self):
         print 'Executing pipeline', self._name
         
         # FIXME!
         # We should check that all the input files and input directories
         # exist before going farther.  Fail early.
-        
+        depends_on = None
+        invocation = 0
         for step in self._steps:
-            print >> sys.stderr, step
-            step.execute()
+            invocation += 1
+            name = '{0}_{1}'.format(self._name, invocation)
+            depends_on = step.submit(depends_on, name)
 
     @property
     def job_runner(self):
@@ -135,14 +132,6 @@ class Pipeline():
             self._job_runner =  TorqueJobRunner(Pipeline.instance.log_dir)
         return self._job_runner
 
-
-def dumpElement(element, indent):
-    print (' ' * indent * 4) + element.tag, element.attrib
-    if element.text:
-        print (' ' * indent * 4) + '  ' + element.text
-    for child in element:
-        dumpElement(child, indent+1)
-        
 def main():
     # The name of the pipeline description is passed on the command line.
     #
@@ -151,7 +140,7 @@ def main():
         print >> sys.stderr, "This test version requires two arguments: XML, input file."
         sys.exit(1)
     pipeline = Pipeline(sys.argv[1], sys.argv[2:])
-    pipeline.execute()
+    pipeline.submit()
 
 if __name__ == "__main__":
     main()

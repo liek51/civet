@@ -21,6 +21,6 @@ class PipelineTool():
 
         self.tool = Tool(self.description, input, output, files)
         
-    def execute(self):
+    def submit(self, depends_on, name_prefix):
         print '        Executing tool', self.name
-        self.tool.execute()
+        return self.tool.submit(depends_on, name_prefix)
