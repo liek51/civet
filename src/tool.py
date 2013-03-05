@@ -6,6 +6,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
+from pipeline_parse import Pipeline
 from global_data import *
 from job_runner.torque import *
 
@@ -18,8 +19,9 @@ class Tool():
     # The only access a tool has to the pipeline's files is through
     # the ins and outs file id lists.
     # 
-    # Each tool definition will create a temporary script which will be submitted to the
-    # cluster as a single job.  This is performed in the torque component.
+    # Each tool definition will create a temporary script which will be
+    # submitted to the cluster as a single job.  This is performed in the
+    # torque component.
     #
     validTags = [
         'command',
@@ -45,16 +47,20 @@ class Tool():
         self.toolFiles = {}
         self.pipelineFiles = pipelineFiles
         for n in range(len(ins)):
-            ToolFile('in_' + str(n+1), pipelineFiles[ins[n]].path, self.toolFiles)
+            ToolFile('in_' + str(n+1), pipelineFiles[ins[n]].path,
+                     self.toolFiles)
         for n in range(len(outs)):
-            ToolFile('out_' + str(n+1), pipelineFiles[outs[n]].path, self.toolFiles)
+            ToolFile('out_' + str(n+1), pipelineFiles[outs[n]].path,
+                     self.toolFiles)
         # First try to find the xml file in the current working directory,
-        # If not found, look in the same directory as the master pipeline directory.
+        # If not found, look in the same directory as the master pipeline
+        # directory.
         # FIXME: We may not want to do this for the CLIA certified pipeline!!!
         if not os.path.exists(xmlfile):
-            xmlfile = os.path.join(globalData['masterXMLdir'], xmlfile)
+            xmlfile = os.path.join(global_data['masterXMLdir'], xmlfile)
         if not os.path.exists(xmlfile):
-            print >> sys.stderr, 'ERROR: Could not find tool XML file:', xmlfile, '\nExiting...'
+            print >> sys.stderr, ('ERROR: Could not find tool XML file:'
+                                  , xmlfile, '\nExiting...')
             sys.exit(1)
        
         tool = ET.parse(xmlfile).getroot()
@@ -103,7 +109,7 @@ class Tool():
         for c in self.commands:
             c.fixupOptionsFiles()
             # Add the command names to the verify_files list
-            verify_files.append(c.program)
+            self.verify_files.append(c.program)
 
         #with open (self.name + '_tool_script.sh', 'w') as of:
         #    print >> of, '#! /bin/bash'
@@ -123,19 +129,22 @@ class Tool():
 
         id = atts['id']
         # Ensure that the id is unique.
-        assert id not in self.options, 'tempfile id duplicates an option name: ' + self.id
-        assert id not in self.toolFiles, 'tempfile id is a duplicate: ' + self.id
+        assert id not in self.options, ('tempfile id duplicates an option'
+                                        'name: ' + self.id)
+        assert id not in self.toolFiles, ('tempfile id is a duplicate: ' +
+                                          self.id)
         
         if 'directory' in atts:
             dir = atts['directory']
         else:
             dir = None
-        # Create a tempfle using python/OS techniques, to get a unique temporary name.
+        # Create a tempfle using python/OS techniques, to get a unique
+        # temporary name.
         t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
         name = t.name
         t.close()
-        # At this point, the temp file exists, but will most likely be written over
-        # with a new file from a command.
+        # At this point, the temp file exists, but will most likely be written
+        # over with a new file from a command.
         # also at this point, it is just another tool file.
         ToolFile(id, name, self.toolFiles, temp=True)
 
@@ -143,7 +152,8 @@ class Tool():
         pass
 
     def validate(self):
-        # Determine whether this tool is unchanged from those that were certified for CLIA.
+        # Determine whether this tool is unchanged from those that were
+        # certified for CLIA.
         pass
 
     def submit(self, depends_on, name_prefix):
@@ -268,7 +278,8 @@ class Command():
 
         for child in e:
             t = child.tag
-            assert t == 'version_command', 'unknown child tag in a command tag: ' + t
+            assert t == 'version_command', ('unknown child tag in a command'
+                                            ' tag: ' + t)
             assert not self.versionCommand
             self.versionCommand = re.sub('\s+', ' ', child.text).strip()
 
@@ -288,18 +299,20 @@ class Command():
                 return self.toolFiles[tok].path
             return 'UNKNOWN OPTION OR FILE ID: ' + tok
             
-        # Fix up a command by replacing all the delimited option names and file ids
-        # with the real option text and file paths.
-        self.realCommand = self.program + ' ' + self.replacePattern.sub(tokenReplace, self.commandTemplate)
+        # Fix up a command by replacing all the delimited option names and
+        # file ids with the real option text and file paths.
+        self.real_command = (self.program + ' ' +
+                             self.replacePattern.sub(tokenReplace,
+                                                     self.commandTemplate))
 
         # FIXME!
         # We may not want to do this, depending on whether the submission
         # mechanism has a different way to redirect I/O.  But for now we have
         # it.
         if self.stdoutId:
-            self.realCommand += ' > ' + self.toolFiles[self.stdoutId].path
+            self.real_command += ' > ' + self.toolFiles[self.stdoutId].path
         if self.stderrId:
-            self.realCommand += ' 2> ' + self.toolFiles[self.stderrId].path
-        print >> sys.stderr, 'Created command', self.realCommand
+            self.real_command += ' 2> ' + self.toolFiles[self.stderrId].path
+        print >> sys.stderr, 'Created command', self.real_command
 
 
