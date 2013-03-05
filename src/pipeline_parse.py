@@ -16,8 +16,16 @@ from job_runner.torque import *
 
 
 
-class Pipeline():
+class Pipeline(object):
     """
+    A singleton module for information about the overall pipeline.
+    
+    For ease of access from other pipeline modules this class is inserted 
+    in the Python modules chain using sys.modules. This technique was gleaned 
+    from (URL on two lines... beware)
+    http://stackoverflow.com/questions/880530/
+    can-python-modules-have-properties-the-same-way-that-objects-can
+    This is done at the end of the file, after the full definition of the class
     """
     valid_tags = [
         'input',
@@ -28,7 +36,10 @@ class Pipeline():
         'tempfile',
         'step' ]
 
-    def __init__(self, xmlfile, params):
+    def __init__(self):
+        pass
+        
+    def parse_XML(self, xmlfile, params):
         pipe = ET.parse(xmlfile).getroot()
         
         # Register the directory of the master (pipeline) XML.
@@ -132,6 +143,8 @@ class Pipeline():
             self._job_runner =  TorqueJobRunner(Pipeline.instance.log_dir)
         return self._job_runner
 
+sys.modules[__name__] = Pipeline()
+
 def main():
     # The name of the pipeline description is passed on the command line.
     #
@@ -139,7 +152,7 @@ def main():
     if len(sys.argv) < 3:
         print >> sys.stderr, "This test version requires two arguments: XML, input file."
         sys.exit(1)
-    pipeline = Pipeline(sys.argv[1], sys.argv[2:])
+    pipeline = pipeline_parse.parse_XML(sys.argv[1], sys.argv[2:])
     pipeline.submit()
 
 if __name__ == "__main__":
