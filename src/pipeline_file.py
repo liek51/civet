@@ -77,7 +77,7 @@ class PipelineFile():
         PipelineFile(id, path, fileType, isFile, isTemp, isInput, isDir, files, pathIsPath)
 
     def is_output_dir(self):
-        return isDir and not isInput
+        return self._isDir and not self._isInput
 
     @property
     def path(self):
