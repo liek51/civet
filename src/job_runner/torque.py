@@ -44,8 +44,7 @@ def _make_sure_path_exists(path):
     name        : name for batch job
     stdout_path : path to final location for job's stdout spool (default = resource manager default)
     stderr_path : path to final location for job's stderr spool (default = resource manager default)
-    prologue    : path to optional job prologue script. Will run before cmd, job 
-                  will abort if prologue does not return 0. 
+     
     
 """
 class BatchJob(object):
@@ -53,8 +52,8 @@ class BatchJob(object):
 
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None, prologue=None, 
-                 epilogue=None):
+                 name=None, stdout_path=None, stderr_path=None, files_to_check=None, 
+                 epilogue=None, version_cmd=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -65,8 +64,9 @@ class BatchJob(object):
         self.workdir = workdir
         self.walltime = walltime
         self.name = name
-        self.prologue = prologue
+        self.files_to_check = files_to_check
         self.epilogue = epilogue
+        self.version_cmd = version_cmd
         
     
     # setter for workdir, sets to the current working directory if a directory is 
@@ -172,23 +172,26 @@ class TorqueJobRunner(object):
         
         cd $$PBS_O_WORKDIR
         
+        #run any supplied pre-job check
+        $PRE_RUN_VALIDATION
+        VALIDATION_STATUS=$$?
         
-        #run any supplied pre-job checks
-        $PROLOGUE
-
-        #save return code for later use
-        PROLOGUE_RETURN=$$?
+        if [ $$VALIDATION_STATUS -eq 0 ]; then
         
-        if [ $$PROLOGUE_RETURN -eq 0 ]; then 
+            #optional version command
+            $VERSION_CMD
+         
+            #execute the actual command line for this pipeline tool
             $CMD
+            
             CMD_EXIT_STATUS=$$?
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
                 echo "Command returned non-zero value.  abort pipeline" 1>&2
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            echo "Command not run, prologue returned non-zero value. Aborting pipeline!"  1>&2
-            abort_pipeline $$PROLOGUE_RETURN            
+            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  1>&2
+            abort_pipeline $$VALIDATION_STATUS            
         fi
         
         #run supplied post-job checks
@@ -209,9 +212,10 @@ class TorqueJobRunner(object):
     """)
   
     
-    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None):
+    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, validation_cmd="ls -l"):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
+        self.validation_cmd = validation_cmd
         self._log_dir = log_dir      
         
         _make_sure_path_exists(log_dir)
@@ -277,15 +281,13 @@ class TorqueJobRunner(object):
         #connected to pbs_server
         
         #write batch script to temp file, will remove after pbs_submit
-        fd, tmp_filename = mkstemp(suffix=".sh")
-        os.write(fd, self.generate_script(batch_job))
-        os.close(fd)
+        filename = os.path.join(self.log_dir, "{0}.sh".format(batch_job.name))
+        script_file = open(filename, "w")
+        script_file.write(self.generate_script(batch_job))
+        script_file.close()
             
         #submit job
-        id = pbs.pbs_submit(connection, pbs_attrs, tmp_filename, queue, None)
-        
-        #a copy of the script was sent to the pbs_server, we can delete it  
-        os.remove(tmp_filename)
+        id = pbs.pbs_submit(connection, pbs_attrs, filename, queue, None)
        
         #check to see if the job was submitted sucessfully. 
         if not id:
@@ -385,23 +387,21 @@ class TorqueJobRunner(object):
         tokens['LOG_DIR'] = os.path.abspath(self.log_dir) 
         tokens['ID_FILE'] = _BATCH_ID_LOG
         
-        tokens['MODULE_LOAD_CMDS'] = ""
-        
-        # I want this to work if batch_job.modules is a string containing the name
-        # of a single modulefile or a list of modulefiles    
+        tokens['MODULE_LOAD_CMDS'] = ""  
         if batch_job.modules:
-            if isinstance(batch_job.modules, basestring):  #basestring = str in Python3
-                tokens['MODULE_LOAD_CMDS'] = "module load " + batch_job.modules
-            else:
-                for module in batch_job.modules:
-                    tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)
-            
+            for module in batch_job.modules:
+                tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)   
         
-        if batch_job.prologue:
-            tokens['PROLOGUE'] = batch_job.prologue
+        if batch_job.files_to_check:
+            tokens['PRE_RUN_VALIDATION'] = "{0} {1}".format(self.validation_cmd, ' '.join(batch_job.files_to_check))
         else:
             #force "empty" prologue to return 0
-            tokens['PROLOGUE'] = "true"
+            tokens['PRE_RUN_VALIDATION'] = "true"
+            
+        if batch_job.version_cmd:
+            tokens['VERSION_CMD'] = batch_job.version_cmd
+        else:
+            tokens['VERSION_CMD'] = "#none given"
             
         if batch_job.epilogue:
             tokens['EPILOGUE'] = batch_job.epilogue
@@ -489,7 +489,7 @@ def main():
     job_runner = TorqueJobRunner()
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
-                   modules=["python"])
+                   modules=["python"], files_to_check=[".bashrc"])
 
     
     print "submitting job with the following script:"
