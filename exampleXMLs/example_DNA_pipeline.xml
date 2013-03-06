@@ -12,7 +12,7 @@
 	Outer level is the pipeline itself
 -->
 
-<pipeline name="DNASEQ Paired End">
+<pipeline name="DNASEQ_Paired_End">
 	<!--
 		First, define the input files for the pipeline. Two fastq's specified
 		on the command line, and a reference file in a fixed location.
