@@ -17,11 +17,10 @@ import errno
 import pbs
 import PBSQuery
 
-
+from batch_job import *
 
 #TODO: make dependency type settable per job
-DEFAULT_DEPEND_TYPE = "afterany"
-DEFAULT_WALLTIME = "01:00:00"
+_DEFAULT_DEPEND_TYPE = "afterok"
 _BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
 def _make_sure_path_exists(path):
@@ -30,71 +29,6 @@ def _make_sure_path_exists(path):
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
-
-
-class BatchJob(object):
-    """
-    a container for a batch job
-    
-    cmd     : a string containing the command (with arguments) to execute
-    workdir : the job's working directory (default is current working directory)
-    nodes   : number of nodes to request from resource manager
-    ppn     : processors per node to request from resource manager
-    walltime : walltime to request
-    modules  : modules to load, pass a list to load multiple module files
-    depends_on  : list of job IDs that this job has a dependency on
-    name        : name for batch job
-    stdout_path : path to final location for job's stdout spool (default = resource manager default)
-    stderr_path : path to final location for job's stderr spool (default = resource manager default)
-    files_to_check : files to validate before running command
-    epilogue : optional post-job checks
-    version_cmd : command to report version of the tool being used """
-    
-    def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
-                 walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None, files_to_check=None, 
-                 epilogue=None, version_cmd=None):
-        self.cmd = cmd
-        self.ppn = ppn
-        self.nodes = nodes
-        self.modules = modules
-        self.depends_on = depends_on
-        self.stdout_path = stdout_path
-        self.stderr_path = stderr_path
-        self.workdir = workdir
-        self.walltime = walltime
-        self.name = name
-        self.files_to_check = files_to_check
-        self.epilogue = epilogue
-        self.version_cmd = version_cmd
-        
-    
-    # setter for workdir, sets to the current working directory if a directory is 
-    # not passed   
-    def set_workdir(self, dir):
-        if dir:
-            self._workdir = workdir
-        else:
-            self._workdir = os.getcwd()
-    
-    def get_workdir(self):
-        return self._workdir
-    
-    workdir = property(get_workdir, set_workdir)
-    
-    # setter for the job name, throw an exception if the name passed has invalid
-    # characters
-    def set_name(self, name):
-        if name:
-            for c in name:
-                if c not in string.digits + string.letters + "_-.":
-                    raise ValueError("Invalid job name: {0}".format(name))
-        self._name = name
-    
-    def get_name(self):
-        return self._name
-
-    name = property(get_name, set_name)
 
 
 
@@ -168,6 +102,16 @@ class TorqueJobRunner(object):
             exit $$1
         }
         
+        DATE=`date`
+        
+        echo "Run time log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo "Error log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-err.log
+        
+        echo "Run begain on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        
+        echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        
         # sleep to overcome any issues with NFS file attribute cacheing
         sleep 60
         
@@ -175,25 +119,30 @@ class TorqueJobRunner(object):
         
         cd $$PBS_O_WORKDIR
         
+        
         #run any supplied pre-job check
-        $PRE_RUN_VALIDATION
+        echo "PREVALIDATION:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         VALIDATION_STATUS=$$?
         
         if [ $$VALIDATION_STATUS -eq 0 ]; then
         
             #optional version command
-            $VERSION_CMD
+            $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log
          
             #execute the actual command line for this pipeline tool
+            echo "Executing $CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             $CMD
             
             CMD_EXIT_STATUS=$$?
+            
+            echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-                echo "Command returned non-zero value.  abort pipeline" 1>&2
+                echo "Command returned non-zero value.  abort pipeline" >> $LOG_DIR/$${PBS_JOBNAME}-err.log
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  1>&2
+            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >> $LOG_DIR/$${PBS_JOBNAME}-err.log
             abort_pipeline $$VALIDATION_STATUS            
         fi
         
@@ -204,7 +153,7 @@ class TorqueJobRunner(object):
         EPILOGUE_RETURN=$$?
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
-            echo "Post job sanity check failed. Aborting pipeline!" 1>&2
+            echo "Post job sanity check failed. Aborting pipeline!" >> $LOG_DIR/$${PBS_JOBNAME}-err.log
             abort_pipeline $$EPILOGUE_RETURN
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
@@ -420,7 +369,7 @@ class TorqueJobRunner(object):
         if batch_job.version_cmd:
             tokens['VERSION_CMD'] = batch_job.version_cmd
         else:
-            tokens['VERSION_CMD'] = "#none given"
+            tokens['VERSION_CMD'] = "#[none given]"
             
         if batch_job.epilogue:
             tokens['EPILOGUE'] = batch_job.epilogue
@@ -499,10 +448,10 @@ class TorqueJobRunner(object):
             return ""
         elif isinstance(batch_job.depends_on, basestring):  #basestring = str in Python3
             #handle string case
-            return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, batch_job.depends_on)
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, batch_job.depends_on)
         else:
             #not a string, assume list of job ids to join
-            return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
 
  
 """
@@ -513,7 +462,7 @@ def main():
     job_runner = TorqueJobRunner()
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
-                   modules=["python"], files_to_check=[".bashrc"])
+                   modules=["python"])
 
     
     print "submitting job with the following script:"
