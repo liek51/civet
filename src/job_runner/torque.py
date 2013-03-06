@@ -10,8 +10,7 @@ provide functionality for queueing and querying jobs on a TORQUE cluster
 
 import textwrap
 import os
-import socket
-from tempfile import mkstemp
+import socket #required by pbs_python
 import string
 import errno
 
@@ -159,13 +158,13 @@ class TorqueJobRunner(object):
             # qdel them.  We don't care what the state is, or even if they still exit
             
             echo "Aborting pipeline" > $LOG_DIR/abort.log
-            while read ID; do
+            while read ID NAME; do
                 if [ "$$ID" != "$$PBS_JOBID" ]; then
-                    echo "calling qdel on $$PBS_JOBID" >> $LOG_DIR/abort.log
+                    echo "calling qdel on $$PBS_JOBID ($${NAME})" >> $LOG_DIR/abort.log
                     qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
             done < $LOG_DIR/$ID_FILE
-            echo "$$1" > $LOG_DIR/$${PBS_JOBID}-status.txt
+            echo "$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             exit $$1
         }
         
@@ -209,7 +208,7 @@ class TorqueJobRunner(object):
             abort_pipeline $$EPILOGUE_RETURN
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
-            echo "0" > $LOG_DIR/$${PBS_JOBID}-status.txt
+            echo "0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
     
         fi
     
@@ -220,7 +219,8 @@ class TorqueJobRunner(object):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
-        self._log_dir = log_dir      
+        self._log_dir = log_dir
+        self._job_names = []   
         
         _make_sure_path_exists(log_dir)
           
@@ -244,6 +244,10 @@ class TorqueJobRunner(object):
           batch_job : description of the job to queue
           queue     : optional destination queue, uses server default if none is passed
         """
+        
+        assert batch_job.name not in self._job_names
+            
+        
         job_attributes = {}
         job_resources = {}
         
@@ -305,10 +309,12 @@ class TorqueJobRunner(object):
        
         pbs.pbs_disconnect(connection)
         
+        self._job_names.append(batch_job.name)
+        
         if self.submit_with_hold and not batch_job.depends_on:
             self.held_jobs.append(id)
             
-        self._id_log.write(id + "\n")
+        self._id_log.write(id + '\t' + batch_job.name + '\n')
         self._id_log.flush()
         return id
 
