@@ -10,7 +10,7 @@ import commands
 import json
 
 # A class to track interesting information about files.
-class FileInfo():
+class FileInfo(object):
     #
     # A set of "gold" file info, read in from disk.
     #
@@ -19,20 +19,24 @@ class FileInfo():
     # The set of files found on the current system
     files = []
 
+    def __init__(self):
+        self.compare_failures = None
+        
     # Determine info about a file named fn
-    def __init__(self, fn):
+    def cache_attrs(self, fn):
     
         # Take care of path and links
         self.name = FileInfo.expandName(fn)
 
         # Now that we have our best version of the filename, does it exist?
         if not os.path.exists(self.name):
-            raise Exception('No such file: ' + self.name)
+            self.mode = 'No such file.'
+            return
 
         # Get the stat info
         s = os.stat(self.name)
         self.mode = s.st_mode
-        self.modeString = oct(s.st_mode)
+        self.mode_string = oct(s.st_mode)
         self.uid = s.st_uid
         self.gid = s.st_gid
         self.size = s.st_size
@@ -40,6 +44,16 @@ class FileInfo():
 
         self.getHash()
 
+    def reload(self, dct):
+        self.sha1 = dct['sha1']
+        self.uid = dct['uid']
+        self.gid = dct['gid']
+        self.name = dct['name']
+        self.mode = dct['mode']
+        self.mode_string = dct['mode_string']
+        self.mtime = dct['mtime']
+        self.size = dct['size']
+        
     @staticmethod
     def expandName(fn):
         # Many of the files we'll be testing are executables, and therefore
@@ -118,6 +132,42 @@ class FileInfo():
             
         return parts
 
+    def update_compare_failures(self, msg, val1, val2):
+        if not self.compare_failures:
+            self.compare_failures = ''
+        self.compare_failures += '    {0} differs.\n        Master: {1}\n        Found:  {2}\n'.format(
+            msg, val1, val2)
+
+    def __eq__(self, other):
+        #print >> sys.stderr, type(self), type(other), "REENABLE THROW"
+        if not isinstance(other, FileInfo):
+            raise Exception('Other instance must be a FileInfo!')
+        if self.sha1 != other.sha1:
+            self.update_compare_failures('sha1', other.sha1, self.sha1)
+        if self.uid != other.uid:
+            self.update_compare_failures('uid', other.uid, self.uid)
+        if self.name != other.name:
+            self.update_compare_failures('name', other.name, self.name)
+            self.compare_failures += (
+                '        (This indicates a logic failure in the program. '
+                'Please report it.)\n')
+        if self.gid != other.gid:
+            self.update_compare_failures('gid', other.gid, self.gid)
+        if self.mode != other.mode:
+            self.update_compare_failures('mode', other.mode, self.mode)
+        if self.mtime != other.mtime:
+            self.update_compare_failures('mtime', other.mtime, self.mtime)
+        if self.mode_string != other.mode_string:
+            self.update_compare_failures('mode_string', other.mode_string, 
+                                         self.mode_string)
+        if self.size != other.size:
+            self.update_compare_failures('size', other.size, self.size)
+
+        # Equal if no failures
+        return self.compare_failures is None
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 """
     A class to track the details of many files, encapsulated in FileInfo
@@ -127,20 +177,23 @@ class FileCollection(object):
 
     def __init__(self):
         self.fileList = []
+        self.fileNameList = []
         self.fileDict = {}
 
-    def addFile(self, fn):
+    def add_file(self, fn):
         nextStartingPoint = len(self.fileList)
         # Normalize the filename.
         fn = FileInfo.expandName(fn)
 
         # If we've already explored this file, nothing to do.
-        if fn in self.fileList:
+        if fn in self.fileNameList:
             return
 
-        f = FileInfo(fn)
+        f = FileInfo()
+        f.cache_attrs(fn)
         self.fileDict[fn] = f
         self.fileList.append(f)
+        self.fileNameList.append(f.name)
         
         foundOne = True
         while foundOne:
@@ -160,25 +213,46 @@ class FileCollection(object):
                         continue
                     #Normalize the filename (probably not necessary)
                     dll = os.path.realpath(dll)
-                    if dll not in self.fileList:
+                    if dll not in self.fileNameList:
                         foundOne = True
-                        f = FileInfo(dll)
+                        f = FileInfo()
+                        f.cache_attrs(dll)
                         self.fileDict[dll] = f
                         self.fileList.append(f)
+                        self.fileNameList.append(f.name)
 
-    def toJSON(self):
+    def to_JSON(self):
         self.fileDict = {}
         for f in self.fileList:
             self.fileDict[f.name] = f
         return json.dumps(self.fileDict, cls=FileCollection.MyEncoder, indent=2)
 
-    def toJSONFile(self, fn):
+    def to_JSON_file(self, fn):
         with open(fn, 'w') as f:
-            f.write(self.toJSON())
+            f.write(self.to_JSON())
 
-    def fromJSONFile(self, fn):
+    def from_JSON_file(self, fn):
         with open(fn) as f:
-            self.fileDict = json.load(f)
+            JSON_data = json.load(f)
+        for fn in JSON_data:
+            fi = FileInfo()
+            fi.reload(JSON_data[fn])
+            self.fileDict[fn] = fi
+            self.fileList.append(fi)
+            self.fileNameList.append(fi.name)
+            
+    def validate(self, master):
+        msg = ''
+        for fi in self.fileList:
+            if fi.name in master.fileDict:
+                m = master.fileDict[fi.name]
+                if fi != m:
+                    msg += 'Validation failure' + fi.name + '\n'
+                    msg += fi.compare_failures
+            else:
+                msg += 'Validation failure' + fi.name + '\n'
+                msg += '    Not found in the master file list\n'
+        return msg
 
     class MyEncoder(json.JSONEncoder):
         def default(self, obj):
@@ -187,23 +261,24 @@ class FileCollection(object):
 
             return obj.__dict__
 
+
 def main():
     a = FileCollection()
-    a.addFile('bash')
-    a.addFile('gcc')
-    a.addFile('awk')
-    a.addFile('python')
-    a.addFile('ruby')
-    a.addFile(sys.argv[0])
+    a.add_file('bash')
+    a.add_file('gcc')
+    a.add_file('awk')
+    a.add_file('python')
+    a.add_file('ruby')
+    a.add_file(sys.argv[0])
 
     print 'Data as parsed.'
-    print a.toJSON()
-    a.toJSONFile('junk.json')
+    print a.to_JSON()
+    a.to_JSON_file('junk.json')
     
     b = FileCollection()
-    b.fromJSONFile('junk.json')
+    b.from_JSON_file('junk.json')
     print "\n\nAfter processing through JSON file..."
-    print b.toJSON()
+    print b.to_JSON()
     
     
 if __name__ == '__main__':
