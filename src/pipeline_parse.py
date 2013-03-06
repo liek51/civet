@@ -7,6 +7,10 @@ import sys
 import re
 import datetime
 import xml.etree.ElementTree as ET
+
+
+print '\n\n\n\n\n', dir(ET), '\n\n\n\n\n\n'
+
 from foreach import *
 from global_data import *
 from tool import *
@@ -23,8 +27,10 @@ class Pipeline(object):
     For ease of access from other pipeline modules this class is inserted 
     in the Python modules chain using sys.modules. This technique was gleaned 
     from (URL on two lines... beware)
+
     http://stackoverflow.com/questions/880530/
     can-python-modules-have-properties-the-same-way-that-objects-can
+
     This is done at the end of the file, after the full definition of the class
     """
     valid_tags = [
@@ -37,9 +43,11 @@ class Pipeline(object):
         'step' ]
 
     def __init__(self):
+        print 'in init', dir(ET)
         pass
         
     def parse_XML(self, xmlfile, params):
+        print 'In pipeline.parse_XML', dir(ET)
         pipe = ET.parse(xmlfile).getroot()
         
         # Register the directory of the master (pipeline) XML.
@@ -84,7 +92,8 @@ class Pipeline(object):
     @property
     def output_dir(self):
         if not self._output_dir:
-            for f in files:
+            for fid in self._files:
+                f = self._files[fid]
                 if f.is_output_dir():
                     self._output_dir = f.path
                     break
@@ -133,7 +142,7 @@ class Pipeline(object):
         invocation = 0
         for step in self._steps:
             invocation += 1
-            name = '{0}_{1}'.format(self._name, invocation)
+            name = '{0}_Step_{1}'.format(self._name, invocation)
             depends_on = step.submit(depends_on, name)
 
     @property
@@ -142,18 +151,5 @@ class Pipeline(object):
         if not self._job_runner:
             self._job_runner =  TorqueJobRunner(Pipeline.instance.log_dir)
         return self._job_runner
-
 sys.modules[__name__] = Pipeline()
-
-def main():
-    # The name of the pipeline description is passed on the command line.
-    #
-    # This is a sample.  Requires two args.  Real one would take a variable list.
-    if len(sys.argv) < 3:
-        print >> sys.stderr, "This test version requires two arguments: XML, input file."
-        sys.exit(1)
-    pipeline = pipeline_parse.parse_XML(sys.argv[1], sys.argv[2:])
-    pipeline.submit()
-
-if __name__ == "__main__":
-    main()
+print '******DONE PROCESSING*****', __name__, sys.modules[__name__]
