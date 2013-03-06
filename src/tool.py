@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 # pipeline components
 from global_data import *
-from job_runner.torque import *
+from job_runner.batch_job import *
 import pipeline_parse as PL
 
 class Tool():
