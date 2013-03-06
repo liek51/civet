@@ -168,6 +168,16 @@ class TorqueJobRunner(object):
             exit $$1
         }
         
+        DATE=`date`
+        
+        echo "Run time log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo "Error log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-err.log
+        
+        echo "Run begain on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        
+        echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        
         # sleep to overcome any issues with NFS file attribute cacheing
         sleep 60
         
@@ -175,25 +185,30 @@ class TorqueJobRunner(object):
         
         cd $$PBS_O_WORKDIR
         
+        
         #run any supplied pre-job check
-        $PRE_RUN_VALIDATION
+        echo "PREVALIDATION:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         VALIDATION_STATUS=$$?
         
         if [ $$VALIDATION_STATUS -eq 0 ]; then
         
             #optional version command
-            $VERSION_CMD
+            $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log
          
             #execute the actual command line for this pipeline tool
+            echo "Executing $CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             $CMD
             
             CMD_EXIT_STATUS=$$?
+            
+            echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-                echo "Command returned non-zero value.  abort pipeline" 1>&2
+                echo "Command returned non-zero value.  abort pipeline" >> $LOG_DIR/$${PBS_JOBNAME}-err.log
                 abort_pipeline $$CMD_EXIT_STATUS
             fi
         else
-            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  1>&2
+            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >> $LOG_DIR/$${PBS_JOBNAME}-err.log
             abort_pipeline $$VALIDATION_STATUS            
         fi
         
@@ -204,7 +219,7 @@ class TorqueJobRunner(object):
         EPILOGUE_RETURN=$$?
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
-            echo "Post job sanity check failed. Aborting pipeline!" 1>&2
+            echo "Post job sanity check failed. Aborting pipeline!" >> $LOG_DIR/$${PBS_JOBNAME}-err.log
             abort_pipeline $$EPILOGUE_RETURN
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
@@ -420,7 +435,7 @@ class TorqueJobRunner(object):
         if batch_job.version_cmd:
             tokens['VERSION_CMD'] = batch_job.version_cmd
         else:
-            tokens['VERSION_CMD'] = "#none given"
+            tokens['VERSION_CMD'] = "#[none given]"
             
         if batch_job.epilogue:
             tokens['EPILOGUE'] = batch_job.epilogue
@@ -513,7 +528,7 @@ def main():
     job_runner = TorqueJobRunner()
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
-                   modules=["python"], files_to_check=[".bashrc"])
+                   modules=["python"])
 
     
     print "submitting job with the following script:"
