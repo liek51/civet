@@ -6,7 +6,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
-from pipeline_parse import Pipeline
+import pipeline_parse as PL
 from global_data import *
 from job_runner.torque import *
 
@@ -176,10 +176,9 @@ class Tool():
             print '            executing command:', c.real_command
             multi_command_list.append(c.real_command)
         multi_command = '\n'.join(multi_command_list)
-        pipeline = Pipeline.instance
         print 'Batch Job:'
         print '    cmd:', multi_command
-        print '    workdir:', pipeline.output_dir
+        print '    workdir:', PL.output_dir
         print '    files_to_verify:', self.verify_files
         print '    ppn:', self.threads
         print '    walltime:', self.walltime
@@ -188,11 +187,11 @@ class Tool():
         print '    name:', name_prefix + self.name
         """
         batch_job = BatchJob(
-            multi_command, workdir=pipeline.output_dir, files_to_verify=self.verify_files, 
+            multi_command, workdir=PL.output_dir, files_to_verify=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name_prefix + self.name)
     
-        return pipeline.job_runner.queue_job(batch_job)
+        return PL.job_runner.queue_job(batch_job)
         """
         return 1
         
