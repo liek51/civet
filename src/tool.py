@@ -6,9 +6,9 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
-import pipeline_parse as PL
 from global_data import *
 from job_runner.torque import *
+import pipeline_parse as PL
 
 class Tool():
     # This script parses all of a tool definition.  Tools may be invoked
@@ -36,10 +36,13 @@ class Tool():
         'name',
         'threads',
         'tool_config_prefix',
-        'wallclock',
+        'walltime',
         ]
 
     def __init__(self, xmlfile, ins, outs, pipelineFiles):
+        # Does placing the import here help?
+        import pipeline_parse as PL
+        print(PL)
         self.options = {}
         self.commands = []
         self.modules = []
@@ -109,7 +112,9 @@ class Tool():
         for c in self.commands:
             c.fixupOptionsFiles()
             # Add the command names to the verify_files list
-            self.verify_files.append(c.program)
+            p = c.program
+            if p not in self.verify_files:
+                self.verify_files.append(c.program)
 
         #with open (self.name + '_tool_script.sh', 'w') as of:
         #    print >> of, '#! /bin/bash'
@@ -170,26 +175,29 @@ class Tool():
             job_id: a value which can be passed in as a depends_on list 
                 element in a subsequent tool sumbission.
         """
+        # Get the current symbols in the pipeline...
+        import pipeline_parse as PL
+
         # actually run the tool
+        name = '{0}_{1}'.format(name_prefix, self.name)
         multi_command_list = []
         for c in self.commands:
             print '            executing command:', c.real_command
             multi_command_list.append(c.real_command)
         multi_command = '\n'.join(multi_command_list)
-        print 'Batch Job:'
-        print '    cmd:', multi_command
+        print 'Batch Job:\n' + multi_command
         print '    workdir:', PL.output_dir
         print '    files_to_verify:', self.verify_files
         print '    ppn:', self.threads
         print '    walltime:', self.walltime
         print '    modules:', self.modules
         print '    depends_on:', depends_on
-        print '    name:', name_prefix + self.name
+        print '    name:', name
         """
         batch_job = BatchJob(
             multi_command, workdir=PL.output_dir, files_to_verify=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
-            depends_on=depends_on, name=name_prefix + self.name)
+            depends_on=depends_on, name=name)
     
         return PL.job_runner.queue_job(batch_job)
         """

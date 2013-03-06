@@ -5,9 +5,10 @@
 	bwa
 -->
 <tool 
-	name="BWA to BAM PE" 
+	name="BWA_to_BAM_PE" 
 	tool_config_prefix="BWA.ALIGN"
-	threads="8">
+	threads="8"
+	walltime="6:15:34">
 	<!--
 		The process hands us two input fastq files, the reference and 
 		the file spec for an output sorted bam file.  This tool also 
@@ -19,6 +20,17 @@
 		sorted, indexed BAM file.
 	</description>
 
+
+	<!--
+	        This tool requires some modules loaded to run on the
+                cluster.
+	-->
+	<module>bwa</module>
+	<module>samtools/0.1.16</module>
+
+	<!--
+	        Defile some options and their values for bwa.
+	-->
 	<option name="algorithm" command_text="-a" value="bwtsw" />
 
 	<!--
