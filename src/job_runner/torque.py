@@ -20,7 +20,7 @@ import PBSQuery
 
 
 #TODO: make dependency type settable per job
-DEFAULT_DEPEND_TYPE = "afterany"
+DEFAULT_DEPEND_TYPE = "afterok"
 DEFAULT_WALLTIME = "01:00:00"
 _BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
