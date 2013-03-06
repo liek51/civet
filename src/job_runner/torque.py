@@ -20,8 +20,8 @@ import PBSQuery
 
 
 #TODO: make dependency type settable per job
-DEFAULT_DEPEND_TYPE = "afterok"
-DEFAULT_WALLTIME = "01:00:00"
+_DEFAULT_DEPEND_TYPE = "afterok"
+_DEFAULT_WALLTIME = "01:00:00"
 _BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
 def _make_sure_path_exists(path):
@@ -51,7 +51,7 @@ class BatchJob(object):
     version_cmd : command to report version of the tool being used """
     
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
-                 walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
+                 walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
                  name=None, stdout_path=None, stderr_path=None, files_to_check=None, 
                  epilogue=None, version_cmd=None):
         self.cmd = cmd
@@ -514,10 +514,10 @@ class TorqueJobRunner(object):
             return ""
         elif isinstance(batch_job.depends_on, basestring):  #basestring = str in Python3
             #handle string case
-            return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, batch_job.depends_on)
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, batch_job.depends_on)
         else:
             #not a string, assume list of job ids to join
-            return "{0}:{1}".format(DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, ':'.join(batch_job.depends_on))
 
  
 """
