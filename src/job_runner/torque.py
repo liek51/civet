@@ -32,8 +32,11 @@ def _make_sure_path_exists(path):
         if exception.errno != errno.EEXIST:
             raise
 
-"""
+
+class BatchJob(object):
+    """
     a container for a batch job
+    
     cmd     : a string containing the command (with arguments) to execute
     workdir : the job's working directory (default is current working directory)
     nodes   : number of nodes to request from resource manager
@@ -44,12 +47,10 @@ def _make_sure_path_exists(path):
     name        : name for batch job
     stdout_path : path to final location for job's stdout spool (default = resource manager default)
     stderr_path : path to final location for job's stderr spool (default = resource manager default)
-     
+    files_to_check : files to validate before running command
+    epilogue : optional post-job checks
+    version_cmd : command to report version of the tool being used """
     
-"""
-class BatchJob(object):
-
-
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[], 
                  name=None, stdout_path=None, stderr_path=None, files_to_check=None, 
@@ -97,14 +98,16 @@ class BatchJob(object):
     name = property(get_name, set_name)
 
 
-"""
-    JobStatus - a class that holds the dictionary-like object returned by 
-    PBSQuery.getjob, and knows how to parse that output to get the information 
-    we are interested in.  This is what PBSJobRunner.query_job() returns.
-    status : TORQUE job status as returned by PBSQueryJob
-"""
-class JobStatus(object):
 
+class JobStatus(object):
+    """
+        JobStatus - a class that holds the dictionary-like object returned by 
+        PBSQuery.getjob, and knows how to parse that output to get the information 
+        we are interested in.
+        
+        This is what PBSJobRunner.query_job() returns.
+        status : TORQUE job status as returned by PBSQueryJob
+    """
     def __init__(self, status):
         self.status = status
 
@@ -133,16 +136,17 @@ class JobStatus(object):
     #TODO: implement more properties (like for resources_used.walltime)
 
 
-"""
-   TorqueJobRunner is a class that encapsulates the functionality of submitting
-   jobs to a TORQUE cluster.
-   
-   attributes
-    held_jobs  : a list of job_id,server pairs that were submitted with a user hold
-    submit_with_hold : if True any root job (job with no dependency) will be submitted with a user hold
-    log_dir : directory to store log files, will be created if it doesn't exist
-"""        
+       
 class TorqueJobRunner(object):
+    """
+       TorqueJobRunner is a class that encapsulates the functionality of submitting
+       jobs to a TORQUE cluster.
+       
+       attributes
+        held_jobs  : a list of job_id,server pairs that were submitted with a user hold
+        submit_with_hold : if True any root job (job with no dependency) will be submitted with a user hold
+        log_dir : directory to store log files, will be created if it doesn't exist
+    """ 
     
     # the template script, which will be customized for each job
     # $VAR will be subsituted before job submission, $$VAR will become $VAR after subsitution
@@ -227,16 +231,19 @@ class TorqueJobRunner(object):
         else:
             self._server = pbs.pbs_default()
   
+  
     @property
     def log_dir(self):
         return self._log_dir
             
-    """
-      queue_job - queue a BatchJob.
-      batch_job : description of the job to queue
-      queue     : optional destination queue, uses server default if none is passed
-    """
+            
     def queue_job(self, batch_job, queue=None):
+        """
+          queue a BatchJob.
+          
+          batch_job : description of the job to queue
+          queue     : optional destination queue, uses server default if none is passed
+        """
         job_attributes = {}
         job_resources = {}
         
@@ -306,13 +313,14 @@ class TorqueJobRunner(object):
         return id
 
         
-    """
-        query_job -- query server for status of job specified by id.  If no
-        server is specified, the default will be used.  query_job will return
-        None if the job does not exist on the server, otherwise it will return
-        a JobStatus object.
-    """    
+   
     def query_job(self, id):
+        """
+            Query server for status of job specified by id.
+            
+            query_job will return None if the job does not exist on the server, 
+            otherwise it will return a JobStatus object.
+        """ 
         pbsq = PBSQuery.PBSQuery(server=self._server)
         job_status =  pbsq.getjob(id)
         
@@ -325,10 +333,11 @@ class TorqueJobRunner(object):
         else:
             return None
 
-    """
-        call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
-    """
+    
     def delete_job(self, id):
+        """
+            call pbs_deljob on a job id, return pbs_deljob return value (0 on success)
+        """
         connection = self._connect_to_server()
         rval = pbs.pbs_deljob(connection, id, '' )        
         pbs.pbs_disconnect(connection)
@@ -336,14 +345,16 @@ class TorqueJobRunner(object):
         return rval
  
     
-    """
-        release_job - release a user hold from a held batch job
-        id : job id to release (short form not allowed)
-        server : optional hostname for pbs_server
-        conn   : optinal connection to a pbs_server, if not passed release_job
-                 will establish a new connection 
-    """
+    
     def release_job(self, id, connection=None):
+        """
+            Release a user hold from a held batch job.
+            
+            id : job id to release (short form not allowed)
+            server : optional hostname for pbs_server
+            conn   : optinal connection to a pbs_server, if not passed release_job
+                     will establish a new connection 
+        """
         if connection:
             c = connection
         else:
@@ -359,10 +370,11 @@ class TorqueJobRunner(object):
         return rval
     
     
-    """
-        release_all - Release all jobs in self.held_jobs list reusing connections.  
-    """
+    
     def release_all(self):
+        """
+            Release all jobs in self.held_jobs list reusing connections.  
+        """
         jobs = list(self.held_jobs)  #copy the list of held jobs to iterate over because release_job mutates self.held_jobs
         connection = self._connect_to_server()
         for id in jobs:
@@ -370,14 +382,15 @@ class TorqueJobRunner(object):
         pbs.pbs_disconnect(connection)
 
     
-    """
-        generate a batch script based on our template and return as a string
-        
-        mainly intended to be used internally in PBSJobRunner, but it could be
-        useful externally for debugging/logging the contents of a job script
-        generated for a batch_job
-    """    
+      
     def generate_script(self, batch_job):
+        """
+            generate a batch script based on our template and return as a string
+            
+            mainly intended to be used internally in PBSJobRunner, but it could be
+            useful externally for debugging/logging the contents of a job script
+            generated for a batch_job
+        """  
         tokens = {}
         
         tokens['CMD'] = batch_job.cmd
@@ -412,21 +425,22 @@ class TorqueJobRunner(object):
         return string.Template(self.script_template).substitute(tokens)
 
 
-    """
-    strerror - look up the string associated with a given pbs error code
-    NOTE: Until the pbs_python developers update their source, most of these
-    strings are out of sync with the integer error codes
-    """
+   
     def strerror(self, e):
+        """
+            look up the string associated with a given pbs error code
+            
+            NOTE: Until the pbs_python developers update their source, most of these
+            strings are out of sync with the integer error codes
+        """
         return pbs.errors_txt[e]
 
 
-    """
-        open a connection to a pbs_server.  if no server specified, connect
-        to the default server.  Will raise an exception if a connection can 
-        not be established.
-    """    
-    def _connect_to_server(self):        
+       
+    def _connect_to_server(self):
+        """
+            open a connection to a pbs_server
+        """         
         connection = pbs.pbs_connect(self._server)
         
         if connection <= 0:
@@ -437,12 +451,14 @@ class TorqueJobRunner(object):
         return connection
         
     
-    """
-        generate_env - generate a basic environment string to send along with the 
-        job. This can define any environment variables we want defined in the job's
-        environment when it executes. We define some of the typical PBS_O_* variables
-    """
     def _generate_env(self, batch_job):
+        """
+            generate_env - generate a basic environment string to send along with the 
+            job. 
+            
+            This can define any environment variables we want defined in the job's
+            environment when it executes. We define some of the typical PBS_O_* variables
+        """
     
         # most of our scripts start with "cd $PBS_O_WORKDIR", so make sure we set it
         env = "PBS_O_WORKDIR={0}".format(batch_job.workdir)
@@ -462,12 +478,14 @@ class TorqueJobRunner(object):
         return env
 
         
-    """
-        generate a TORQUE style dependency string for a batch job, to be passed
-        to the ATTR_depend job attribute, will return empty string if 
-        batch_job.depends_on is empty
-    """
+   
     def _dependency_string(self, batch_job):
+        """
+            generate a TORQUE style dependency string for a batch job, to be passed
+            to the ATTR_depend job attribute
+            
+            This will return empty string if batch_job.depends_on is empty
+        """
     
         # we want this to work if batch_job.depends_on is a string containing 
         # the ID of a single job or a list of job ID strings
