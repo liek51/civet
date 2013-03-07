@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+
+<!--
+	A tool to convert a SAM file into a sorted, indexed BAM.
+-->
+<tool 
+	name="BWA_to_BAM_PE" 
+	tool_config_prefix="BWA.ALIGN"
+	threads="8"
+	walltime="6:15:34">
+	<!--
+		The step hands us a sam file and 
+		the file spec for an output sorted bam file.  This tool also 
+		produces a bam index, which by definition is alongside the 
+		bam file,  and is not explicitly named.
+	-->
+	<description>
+		This tool takes a SAM file, producing a
+		sorted, indexed BAM file.
+	</description>
+
+
+	<!--
+	        This tool requires some modules loaded to run on the
+                cluster.
+	-->
+	<module>samtools/0.1.16</module>
+
+	<tempfile id="unsorted_bam" />
+	<command stdout_id="unsorted_bam" program="samtools">view -bS {in_1}</command>
+
+	<!--
+		EXTENSION NEEDED????
+	    We may need some kind of filename manipulation code in here.
+		samtools sort wants just the prefix of the bam filename. It
+		appends ".bam".  I've always hated that design.
+		
+		The file_regex attribute is NOT in the spec.  I'm just trying
+		it on for size.  Comments welcome. (And I know it is a sed
+		command, not a real regex. So sue me. If we want to do this for
+		real, we'll do regexps.)
+		
+		Have to figure out how to link this in, now that we reference
+		files directly in the command, and don't have an option involved.
+	-->
+	<!--<option name="out_bam" id="out_1" file_regex="s/.bam//" />-->
+	<command program="samtools">sort {unsorted_bam} {out_1}</command>
+	<command program="samtools">index {out_1}.bam</command>
+</tool>
