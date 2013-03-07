@@ -221,6 +221,25 @@ class FileCollection(object):
                         self.fileList.append(f)
                         self.fileNameList.append(f.name)
 
+    """
+    Add FileInfo instances into self, if they aren't already
+    in the list.  Changes existing entries if update=True.
+    """
+    def merge(self, other, update):
+        if not isinstance(other, FileCollection):
+            raise Exception("other must be a FileCollection")
+        for fn in other.fileDict:
+            if (fn not in self.fileDict) or update:
+                fi = other.fileDict[fn]
+                self.fileDict[fn] = fi
+
+        self.fileList = []
+        self.fileNameList = []
+        for fn in self.fileDict:
+            fi = self.fileDict[fn]
+            self.fileList.append(fi)
+            self.fileNameList.append(fi.name)
+
     def to_JSON(self):
         self.fileDict = {}
         for f in self.fileList:
@@ -247,10 +266,10 @@ class FileCollection(object):
             if fi.name in master.fileDict:
                 m = master.fileDict[fi.name]
                 if fi != m:
-                    msg += 'Validation failure' + fi.name + '\n'
+                    msg += 'Validation failure:' + fi.name + '\n'
                     msg += fi.compare_failures
             else:
-                msg += 'Validation failure' + fi.name + '\n'
+                msg += 'Validation failure:' + fi.name + '\n'
                 msg += '    Not found in the master file list\n'
         return msg
 
