@@ -8,11 +8,7 @@ import re
 import datetime
 import xml.etree.ElementTree as ET
 
-
-print '\n\n\n\n\n', dir(ET), '\n\n\n\n\n\n'
-
 from foreach import *
-from global_data import *
 from tool import *
 from tool_logger import *
 from pipeline_file import *
@@ -43,16 +39,14 @@ class Pipeline(object):
         'step' ]
 
     def __init__(self):
-        print 'in init', dir(ET)
         pass
         
     def parse_XML(self, xmlfile, params):
-        print 'In pipeline.parse_XML', dir(ET)
         pipe = ET.parse(xmlfile).getroot()
-        
+
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
-        global_data['masterXMLdir'] = os.path.split(xmlfile)[0]
+        self.master_XML_dir = os.path.split(xmlfile)[0]
         
         # The outermost tag must be pipeline; it must have a name
         # and must not have text
@@ -62,6 +56,10 @@ class Pipeline(object):
 
         self._steps = []
         self._files = {}
+
+        # We need to process all our files before we process anything else.
+        # Stash anything not a file and process it in a later pass.
+        pending = []
 
         # An output directory where log files and rul files will be
         # written, if not otherwise specified.  Defaults to '.'.
@@ -75,31 +73,36 @@ class Pipeline(object):
             # outputdir or tempfile
             t = child.tag
             assert t in Pipeline.valid_tags, ' illegal tag:' + t
-            if t == 'step':
-                self._steps.append(Step(child, self._files))
-            elif t == 'foreach':
-                self._steps.append(ForEach(child, self._files))
+            if t == 'step' or t == 'foreach':
+                pending.append(child)
             else:
                 PipelineFile.parse_XML(child, self._files)
         
         # Here we have finished parsing the pipeline XML Time to fix up 
         # the file paths that were passed in as positional...
         self.fixup_positional_files(params)
-        
-        # Register ourself for later retrieval
-        Pipeline.instance = self
+        self.paths_for_temp_files()
+
+        # Now that our files are all processed and fixed up, we can process
+        # the rest of the XML involved with this pipeline.
+        for child in pending:
+            t = child.tag
+            if t == 'step':
+                self._steps.append(Step(child, self._files))
+            elif t == 'foreach':
+                self._steps.append(ForEach(child, self._files))
 
     @property
     def output_dir(self):
         if not self._output_dir:
+            self._output_dir = '.'
             for fid in self._files:
                 f = self._files[fid]
                 if f.is_output_dir():
                     self._output_dir = f.path
                     break
-            self._output_dir = '.'
         return self._output_dir
-        
+
     @property
     def log_dir(self):
         if not self._log_dir:
@@ -117,21 +120,36 @@ class Pipeline(object):
         #print self._files
         for fid in self._files:
             f = self._files[fid]
-            if not f._isPath:
-                #print 'Fixing up', fid, 'path index is', f.path,
+            if not f.is_path and not f.is_temp:
+                # print >> sys.stderr, 'Fixing up', fid, 'path index is', f.path,
                 if f.path > pLen:
                     print >> sys.stderr, 'You did not specify enough files for this pipeline. Exiting.'
                     sys.exit(1)
                 f.path = params[f.path - 1]
                 f.isPath = True
 
-    def log_dir(self):
+    def paths_for_temp_files(self):
         """
-        Creates an output log directory for the pipeline run, based on 
-        the pipeline name and current date and time.
+        Temp files at the pipeline level can span across tool invocations,
+        which means across Torque jobs.  Because of that, they need to live
+        in the real cluster filesystem, not in a machine private temp directory.
+        We'll clean them up at the end of the run.
         """
-        self._logdir
-        
+        for fid in self._files:
+            f = self._files[fid]
+            if not f.is_temp:
+                continue
+            if f.path:
+                print >> sys.stderr, "HUH? temp file already has a path."
+            # Create a tempfle using python/OS techniques, to get a unique
+            # temporary name.
+            t = tempfile.NamedTemporaryFile(dir=self.output_dir, delete=False)
+            name = t.name
+            t.close()
+            f.path = name
+            f.is_path = True
+            print >> sys.stderr, f.id, self._files[fid].path
+
     def submit(self):
         print 'Executing pipeline', self._name
         
@@ -143,13 +161,13 @@ class Pipeline(object):
         for step in self._steps:
             invocation += 1
             name = '{0}_Step_{1}'.format(self._name, invocation)
-            depends_on = step.submit(depends_on, name)
+            depends_on = step.submit([depends_on], name)
 
     @property
     def job_runner(self):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
-            self._job_runner =  TorqueJobRunner(Pipeline.instance.log_dir)
+            self._job_runner =  TorqueJobRunner(Pipeline.log_dir)
         return self._job_runner
+
 sys.modules[__name__] = Pipeline()
-print '******DONE PROCESSING*****', __name__, sys.modules[__name__]

@@ -4,7 +4,6 @@ class Step():
     validTags = [
         'tool' ]
     def __init__(self, e, files):
-        print 'In step:', e.tag, e.attrib
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
         self.name = e.attrib['name']

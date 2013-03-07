@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+
+<!--
+	A tool to align two fastq files and produce a sam file using
+	bwa
+-->
+<tool 
+	name="BWA_to_SAM_PE" 
+	tool_config_prefix="BWA.ALIGN"
+	threads="8"
+	walltime="6:15:34">
+	<!--
+		The step hands us two input fastq files, the reference and 
+		the file spec for an output sam file.
+	-->
+	<description>
+		This tool takes two fastq files and aligns them, producing a
+		SAM file.
+	</description>
+
+
+	<!--
+	        This tool requires some modules loaded to run on the
+                cluster.
+	-->
+	<module>bwa</module>
+
+	<!--
+	        Defile some options and their values for bwa.
+	-->
+	<option name="algorithm" command_text="-a" value="bwtsw" />
+
+	<!--
+		We wouldn't really run index as part of the pipeline, but
+		would use pre-built indices. I think. It runs for hours.
+	<command program="bwa">index {algorithm} {in_3}</command>
+	-->
+
+	<tempfile id="sai_1" />
+	<tempfile id="sai_2" />
+
+	<option name="maxDiff" command_text="-n" value="4" />
+
+	<!--
+		Only options that need to be overridable via env variables
+		or need to include filenames need to be listed in option tags.
+		Options that are fixed (e.g., -t 8, below) can be encoded
+		directly in the command line.
+	-->
+	<command program="bwa" stdout_id = "sai_1"> aln {maxDiff} -t 8 {in_3} {in_1}</command>
+	<command program="bwa" stdout_id = "sai_2"> aln {maxDiff} -t 8 {in_3} {in_2}</command>
+
+	<option name="maxIns" command_text="-a" value="700" />
+	<command stdout_id="out_1" program="bwa">
+        sampe {maxIns} {in_3} {sai_1} {sai_2} {in_1} {in_2}
+	</command>
+
+</tool>

@@ -2,7 +2,6 @@ from tool import *
 
 class PipelineTool():
     def __init__(self, e, files):
-        print 'In PTool:', e.tag, e.attrib
         att = e.attrib
         input = []
         output = []
