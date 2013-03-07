@@ -16,28 +16,31 @@ def process_options():
     #DEFAULT_MASTER_LIST='/opt/jax/cga/master_file_list'
     DEFAULT_MASTER_LIST='./fred/master_file_list'
 
-    parser = argparse.ArgumentParser('Validate files')
+    parser = argparse.ArgumentParser('Validate files', 
+        epilog='--generate overrides --add and --update; '
+               '--add overrides --update')
+    parser.add_argument('-a', '--add', dest='add', action='store_true',
+        default=False, help='Add file info to an existing master list.')
     parser.add_argument('-g', '--generate', dest='gen', action='store_true',
         default=False, help='Generate a file containing info about the '
                             'current state of the files.')
     parser.add_argument('-m', '--master-list', dest='master_list',
                         default=DEFAULT_MASTER_LIST,
                         help='Specify an alternate file when creating '
-                             'the master list.')
+                             'or modifying the master list.')
+    parser.add_argument('-u', '--update', dest='update', action='store_true',
+        default=False, help='Update master list, replacing current info.')
     parser.add_argument('files', metavar='F', type=str, nargs='+',
                         help='List of files to validate.')
     args = parser.parse_args()
-    if not args.gen:
+    if not args.gen and not args.add and not args.update:
         if args.master_list != DEFAULT_MASTER_LIST:
             print >> sys.stderr, ('Option --master list only available when '
-                'generating the master list. Ignoring.')
+                'generating or modifying the master list. Ignoring.')
             args.master_list = DEFAULT_MASTER_LIST
     return args
 
-def ensure_directory_exists(path):
-    dir = os.path.split(path)[0]
-    if not dir:
-        dir = '.'
+def ensure_directory_exists(dir):
     try:
         if not os.path.exists(dir):
             os.mkdir(dir)
@@ -51,21 +54,38 @@ def main():
     files = validity.FileCollection()
     for fn in args.files:
         files.add_file(fn)
-    
+
     if args.gen:
         #Generate list.
         f = args.master_list
-        ensure_directory_exists(f)
+        dir = os.path.split(args.master_list)[0]
+        # If the master list path is just a file, directory is empty.
+        if dir:
+            ensure_directory_exists(dir)
         files.to_JSON_file(args.master_list)
     else:
-        # Validate files.
-        # Read in the master
+        # We're going to do something requiring us to read the master list.
+        # Go ahead and do it.
+        if not os.path.exists(args.master_list):
+            if not (args.add or args.update):
+                print >> sys.stderr, 'Validation failure:',
+            print >> sys.stderr, ('master file list ' +
+                args.master_list + ' does not exist.')
+            sys.exit(2)
+
         m = validity.FileCollection()
         m.from_JSON_file(args.master_list)
-        validation_failures = files.validate(m)
-        if validation_failures:
-            print >> sys.stderr, validation_failures
-            sys.exit(1)
+
+        if args.add or args.update:
+            # merge doesn't change existing entries unless update==True
+            m.merge(files, args.update)
+            m.to_JSON_file(args.master_list)
+        else:
+            # Validate files.
+            validation_failures = files.validate(m)
+            if validation_failures:
+                print >> sys.stderr, validation_failures
+                sys.exit(1)
     sys.exit(0)
 
 main()
