@@ -13,24 +13,23 @@ class PipelineFile():
         'outputdir',
         'tempfile' ]
         
-    def __init__(self, id, path, type, isFile, isTemp, isInput, isDir, files, isPath):
-        self._id = id
-        self._path = path
+    def __init__(self, id, path, type, is_file, is_temp, is_input, is_dir, files, is_path):
+        self.id = id
+        self.path = path
         self._filetype = type
-        self._isFile = isFile
-        self._isTemp = isTemp
-        self._isInput = isInput
-        self._isDir = isDir
-        self._isPath = isPath
-        self._logDir = None
+        self._is_file = is_file
+        self.is_temp = is_temp
+        self._is_input = is_input
+        self._is_dir = is_dir
+        self.is_path = is_path
         
-        if self._id in files:
+        if self.id in files:
             # We've already seen this file ID.
             # Make sure they're compatible
-            self.compatible(files[self._id])
+            self.compatible(files[self.id])
         else:
             # Register this file in the files/options namespace
-            files[self._id] = self
+            files[self.id] = self
             
     @staticmethod
     def get_instance():
@@ -38,7 +37,6 @@ class PipelineFile():
 
     @staticmethod        
     def parse_XML(e, files):
-        print 'In PFile.parseXML:', e.tag, e.attrib
         t = e.tag
         att = e.attrib
         # Make sure that we have the right kind of tag.
@@ -49,43 +47,39 @@ class PipelineFile():
         id = att['id']
 
         # We are a file...
-        isFile = True
+        is_file = True
 
         # Init some variables.
-        pathIsPath = False
+        path_is_path = False
         path = None
         fileType = None
         
         # What kind of file?
-        isTemp = e.tag == 'tempfile'
-        isInput = e.tag == 'input' or e.tag == 'inputdir'
-        isDir = e.tag == 'outputdir' or e.tag == 'inputdir'
+        is_temp = e.tag == 'tempfile'
+        is_input = e.tag == 'input' or e.tag == 'inputdir'
+        is_dir = e.tag == 'outputdir' or e.tag == 'inputdir'
         
         # All except directories require a type 
-        if not isDir:
+        if not is_dir:
             fileType = e.attrib['type']
 
         # All except temp files need either a filespec or parameter
-        if not isTemp:
+        if not is_temp:
             if 'filespec' in att:
                 path = att['filespec']
-                pathIsPath = True
+                path_is_path = True
             if 'parameter' in att:
                 assert not path, 'Must not have both filespec and parameter attributes.'
                 path = int(att['parameter'])
 
-        PipelineFile(id, path, fileType, isFile, isTemp, isInput, isDir, files, pathIsPath)
+        PipelineFile(id, path, fileType, is_file, is_temp, is_input, is_dir, files, path_is_path)
 
     def is_output_dir(self):
-        return self._isDir and not self._isInput
-
-    @property
-    def path(self):
-        return self._path
+        return self._is_dir and not self._is_input
 
     @staticmethod
-    def from_filename(id, name, isInput, files):
-        PipelineFile(id, name, None, True, False, isInput, False, files, True)
+    def from_filename(id, name, is_input, files):
+        PipelineFile(id, name, None, True, False, is_input, False, files, True)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -93,9 +87,9 @@ class PipelineFile():
         
         # Second instance must not have a path, be a tempfile, or a
         # directory.
-        assert not self._path
-        assert not self._isTemp
-        assert not self._isDir
+        assert not self.path
+        assert not self.is_temp
+        assert not self._is_dir
             
         # Same type of file 
         assert self._fileType == o.fileType
@@ -103,4 +97,4 @@ class PipelineFile():
     def __repr__(self):
         return self.__str__()
     def __str__(self):
-        return 'File: %s\tp: %s\tt: %s\tiP: %r\tiI: %r\tit: %r\tiD: %r' % (self._id, self._path, self._fileType, self._pathIsPath, self._isInput, self._isTemp, self._isDir)
+        return 'File: %s\tp: %s\tt: %s\tiP: %r\tiI: %r\tit: %r\tiD: %r' % (self.id, self.path, self._fileType, self.path_is_path, self._is_input, self.is_temp, self._is_dir)

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 #
-# Command line interface to the validity capabilities. Two capabilities
-#  1. Create a "golden images" file, given a list of files
-#  2. Validate a list of file against the golden record.
+# Command line interface to the validity capabilities. Four uses:
+#  1. Create a "golden images" (master) file, given a list of files
+#  2. Add to an existing master file.
+#  3. Update an existing master file.
+#  4. Validate a list of files against the master.
 #
 
 import argparse
@@ -38,6 +40,16 @@ def process_options():
             print >> sys.stderr, ('Option --master list only available when '
                 'generating or modifying the master list. Ignoring.')
             args.master_list = DEFAULT_MASTER_LIST
+    if args.generate and (args.add or args.update):
+        args.add = False
+        arts.update = False
+        print >> sys.stderr, ('--generate is incompatible with --add and --update.\n'
+                              'using --generate')
+    if args.add and args.update:
+        arts.update = False
+        print >> sys.stderr, ('--add is incompatible with --update.\n'
+                              'using --add')
+
     return args
 
 def ensure_directory_exists(dir):

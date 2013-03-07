@@ -35,6 +35,7 @@
 	-->
 	<output id="end1_fq_qc" type="fastq" filespec="cleaned_end_1.fq" />
 	<output id="end2_fq_qc" type="fastq" filespec="cleaned_end_2.fq" />
+	<tempfile id="sam"        type="sam" />
 	<output id="bam"        type="bam"   filespec="sorted.bam" />
 	
 	<!--
@@ -74,13 +75,17 @@
 		files are ready.  Probably will NOT DO this in the first release.
 	-->
 
-	<step name="Alignment">
+	<step name="Alignment_to_bam">
 		<!--
 			An alignment process built using bwa.
 		-->		
-		<tool name="BWA Align to BAM"
+		<tool name="BWA_Align"
 			input="end1_fq_qc,end2_fq_qc,reference"
-			output="bam"
-			description="bwa_to_bam.xml" />
+			output="sam"
+			description="bwa_align.xml" />
+		<tool name="Sam_to_bam"
+		      input="sam"
+		      output="bam"
+		      description="sam_to_bam.xml" />
 	</step>
 </pipeline>
