@@ -122,7 +122,7 @@ class TorqueJobRunner(object):
         
         #run any supplied pre-job check
         echo "PREVALIDATION:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
-        $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 2>> $LOG_DIR/$${PBS_JOBNAME}-err.log
         VALIDATION_STATUS=$$?
         
         if [ $$VALIDATION_STATUS -eq 0 ]; then
