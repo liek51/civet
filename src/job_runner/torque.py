@@ -173,10 +173,10 @@ class TorqueJobRunner(object):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
-        self._log_dir = log_dir
+        self._log_dir = os.path.abspath(log_dir)
         self._job_names = []   
         
-        _make_sure_path_exists(log_dir)
+        _make_sure_path_exists(self._log_dir)
           
         self._id_log = open(os.path.join(log_dir, _BATCH_ID_LOG), 'w')
         
@@ -216,9 +216,13 @@ class TorqueJobRunner(object):
         
         if batch_job.stdout_path:
             job_attributes[pbs.ATTR_o] = batch_job.stdout_path
+        else:
+            job_attributes[pbs.ATTR_o] = os.path.join(self.log_dir, batch_job.name + ".o")
             
         if batch_job.stderr_path:
             job_attributes[pbs.ATTR_e] = batch_job.stderr_path
+        else:
+            job_attributes[pbs.ATTR_e] = os.path.join(self.log_dir, batch_job.name + ".e")
             
         if batch_job.depends_on:
             job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
@@ -362,7 +366,7 @@ class TorqueJobRunner(object):
         
         #expand log_dir to absolute path because a job can have a different
         #working directory
-        tokens['LOG_DIR'] = os.path.abspath(self.log_dir) 
+        tokens['LOG_DIR'] = self.log_dir 
         tokens['ID_FILE'] = _BATCH_ID_LOG
         
         tokens['MODULE_LOAD_CMDS'] = ""  
