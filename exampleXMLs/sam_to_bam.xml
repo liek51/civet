@@ -4,7 +4,7 @@
 	A tool to convert a SAM file into a sorted, indexed BAM.
 -->
 <tool 
-	name="BWA_to_BAM_PE" 
+	name="SAM_to_BAM_PE" 
 	tool_config_prefix="BWA.ALIGN"
 	threads="8"
 	walltime="6:15:34">

@@ -45,7 +45,7 @@ class BatchJob(object):
     # not passed   
     def set_workdir(self, dir):
         if dir:
-            self._workdir = os.path.abspath(workdir)
+            self._workdir = os.path.abspath(dir)
         else:
             self._workdir = os.getcwd()
     

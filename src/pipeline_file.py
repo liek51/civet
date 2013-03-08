@@ -30,7 +30,9 @@ class PipelineFile():
         else:
             # Register this file in the files/options namespace
             files[self.id] = self
-            
+
+        
+
     @staticmethod
     def get_instance():
         return me

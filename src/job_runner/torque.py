@@ -18,18 +18,11 @@ import pbs
 import PBSQuery
 
 from batch_job import *
+import utilities
 
 #TODO: make dependency type settable per job
 _DEFAULT_DEPEND_TYPE = "afterok"
 _BATCH_ID_LOG = "pipeline_batch_id_list.txt"
-
-def _make_sure_path_exists(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
-
 
 
 class JobStatus(object):
@@ -106,11 +99,11 @@ class TorqueJobRunner(object):
             exit $$1
         }
         
-        DATE=`date`
+        DATE=$$(date)
         
         echo "Run time log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-run.log
         echo "Error log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-err.log
-        
+
         echo "Run begain on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
@@ -122,10 +115,10 @@ class TorqueJobRunner(object):
         $MODULE_LOAD_CMDS
         
         cd $$PBS_O_WORKDIR
-        
-        
+
+
         #run any supplied pre-job check
-        echo "PREVALIDATION:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo "PREVALIDATION: ${PRE_RUN_VALIDATION}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 2>> $LOG_DIR/$${PBS_JOBNAME}-err.log
         VALIDATION_STATUS=$$?
         
@@ -176,7 +169,7 @@ class TorqueJobRunner(object):
         self._log_dir = os.path.abspath(log_dir)
         self._job_names = []   
         
-        _make_sure_path_exists(self._log_dir)
+        utilities.make_sure_path_exists(self._log_dir)
           
         self._id_log = open(os.path.join(log_dir, _BATCH_ID_LOG), 'w')
         
@@ -502,4 +495,4 @@ def main():
     
 if __name__ == '__main__': 
     main() 
-    
+

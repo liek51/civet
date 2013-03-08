@@ -43,7 +43,7 @@ class Tool():
         import pipeline_parse as PL
         self.options = {}
         self.commands = []
-        self.modules = []
+        self.modules = ['python/2.7.3']
         self.verify_files = ['python']
         self.tool_files = {}
         self.pipelineFiles = pipelineFiles
@@ -164,10 +164,12 @@ class Tool():
         # Get the current symbols in the pipeline...
         import pipeline_parse as PL
 
+        """
         print >> sys.stderr, "dumping tool files"
         for fid in self.tool_files:
             f = self.tool_files[fid]
             print >> sys.stderr, fid, f.path
+        """
 
         # 
         # Now it is time to fix up the commands and write the script file.
@@ -193,6 +195,7 @@ class Tool():
         for c in self.commands:
             multi_command_list.append(c.real_command)
         multi_command = '\n'.join(multi_command_list)
+        """
         print 'Batch Job:\n' + multi_command
         print '    workdir:', PL.output_dir
         print '    files_to_verify:', self.verify_files
@@ -202,14 +205,17 @@ class Tool():
         print '    depends_on:', depends_on
         print '    name:', name
         """
+
+        # Do the actual batch job sumbission
         batch_job = BatchJob(
-            multi_command, workdir=PL.output_dir, files_to_verify=self.verify_files, 
+            multi_command, workdir=PL.output_dir, files_to_check=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name)
     
-        return PL.job_runner.queue_job(batch_job)
-        """
-        return 1
+        job_id = PL.job_runner.queue_job(batch_job)
+
+        print 'Job', self.name, 'submitted as job id:', job_id
+        return job_id
         
     def getCommand(self):
         # return the command as a string

@@ -40,7 +40,7 @@ def process_options():
             print >> sys.stderr, ('Option --master list only available when '
                 'generating or modifying the master list. Ignoring.')
             args.master_list = DEFAULT_MASTER_LIST
-    if args.generate and (args.add or args.update):
+    if args.gen and (args.add or args.update):
         args.add = False
         arts.update = False
         print >> sys.stderr, ('--generate is incompatible with --add and --update.\n'
