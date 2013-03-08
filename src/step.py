@@ -15,11 +15,12 @@ class Step():
             self.tools.append(PipelineTool(child, files))
 
     def submit(self, depends_on, name_prefix):
-        print '    Executing step', self.name
         invocation = 0
         for tool in self.tools:
             invocation += 1
             name = '{0}_{1}_Tool_{2}'.format(name_prefix, self.name,
                                              invocation)
-            depends_on = tool.submit(depends_on, name)
-
+            job_id = tool.submit(depends_on, name)
+            depends_on = [job_id]
+        return job_id
+            

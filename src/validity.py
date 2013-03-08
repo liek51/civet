@@ -40,7 +40,6 @@ class FileInfo(object):
         self.uid = s.st_uid
         self.gid = s.st_gid
         self.size = s.st_size
-        self.mtime = s.st_mtime
 
         self.getHash()
 
@@ -51,7 +50,6 @@ class FileInfo(object):
         self.name = dct['name']
         self.mode = dct['mode']
         self.mode_string = dct['mode_string']
-        self.mtime = dct['mtime']
         self.size = dct['size']
         
     @staticmethod
@@ -116,10 +114,13 @@ class FileInfo(object):
             return []
         
         parts = result.split('\n')
+        processed = []
         for n in range(len(parts)):
             # One dll at a time. Prune the address from the right.
             # If there is a path, it is the second element, use it.
             # If that's empty, use the first element.
+            if 'ldd: warning:' in parts[n]:
+                continue
             names = parts[n].split(' (')[0]
             names = names.split('=>')
             if len(names) > 1:
@@ -128,9 +129,8 @@ class FileInfo(object):
                 name = ''
             if name == '':
                 name = names[0].strip()
-            parts[n] = name
-            
-        return parts
+            processed.append(name)
+        return processed 
 
     def update_compare_failures(self, msg, val1, val2):
         if not self.compare_failures:
@@ -155,8 +155,6 @@ class FileInfo(object):
             self.update_compare_failures('gid', other.gid, self.gid)
         if self.mode != other.mode:
             self.update_compare_failures('mode', other.mode, self.mode)
-        if self.mtime != other.mtime:
-            self.update_compare_failures('mtime', other.mtime, self.mtime)
         if self.mode_string != other.mode_string:
             self.update_compare_failures('mode_string', other.mode_string, 
                                          self.mode_string)
