@@ -7,10 +7,8 @@ class PipelineFile():
     me = None
     
     validFileTags = [
-        'input',
-        'inputdir',
-        'output',
-        'outputdir',
+        'file',
+        'dir',
         'tempfile' ]
         
     def __init__(self, id, path, type, is_file, is_temp, is_input, is_dir, files, is_path):
@@ -49,18 +47,22 @@ class PipelineFile():
         id = att['id']
 
         # We are a file...
-        is_file = True
+        is_file = t == 'file' or t == 'tempfile'
+        is_dir = t == 'dir'
 
         # Init some variables.
         path_is_path = False
         path = None
         fileType = None
-        
+
         # What kind of file?
         is_temp = e.tag == 'tempfile'
-        is_input = e.tag == 'input' or e.tag == 'inputdir'
-        is_dir = e.tag == 'outputdir' or e.tag == 'inputdir'
-        
+
+        # Input?
+        is_input = False
+        if input in att:
+            is_input = att['input'].upper() == 'TRUE'
+
         # All except directories require a type 
         if not is_dir:
             fileType = e.attrib['type']
