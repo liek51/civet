@@ -245,7 +245,12 @@ class Option():
         try:
             name = e.attrib['name'].strip()
             command_text = e.attrib['command_text'].strip()
-            value = e.attrib['value'].strip()
+            if 'value' in e.attrib:
+                value = e.attrib['value'].strip()
+            elif 'from_file' in e.attrib:
+                fid = e.attrib['from_file']
+                fn = tool_files[fid].path
+                value = open(fn).readline().rstrip()
         except:
             dumpElement(e, 0)
             return
