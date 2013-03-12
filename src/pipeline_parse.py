@@ -82,6 +82,8 @@ class Pipeline(object):
         # the file paths that were passed in as positional...
         self.fixup_positional_files(params)
         self.paths_for_temp_files()
+        self.process_based_on_attribute()
+        self.process_in_dir_attribute()
 
         # Now that our files are all processed and fixed up, we can process
         # the rest of the XML involved with this pipeline.
@@ -153,6 +155,25 @@ class Pipeline(object):
             f.path = name
             f.is_path = True
             print >> sys.stderr, f.id, self._files[fid].path
+
+    def process_based_on_attribute(self):
+        for fid in self._files:
+            f = self._files[fid]
+            if not f.based_on:
+                continue
+            # the based_on attribute is the fid of another file
+            # whose path we're going to mangle to create ours.
+            original_path = self._files[f.based_on].path
+            f.path = re.sub(f.pattern, f.replace, original_path)
+
+    def process_in_dir_attribute(self):
+        for fid in self._files:
+            f = self._files[fid]
+            if not f.in_dir:
+                continue
+            d = self._files[f.in_dir]
+            assert d.is_dir, 'in_dir does not specify a directory ' + f.path
+            f.path = os.path.join(d.path, f.path)
 
     def submit(self):
         print 'Executing pipeline', self._name

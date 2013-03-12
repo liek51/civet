@@ -103,7 +103,13 @@ class Tool():
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
-                self.validate_files.append(child.text)
+                a = child.attrib
+                if 'id' in a:
+                    name = self.tool_files[a[id]].path
+                    print 'Validate new form name =', name
+                else:
+                    name = child.text
+                self.validate_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
 
@@ -245,7 +251,12 @@ class Option():
         try:
             name = e.attrib['name'].strip()
             command_text = e.attrib['command_text'].strip()
-            value = e.attrib['value'].strip()
+            if 'value' in e.attrib:
+                value = e.attrib['value'].strip()
+            elif 'from_file' in e.attrib:
+                fid = e.attrib['from_file']
+                fn = tool_files[fid].path
+                value = open(fn).readline().rstrip()
         except:
             dumpElement(e, 0)
             return
