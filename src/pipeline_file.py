@@ -11,7 +11,8 @@ class PipelineFile():
         'dir',
         'tempfile' ]
         
-    def __init__(self, id, path, type, is_file, is_temp, is_input, is_dir, files, is_path):
+    def __init__(self, id, path, type, is_file, is_temp, is_input, is_dir, 
+                 files, is_path, based_on, pattern, replace):
         self.id = id
         self.path = path
         self._filetype = type
@@ -20,6 +21,9 @@ class PipelineFile():
         self._is_input = is_input
         self._is_dir = is_dir
         self.is_path = is_path
+        self.based_on = based_on
+        self.pattern = pattern
+        self.replace = replace
         
         if self.id in files:
             # We've already seen this file ID.
@@ -54,7 +58,10 @@ class PipelineFile():
         path_is_path = False
         path = None
         fileType = None
-
+        based_on = None
+        pattern = None
+        replace = None
+        
         # What kind of file?
         is_temp = e.tag == 'tempfile'
 
@@ -67,16 +74,26 @@ class PipelineFile():
         if not is_dir:
             fileType = e.attrib['type']
 
-        # All except temp files need either a filespec or parameter
+        # All except temp files need either a filespec or parameter,
+        # or based_on
         if not is_temp:
             if 'filespec' in att:
                 path = att['filespec']
                 path_is_path = True
             if 'parameter' in att:
-                assert not path, 'Must not have both filespec and parameter attributes.'
+                assert not path, ('Must not have both filespec'
+                                  'and parameter attributes.')
                 path = int(att['parameter'])
+            if 'based_on' in att:
+                assert (not path) and (not parameter), (
+                    'Must not have based_on and path or parameter attributes.')
+                based_on = att['based_on']
+                pattern = att['pattern']
+                replace = att['replace']
 
-        PipelineFile(id, path, fileType, is_file, is_temp, is_input, is_dir, files, path_is_path)
+        PipelineFile(
+            id, path, fileType, is_file, is_temp, is_input, is_dir, files, 
+            path_is_path, based_on, pattern, replace)
 
     def is_output_dir(self):
         return self._is_dir and not self._is_input

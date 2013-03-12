@@ -103,7 +103,13 @@ class Tool():
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
-                self.validate_files.append(child.text)
+                a = child.attrib
+                if 'id' in a:
+                    name = self.tool_files[a[id]].path
+                    print 'Validate new form name =', name
+                else:
+                    name = child.text
+                self.validate_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
 
