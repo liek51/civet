@@ -1,0 +1,184 @@
+#Step1: NGS QC 
+#1.1 Quality Statistics generation and bad read filtering
+
+IlluQC_PRLL.pl -pe read1.fastq read2.fastq 2 5 -s 30 -c 12 -o filter
+
+#1.2 Quality based trimming of filtered files
+
+TrimmingReads.pl -i filter/read1.fastq_filtered -irev filter/read2.fastq_filtered -q 30
+
+#Step2: Alignment
+#2.1 Running BWA aln step
+
+bwa aln -t 12 /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/BWAIndex/version0.5.x/genome.fa filter/read1.fastq_filtered_trimmed > aln1.sai
+bwa aln -t 12 /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/BWAIndex/version0.5.x/genome.fa filter/read2.fastq_filtered_trimmed > aln2.sai
+
+#2.2 Running BWA sampe step
+
+bwa sampe -r @RG"\t"ID:SAMPLE1_RG1"\t"LB:SAMPLE1_LIB1"\t"SM:SAMPLE1"\t"PL:ILLUMINA /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/BWAIndex/version0.5.x/genome.fa aln1.sai aln2.sai filter/read1.fastq_filtered_trimmed filter/read2.fastq_filtered_trimmed > aln.sam 
+
+#Step3: Variant Pre-processing 
+
+#Step3.1: Picard SortSam.jar (generating sorted alignment bam file)
+
+java -Xmx2g -jar /opt/compsci/picard/1.8.4/SortSam.jar \
+SO=coordinate \
+INPUT=aln.sam \
+OUTPUT=aln.bam \
+VALIDATION_STRINGENCY=LENIENT \
+CREATE_INDEX=true
+
+#Step3.2:  Picard Mark Duplicates (Removing duplicates in BAM file)
+
+java -Xmx2g -jar /opt/compsci/picard/1.8.4/MarkDuplicates.jar \
+INPUT=aln.bam \
+OUTPUT=aln_dedup.bam \
+METRICS_FILE=metrics.txt \
+REMOVE_DUPLICATES=true \
+CREATE_INDEX=true \
+VALIDATION_STRINGENCY=LENIENT
+
+#Step3.3: Realignment around indels Part I (Target Interval Creation)
+
+java -Xmx2g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-I aln_dedup.bam \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+--num_threads 8 \
+-T RealignerTargetCreator \
+-o forIndelRealigner.intervals \
+-known pathTo/1000G_phase1.indels.hg19.vcf \
+-known pathTo/Mills_and_1000G_gold_standard.indels.hg19.vcf
+
+#Step3.4: Realignment around indels Part II (Performing the local re-alignment)
+
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-I aln_dedup.bam \
+-R hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+-T IndelRealigner \
+-targetIntervals forIndelRealigner.intervals \
+-o realignedBam.bam \
+-known pathTo/1000G_phase1.indels.hg19.vcf \
+-known pathTo/Mills_and_1000G_gold_standard.indels.hg19.vcf
+
+#Step3.5: Base Quality Recalibration Part I
+
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-T BaseRecalibrator \
+-I realignedBam.bam \
+-nct 8 \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+-knownSites pathTo/dbsnp_137.hg19.vcf \
+-knownSites pathTo/Mills_and_1000G_gold_standard.indels.hg19.vcf \
+-knownSites pathTo/1000G_phase1.indels.hg19.vcf \
+-o recal_data.grp \
+--plot_pdf_file Pre_recal_data.pdf
+
+#Step 3.5: Base Quality Recalibration Part II (Just creating plots after model generation)
+
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-T BaseRecalibrator \
+-I realignedBam.bam \
+-nct 8 \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+-knownSites pathTo/dbsnp_137.hg19.vcf \
+-knownSites pathTo/Mills_and_1000G_gold_standard.indels.hg19.vcf \
+-knownSites pathTo/1000G_phase1.indels.hg19.vcf \
+-BQSR recal_data.grp \
+-o Post_recal_data.grp \
+--plot_pdf_file Post_recal_data.pdf
+
+#Step3.5: Base Quality Recalibration Part III (printing the reads)
+
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-T PrintReads \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+-I realignedBam.bam \
+-nct 4 \
+-BQSR recal_data.grp \
+-o realigned_BQSR.bam
+
+#Step 3.6: Picard CalculateHsMetrics (generating target enrichment information)
+
+java -jar -Xmx2g  /opt/compsci/picard/1.8.4/CalculateHsMetrics.jar \
+BAIT_INTERVALS=pathTo/Exome_Baits.txt \
+TARGET_INTERVALS=pathTo/Exome_Targets.txt \
+INPUT= realigned_BQSR.bam \
+OUTPUT=CoverageMetrics.txt \
+VALIDATION_STRINGENCY=LENIENT \
+
+#Step 4: Variant Calling
+
+java -Xmx2g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+-T UnifiedGenotyper \
+--num_threads 8 \
+-I realigned_BQSR.bam \
+--dbsnp pathTo/dbsnp_137.hg19.vcf \
+-glm BOTH \
+-o variants.raw.vcf \
+-dcov 200 \
+-L pathTo/Exome_Targets.bed 
+
+#Step5: Variant Quality Recalibration -- SNPs
+#Step 5.1: Generating SNP model
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-T VariantRecalibrator \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+--num_threads 8 \
+-input variants.raw.vcf \
+-resource:hapmap,known=false,training=true,truth=true,prior=15.0 pathTo/hapmap_3.3.hg19.vcf \
+-resource:omni,known=false,training=true,truth=false,prior=12.0 pathTo/1000G_omni2.5.hg19.vcf \
+-resource:dbsnp,known=true,training=false,truth=false,prior=6.0 pathTo/dbsnp_137.hg19.vcf \
+-an QD -an HaplotypeScore -an MQRankSum -an ReadPosRankSum -an FS -an MQ \
+-mode SNP \
+--maxGaussians 4 \
+-percentBad 0.05 \
+-recalFile VQSR/output.recal \
+-tranchesFile VQSR/output.tranches \
+-rscriptFile VQSR/output.plots.R
+
+#Step 5.2: Generating Indel model
+
+java -Xmx4g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar \
+-T VariantRecalibrator \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+--num_threads 8 \
+-input variants.raw.vcf \
+-resource:mills,known=true,training=true,truth=true,prior=12.0 pathTo/Mills_and_1000G_gold_standard.indels.hg19.vcf \
+-an QD -an FS -an HaplotypeScore -an ReadPosRankSum \
+-mode INDEL \
+--maxGaussians 4 \
+-percentBad 0.05 \
+-recalFile VQSR/output_indel.recal \
+-tranchesFile VQSR/output_indel.tranches \
+-rscriptFile VQSR/output_indel.plots.R
+
+#Step 5.3: Apply SNP recalibration
+java -Xmx3g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar  \
+-T ApplyRecalibration \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+--num_threads 8 \
+-input variants.raw.vcf \
+--ts_filter_level 99.0 \
+-tranchesFile VQSR/output.tranches \
+-recalFile VQSR/output.recal \
+-mode SNP \
+-o VQSR/snps.recalibrated.filtered.vcf
+
+#Step 5.4: Apply Indel recalibration
+
+java -Xmx3g -jar /opt/compsci/GATK/2.2-16/GenomeAnalysisTK.jar  \
+-T ApplyRecalibration \
+-R /hpcdata/shared/genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa \
+--num_threads 8 \
+-input VQSR/snps.recalibrated.filtered.vcf \
+--ts_filter_level 99.0 \
+-tranchesFile VQSR/output_indel.tranches \
+-recalFile VQSR/output_indel.recal \
+-mode INDEL \
+-o VQSR/analysis_ready.vcf
+
+
+
+
+
