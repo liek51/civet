@@ -13,7 +13,7 @@ from tool import *
 from tool_logger import *
 from pipeline_file import *
 from job_runner.torque import *
-
+import utilities
 
 
 class Pipeline(object):
@@ -54,19 +54,19 @@ class Pipeline(object):
         self._name = pipe.attrib['name']
         assert not pipe.text.strip()
 
-        self._steps = []
-        self._files = {}
-
         # We need to process all our files before we process anything else.
         # Stash anything not a file and process it in a later pass.
         pending = []
 
-        # An output directory where log files and rul files will be
-        # written, if not otherwise specified.  Defaults to '.'.
+        # Set up for some properties
         self._output_dir = None
-
+        self._log_dir = None
         self._job_runner = None
         
+        # And track the major components of the pipeline
+        self._steps = []
+        self._files = {}
+
         # Walk the child tags.
         for child in pipe:
             # a pipeline can only contain step, input, output, 
@@ -106,7 +106,7 @@ class Pipeline(object):
     @property
     def log_dir(self):
         if not self._log_dir:
-            self._log_dir = os.path.join(self.output_dir, 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%m%S'))
+            self._log_dir = os.path.join(self.output_dir, 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
         
     def fixup_positional_files(self, params):
@@ -127,6 +127,10 @@ class Pipeline(object):
                     sys.exit(1)
                 f.path = params[f.path - 1]
                 f.isPath = True
+            # Now that we know we have paths, make sure any output dirs exist.
+
+            if f.is_output_dir():
+                utilities.make_sure_path_exists(f.path)
 
     def paths_for_temp_files(self):
         """
@@ -156,18 +160,27 @@ class Pipeline(object):
         # FIXME!
         # We should check that all the input files and input directories
         # exist before going farther.  Fail early.
-        depends_on = None
+        depends_on = []
         invocation = 0
         for step in self._steps:
             invocation += 1
             name = '{0}_Step_{1}'.format(self._name, invocation)
-            depends_on = step.submit([depends_on], name)
+            job_id = step.submit(depends_on, name)
+            depends_on = [job_id]
+
+        # We're done submitting all the jobs.  Release them and get on with it.
+        # This is the last action of the pipeline submission process. WE'RE DONE!
+        self.job_runner.release_all()
+
+        # Let the people know where they can see their logs.
+        print 'Log directory: ', self.log_dir
 
     @property
     def job_runner(self):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
-            self._job_runner =  TorqueJobRunner(Pipeline.log_dir)
+            self._job_runner =  TorqueJobRunner(self.log_dir, 
+                                                validation_cmd="/hpcdata/asimons/validate")
         return self._job_runner
 
 sys.modules[__name__] = Pipeline()
