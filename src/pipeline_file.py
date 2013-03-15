@@ -1,21 +1,44 @@
+import sys
+import os
+import tempfile
+import re
+
+import utilities
+
 class PipelineFile():
     """
     Initialize ourselves from an XML tag that represents some king
     of file.  Arguments: XML element representing the file, and a
     hash of processed files
     """
-    me = None
-    
     validFileTags = [
         'file',
         'dir',
-        'tempfile' ]
-        
-    def __init__(self, id, path, type, is_file, is_temp, is_input, is_dir, 
-                 files, is_path, based_on, pattern, replace):
+        ]
+
+    valid_file_attributes = [
+        'id',
+        'input',
+        'in_dir',
+        'temp',
+        'filespec',
+        'parameter',
+        'based_on',
+        'pattern',
+        'replace',
+        ]
+
+    # Track the master output directory.
+    output_dir = '.'
+
+    # And the parameters to the pipeline
+    params = None
+
+    def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
+                 files, is_path, based_on, pattern, replace, in_dir,
+                 is_parameter):
         self.id = id
         self.path = path
-        self._filetype = type
         self._is_file = is_file
         self.is_temp = is_temp
         self._is_input = is_input
@@ -24,7 +47,10 @@ class PipelineFile():
         self.based_on = based_on
         self.pattern = pattern
         self.replace = replace
-        
+        self.in_dir = in_dir
+        self.is_parameter = is_parameter
+        self._is_fixed_up = False
+
         if self.id in files:
             # We've already seen this file ID.
             # Make sure they're compatible
@@ -33,46 +59,47 @@ class PipelineFile():
             # Register this file in the files/options namespace
             files[self.id] = self
 
-        
-
-    @staticmethod
-    def get_instance():
-        return me
-
     @staticmethod        
     def parse_XML(e, files):
         t = e.tag
         att = e.attrib
         # Make sure that we have the right kind of tag.
-        assert t in PipelineFile.validFileTags, 'Illegal pipeline file tag: "' + t + '"'
+        assert t in PipelineFile.validFileTags, ('Illegal pipeline file tag: "'
+                                                 + t + '"')
 
-        # id attribute is required, make sure we're not already in, or,
-        # if we are, that we have the same attributes.
+        for a in att:
+            assert a in PipelineFile.valid_file_attributes, (
+                'Illegal pipeline file attribute: "' + a + '"')
+
+        # id attribute is required, make sure this id is not already
+        # in use, or, if it is, that it has the same attributes.
         id = att['id']
 
         # We are a file...
-        is_file = t == 'file' or t == 'tempfile'
+        is_file = t == 'file'
         is_dir = t == 'dir'
 
         # Init some variables.
         path_is_path = False
         path = None
-        fileType = None
         based_on = None
         pattern = None
         replace = None
-        
+        is_parameter = False
+
         # What kind of file?
-        is_temp = e.tag == 'tempfile'
+        is_temp = False
+        if 'temp' in att:
+            is_temp = att['temp'].upper() == 'TRUE'
 
         # Input?
         is_input = False
-        if input in att:
+        if 'input' in att:
             is_input = att['input'].upper() == 'TRUE'
 
-        # All except directories require a type 
-        if not is_dir:
-            fileType = e.attrib['type']
+        in_dir = None
+        if 'in_dir' in att:
+            in_dir = att['in_dir']
 
         # All except temp files need either a filespec or parameter,
         # or based_on
@@ -84,23 +111,32 @@ class PipelineFile():
                 assert not path, ('Must not have both filespec'
                                   'and parameter attributes.')
                 path = int(att['parameter'])
+                is_parameter = True
+
             if 'based_on' in att:
-                assert (not path) and (not parameter), (
+                assert (not path), (
                     'Must not have based_on and path or parameter attributes.')
                 based_on = att['based_on']
                 pattern = att['pattern']
                 replace = att['replace']
 
         PipelineFile(
-            id, path, fileType, is_file, is_temp, is_input, is_dir, files, 
-            path_is_path, based_on, pattern, replace)
+            id, path, is_file, is_temp, is_input, is_dir, files, 
+            path_is_path, based_on, pattern, replace, in_dir, is_parameter)
 
+        # This routine latches the first output directory we see.
+        # We call it arbitrarily for all files.
+        PipelineFile.set_output_dir(files[id])
+
+    @property
     def is_output_dir(self):
         return self._is_dir and not self._is_input
 
     @staticmethod
     def from_filename(id, name, is_input, files):
-        PipelineFile(id, name, None, True, False, is_input, False, files, True)
+        print >> sys.stderr, '****************from_filename() used:', name
+        PipelineFile(id, name, True, False, is_input, False, files,
+                     True, None, False)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -112,10 +148,140 @@ class PipelineFile():
         assert not self.is_temp
         assert not self._is_dir
             
-        # Same type of file 
-        assert self._fileType == o.fileType
-
     def __repr__(self):
         return self.__str__()
+
     def __str__(self):
-        return 'File: %s\tp: %s\tt: %s\tiP: %r\tiI: %r\tit: %r\tiD: %r' % (self.id, self.path, self._fileType, self.path_is_path, self._is_input, self.is_temp, self._is_dir)
+        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} inD:{9}'.format(
+            self.id, self.path, self.is_path, self._is_input,
+            self.is_temp, self._is_dir, self.based_on, self.replace,
+            self.pattern, self.in_dir)
+
+    @staticmethod
+    def set_output_dir(f):
+        # Only register the first output dir that is not cwd
+        if PipelineFile.output_dir != '.':
+            return
+        if not f._is_dir:
+            return
+        if f.is_output_dir:
+            PipelineFile.output_dir = f.path
+
+    ############################################################
+    ############################################################
+    ############################################################
+    ############################################################
+    @staticmethod
+    def register_params(params):
+        PipelineFile.params = params
+
+    @staticmethod
+    def fix_up_files(files):
+        print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
+        circularity = []
+        for fid in files:
+            files[fid].fix_up_file(files, circularity)
+
+    def fix_up_file(self, files, circularity):
+        """
+        Take care of all the inter-file dependencies such as
+        in_dir and based_on, as well as files passed in as
+        parameters.
+        """
+        if self._is_fixed_up:
+            return
+        # detect dependency cycles
+        if self in circularity:
+            print >> sys.stderr, '\nFile dependency cycle detected.'
+            for f in circularity:
+                print >> sys.stderr, f
+            print >> sys.stderr, self
+            sys.exit(1)
+
+        print >> sys.stderr, ('  ' * len(circularity)) + 'Fixing up' + str(self)
+        circularity.append(self)
+
+        self.parameter_to_path()
+        self.apply_based_on(files, circularity)
+        self.apply_in_dir_and_create_temp(files, circularity)
+
+        self._is_fixed_up = True
+
+        check = circularity.pop()
+
+        if check != self:
+            print >> sys.stderr, 'circularity.pop() failed!\ncheck:', check
+            print >> sys.stderr, ' self:', self
+            sys.exit(1)
+
+        print >> sys.stderr, ('  ' * len(circularity)) + 'Done with' + str(self)
+
+
+    def parameter_to_path(self):
+        if self.is_parameter:
+            #print >> sys.stderr, '\nFixing parameter file.'
+            #print >> sys.stderr, self
+            idx = self.path - 1
+            params = PipelineFile.params
+            if idx >= len(params):
+                print >> sys.stderr, ('Too few parameters... len(params): ' +
+                    str(len(params)) + 'File: ' + self.id + 
+                    ' referenced parameter ' + self.path)
+            self.path = params[idx]
+            self.is_path = True
+            self.is_parameter = False
+            #print >> sys.stderr, self
+
+    def apply_based_on(self, files, circularity):
+        bo = self.based_on
+        if not bo:
+            return
+        # the based_on attribute is the fid of another file
+        # whose path we're going to mangle to create ours.
+        #print >> sys.stderr, 'processing based_on\n', self
+        if not bo in files:
+            print >> sys.stderr, 'ERROR: based on unknown file.'
+            sys.exit(1)
+        bof =files[bo]
+        bof.fix_up_file(files, circularity)
+
+        original_path = bof.path
+        #print >> sys.stderr, '\nBased on'
+        #print >> sys.stderr, original_path
+        #print >> sys.stderr, bof
+        #print >> sys.stderr, self
+        self.path = re.sub(self.pattern, self.replace, original_path)
+        #print >> sys.stderr, self
+
+    def apply_in_dir_and_create_temp(self, files, circularity):
+        ind = self.in_dir
+        if (not ind) and (not self.is_temp):
+            return
+        dir = PipelineFile.output_dir
+
+        if ind:
+            if not ind in files:
+                print >> sys.stderr, 'ERROR: in_dir is unknown file.'
+                sys.exit(1)
+            indf = files[ind]
+            indf.fix_up_file(files, circularity)
+            dir = indf.path
+
+        if self.is_temp and not self.path:
+            # If it is an anonymous temp, we'll create it in
+            # the proper directory
+            t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
+            name = t.name
+            t.close()
+            self.path = name
+            self.is_path = True
+        elif ind:
+            # Apply the containing directory to the path...
+            fn = os.path.split(self.path)[1]
+            self.path = os.path.join(dir, fn)
+            self.in_dir = None
+            
+    ############################################################
+    ############################################################
+    ############################################################
+    ############################################################

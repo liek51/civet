@@ -6,8 +6,11 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
-from job_runner.batch_job import *
+
+#from job_runner.batch_job import *
+
 import pipeline_parse as PL
+import pipeline_file as PF
 
 class Tool():
     # This script parses all of a tool definition.  Tools may be invoked
@@ -26,7 +29,7 @@ class Tool():
         'command',
         'description',
         'option',
-        'tempfile',
+        'file',
         'validate',
         'module',
         ]
@@ -49,12 +52,10 @@ class Tool():
         self.pipelineFiles = pipelineFiles
         for n in range(len(ins)):
             f = pipelineFiles[ins[n]]
-            ToolFile('in_' + str(n+1), f.path, 
-                     self.tool_files)
+            self.tool_files['in_' + str(n+1)] = f
         for n in range(len(outs)):
             f = pipelineFiles[outs[n]]
-            ToolFile('out_' + str(n+1), f.path,
-                     self.tool_files)
+            self.tool_files['out_' + str(n+1)] = f
 
         # First try to find the xml file in the current working directory,
         # If not found, look in the same directory as the master pipeline
@@ -66,6 +67,9 @@ class Tool():
             print >> sys.stderr, ('ERROR: Could not find tool XML file:'
                                   , xmlfile, '\nExiting...')
             sys.exit(1)
+
+        # Verify that the tool definition file has not changed.
+        self.verify_files.append(xmlfile)
        
         tool = ET.parse(xmlfile).getroot()
         atts = tool.attrib
@@ -85,10 +89,28 @@ class Tool():
         else:
             self.walltime = '01:00:00'
 
+
+        # Process all our files first, then the other tags.
+        pending = []
+
         # Now process our child tags
         for child in tool:
             t = child.tag
             assert t in Tool.validTags, 'unknown child tag in tool tag: ' + t
+
+
+            if t == 'file':
+                # Register the file in the tool's file dictionary
+                self.file(child)
+            else:
+                pending.append(child)
+
+        # Now we can fixup our files.
+        PF.fixup_files(self.tool_files)
+
+        # Now, finally, we can process the rest of the tags.
+        for child in pending:
+            t = child.tag
             if t == 'description':
                 # This one is so simple we process it inline here, instead of 
                 # having a different class to process it.
@@ -97,9 +119,6 @@ class Tool():
                 Option(child, self.options, self.tool_files)
             elif t == 'command':
                 Command(child, self.commands, self.options, self.tool_files)
-            elif t == 'tempfile':
-                # Register the tempfile in the tool's file dictionary
-                self.tempFile(child)
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
@@ -114,13 +133,7 @@ class Tool():
                 print >> sys.stderr, 'Unprocessed tag:', t
 
     def tempFile(self, e):
-        validAtts = [
-            'id',
-            'directory',
-            ]
         atts = e.attrib
-        for a in atts:
-            assert a in validAtts, 'tempfile tag has unknown attribute: ' + a
 
         id = atts['id']
         # Ensure that the id is unique.
@@ -129,21 +142,8 @@ class Tool():
         assert id not in self.tool_files, ('tempfile id is a duplicate: ' +
                                           self.id)
         
-        if 'directory' in atts:
-            dir = atts['directory']
-        else:
-            dir = None
 
-        # Create a tempfle using python/OS techniques, to get a unique
-        # temporary name.
-        t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
-        name = t.name
-        t.close()
-
-        # At this point, the temp file exists, but will most likely be written
-        # over with a new file from a command.
-        # also at this point, it is just another tool file.
-        ToolFile(id, name, self.tool_files, temp=True)
+        PF.parse_XML(e, self.tool_files)
 
     def logVersion(self):
         pass
@@ -201,7 +201,7 @@ class Tool():
         for c in self.commands:
             multi_command_list.append(c.real_command)
         multi_command = '\n'.join(multi_command_list)
-        """
+        #"""
         print 'Batch Job:\n' + multi_command
         print '    workdir:', PL.output_dir
         print '    files_to_verify:', self.verify_files
@@ -222,7 +222,9 @@ class Tool():
 
         print 'Job', self.name, 'submitted as job id:', job_id
         return job_id
-        
+        """
+        return "1"
+
     def getCommand(self):
         # return the command as a string
         pass
@@ -233,17 +235,6 @@ class Tool():
         # simply calls getCommand and writes it.
         pass
 
-
-class ToolFile():
-    def __init__(self, id, path, tool_files, temp=False):
-        self.id = id
-        self.path = path
-        self.temp = temp
-        tool_files[self.id] = self
-
-    def __repr__(self):
-        return ' '.join(['id', self.id, 'path', str(self.path), 'temp', str(self.temp)])
-        
 class Option():
     def __init__(self, e, options, tool_files):
         self.command_text = ''
