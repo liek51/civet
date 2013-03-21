@@ -155,6 +155,9 @@ class FileInfo(object):
             self.update_compare_failures('gid', other.gid, self.gid)
         if self.mode != other.mode:
             self.update_compare_failures('mode', other.mode, self.mode)
+        # Special check: If either file doesn't exist, we fail.
+        if self.mode == 'No such file.':
+            self.update_compare_failures('mode', other.mode, self.mode)
         if self.mode_string != other.mode_string:
             self.update_compare_failures('mode_string', other.mode_string, 
                                          self.mode_string)

@@ -24,3 +24,11 @@ class Step():
             depends_on = [job_id]
         return job_id
             
+    def collect_files_to_validate(self):
+        fns = []
+        for tool in self.tools:
+            tfns = tool.collect_files_to_validate()
+            for fn in tfns:
+                if fn not in fns:
+                    fns.append(fn)
+        return fns

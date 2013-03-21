@@ -58,9 +58,12 @@ class BatchJob(object):
     # characters
     def set_name(self, name):
         if name:
+            chars = []
             for c in name:
+                chars.append(c)
                 if c not in string.digits + string.letters + "_-.":
-                    raise ValueError("Invalid job name: {0}".format(name))
+                    raise ValueError("Invalid job name: '{0}'. "
+                                     "Illegal character {1} {2}".format(name, c, chars))
         self._name = name
     
     def get_name(self):

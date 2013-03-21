@@ -167,17 +167,13 @@ class PipelineFile():
         if f.is_output_dir:
             PipelineFile.output_dir = f.path
 
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################
     @staticmethod
     def register_params(params):
         PipelineFile.params = params
 
     @staticmethod
     def fix_up_files(files):
-        print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
+        #print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
         circularity = []
         for fid in files:
             files[fid].fix_up_file(files, circularity)
@@ -198,12 +194,24 @@ class PipelineFile():
             print >> sys.stderr, self
             sys.exit(1)
 
-        print >> sys.stderr, ('  ' * len(circularity)) + 'Fixing up' + str(self)
+        #print >> sys.stderr, ('  ' * len(circularity)) + 'Fixing up' + str(self)
         circularity.append(self)
 
         self.parameter_to_path()
         self.apply_based_on(files, circularity)
         self.apply_in_dir_and_create_temp(files, circularity)
+
+        # Don't do this.  If we need to do it for some, we'll need
+        # to invent an attribute for it, because some tools want
+        # to do the creating, and will fail if the directory exists.
+        
+        #if self._is_dir:
+        #    utilities.make_sure_path_exists(self.path)
+
+        # Turn all the paths into an absolute path, so changes in
+        # working directory throughout the pipeline lifetime don't
+        # foul us up.
+        self.path = os.path.abspath(self.path)
 
         self._is_fixed_up = True
 
@@ -214,7 +222,7 @@ class PipelineFile():
             print >> sys.stderr, ' self:', self
             sys.exit(1)
 
-        print >> sys.stderr, ('  ' * len(circularity)) + 'Done with' + str(self)
+        #print >> sys.stderr, ('  ' * len(circularity)) + 'Done with' + str(self)
 
 
     def parameter_to_path(self):
@@ -240,7 +248,7 @@ class PipelineFile():
         # whose path we're going to mangle to create ours.
         #print >> sys.stderr, 'processing based_on\n', self
         if not bo in files:
-            print >> sys.stderr, 'ERROR: based on unknown file.'
+            print >> sys.stderr, 'ERROR: based on unknown file:', bo
             sys.exit(1)
         bof =files[bo]
         bof.fix_up_file(files, circularity)
@@ -259,9 +267,10 @@ class PipelineFile():
             return
         dir = PipelineFile.output_dir
 
+        utilities.make_sure_path_exists(dir)
         if ind:
             if not ind in files:
-                print >> sys.stderr, 'ERROR: in_dir is unknown file.'
+                print >> sys.stderr, 'ERROR: in_dir is unknown file:', ind
                 sys.exit(1)
             indf = files[ind]
             indf.fix_up_file(files, circularity)
@@ -280,8 +289,3 @@ class PipelineFile():
             fn = os.path.split(self.path)[1]
             self.path = os.path.join(dir, fn)
             self.in_dir = None
-            
-    ############################################################
-    ############################################################
-    ############################################################
-    ############################################################

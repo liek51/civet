@@ -7,10 +7,9 @@ import xml.etree.ElementTree as ET
 
 # pipeline components
 
-#from job_runner.batch_job import *
-
+from job_runner.batch_job import *
 import pipeline_parse as PL
-import pipeline_file as PF
+from pipeline_file import *
 
 class Tool():
     # This script parses all of a tool definition.  Tools may be invoked
@@ -28,6 +27,7 @@ class Tool():
     validTags = [
         'command',
         'description',
+        'dir',
         'option',
         'file',
         'validate',
@@ -41,9 +41,11 @@ class Tool():
         'walltime',
         ]
 
-    def __init__(self, xmlfile, ins, outs, pipelineFiles):
-        # Does placing the import here help?
+    def __init__(self, xml_file, ins, outs, pipelineFiles):
+        # Don't understand why this has to be here as well to get some
+        # symbols. But it seems to be needed.
         import pipeline_parse as PL
+
         self.options = {}
         self.commands = []
         self.modules = ['python/2.7.3']
@@ -61,17 +63,21 @@ class Tool():
         # If not found, look in the same directory as the master pipeline
         # directory.
         # FIXME: We may not want to do this for the CLIA certified pipeline!!!
-        if not os.path.exists(xmlfile):
-            xmlfile = os.path.join(PL.master_XML_dir, xmlfile)
-        if not os.path.exists(xmlfile):
+        if not os.path.exists(xml_file):
+            xml_file = os.path.join(PL.master_XML_dir, xml_file)
+        if not os.path.exists(xml_file):
             print >> sys.stderr, ('ERROR: Could not find tool XML file:'
-                                  , xmlfile, '\nExiting...')
+                                  , xml_file, '\nExiting...')
             sys.exit(1)
 
+        #print >> sys.stderr, '***Parsing tool file:', xml_file
+
+        self.xml_file = xml_file
+
         # Verify that the tool definition file has not changed.
-        self.verify_files.append(xmlfile)
+        self.verify_files.append(xml_file)
        
-        tool = ET.parse(xmlfile).getroot()
+        tool = ET.parse(xml_file).getroot()
         atts = tool.attrib
         # Validate the attributes
         for a in atts:
@@ -99,14 +105,14 @@ class Tool():
             assert t in Tool.validTags, 'unknown child tag in tool tag: ' + t
 
 
-            if t == 'file':
+            if t == 'file' or t == 'dir':
                 # Register the file in the tool's file dictionary
                 self.file(child)
             else:
                 pending.append(child)
 
-        # Now we can fixup our files.
-        PF.fixup_files(self.tool_files)
+        # Now we can fix up our files.
+        PipelineFile.fix_up_files(self.tool_files)
 
         # Now, finally, we can process the rest of the tags.
         for child in pending:
@@ -118,21 +124,20 @@ class Tool():
             elif t == 'option':
                 Option(child, self.options, self.tool_files)
             elif t == 'command':
-                Command(child, self.commands, self.options, self.tool_files)
+                Command(child, self.commands, self.options, self.tool_files, self.xml_file)
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
                 a = child.attrib
                 if 'id' in a:
-                    name = self.tool_files[a[id]].path
-                    print 'Validate new form name =', name
+                    name = self.tool_files[a['id']].path
                 else:
                     name = child.text
-                self.validate_files.append(name)
+                self.verify_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
 
-    def tempFile(self, e):
+    def file(self, e):
         atts = e.attrib
 
         id = atts['id']
@@ -143,7 +148,10 @@ class Tool():
                                           self.id)
         
 
-        PF.parse_XML(e, self.tool_files)
+        PipelineFile.parse_XML(e, self.tool_files)
+
+    def collect_files_to_validate(self):
+        return self.verify_files
 
     def logVersion(self):
         pass
@@ -180,8 +188,8 @@ class Tool():
         # 
         # Now it is time to fix up the commands and write the script file.
         # We couldn't do this before, because we have to ensure that ALL 
-        # pipeline XML processing is done. (tempfiles need an output dir,
-        # and might have been specified before the output dir.
+        # pipeline XML processing is done. (Tempfiles need an output dir,
+        # and might have been specified before the output dir.)
         # Tempfiles specified in the pipeline have already been fixed up 
         # and have paths.  Here in the tool, they appear as normal files.
         # This is different from tempfiles specified in the tool; they
@@ -195,26 +203,29 @@ class Tool():
             if p not in self.verify_files:
                 self.verify_files.append(c.program)
 
-        # actually run the tool
+        # actually run the tool; get the date/time at the start of every
+        # command, and at the end of the run.
         name = '{0}_{1}'.format(name_prefix, self.name)
         multi_command_list = []
         for c in self.commands:
-            multi_command_list.append(c.real_command)
+            multi_command_list.append('date; ' + c.real_command)
+        multi_command_list.append('date')
         multi_command = '\n'.join(multi_command_list)
-        #"""
-        print 'Batch Job:\n' + multi_command
-        print '    workdir:', PL.output_dir
+        """
+        print 'Batch Job (', self.xml_file, '):\n' + multi_command
+        print '    workdir:', PipelineFile.output_dir
         print '    files_to_verify:', self.verify_files
         print '    ppn:', self.threads
         print '    walltime:', self.walltime
         print '    modules:', self.modules
         print '    depends_on:', depends_on
         print '    name:', name
+        return "1"
         """
 
         # Do the actual batch job sumbission
         batch_job = BatchJob(
-            multi_command, workdir=PL.output_dir, files_to_check=self.verify_files, 
+            multi_command, workdir=PipelineFile.output_dir, files_to_check=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name)
     
@@ -222,8 +233,6 @@ class Tool():
 
         print 'Job', self.name, 'submitted as job id:', job_id
         return job_id
-        """
-        return "1"
 
     def getCommand(self):
         # return the command as a string
@@ -275,11 +284,12 @@ class Command():
         'stderr_id',
         'stdout_id',
         ]
-    def __init__(self, e, commands, options, tool_files):
+    def __init__(self, e, commands, options, tool_files, xml_file):
         # Stash the options and tool_files dictionaries.  We'll need
         # them to fix up the command lines.
         self.options = options
         self.tool_files = tool_files
+        self.xml_file = xml_file
         self.version_command = None
         atts = e.attrib
         for a in atts:
@@ -326,7 +336,10 @@ class Command():
                 return o.command_text + ' ' + o.value
             if tok in self.tool_files:
                 return self.tool_files[tok].path
-            return 'UNKNOWN OPTION OR FILE ID: ' + tok
+            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", tok, 'in file', self.xml_file
+            print >> sys.stderr, 'Tool files:', self.tool_files
+            print >> sys.stderr, 'Options:', self.options, '\n\n'
+            return 'UNKNOWN OPTION OR FILE ID: ' + tok 
             
         # Fix up a command by replacing all the delimited option names and
         # file ids with the real option text and file paths.
