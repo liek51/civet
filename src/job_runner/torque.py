@@ -121,9 +121,25 @@ class TorqueJobRunner(object):
         echo "PREVALIDATION: ${PRE_RUN_VALIDATION}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 2>> $LOG_DIR/$${PBS_JOBNAME}-err.log
         VALIDATION_STATUS=$$?
+
+
+
+        #
+        #  FIXME; Validation temporarily disabled.
+        #
+        echo "PREVALIDATION: NOT PERFORMED! FIXME BY RENABLING IN torque.py" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        VALIDATION_STATUS=$$?
+
+
+
+
         
         if [ $$VALIDATION_STATUS -eq 0 ]; then
-        
+
+            echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+
+            ls output >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+
             #optional version command
             $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log
          
