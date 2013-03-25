@@ -74,7 +74,6 @@ class PipelineFile():
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
         id = att['id']
-
         # We are a file...
         is_file = t == 'file'
         is_dir = t == 'dir'
@@ -101,24 +100,25 @@ class PipelineFile():
         if 'in_dir' in att:
             in_dir = att['in_dir']
 
-        # All except temp files need either a filespec or parameter,
-        # or based_on
-        if not is_temp:
-            if 'filespec' in att:
-                path = att['filespec']
-                path_is_path = True
-            if 'parameter' in att:
-                assert not path, ('Must not have both filespec'
-                                  'and parameter attributes.')
-                path = int(att['parameter'])
-                is_parameter = True
+        if 'filespec' in att:
+            path = att['filespec']
+            path_is_path = True
 
-            if 'based_on' in att:
-                assert (not path), (
-                    'Must not have based_on and path or parameter attributes.')
-                based_on = att['based_on']
-                pattern = att['pattern']
-                replace = att['replace']
+        if 'parameter' in att:
+            assert not path, ('Must not have both filespec'
+                              'and parameter attributes.')
+            path = int(att['parameter'])
+            is_parameter = True
+
+        if 'based_on' in att:
+            assert (not path), (
+                'Must not have based_on and path or parameter attributes.')
+            based_on = att['based_on']
+            pattern = att['pattern']
+            replace = att['replace']
+
+        #if is_temp and not path:
+        #    print >> sys.stderr, "temp", id, "has no path"
 
         PipelineFile(
             id, path, is_file, is_temp, is_input, is_dir, files, 
@@ -210,8 +210,13 @@ class PipelineFile():
 
         # Turn all the paths into an absolute path, so changes in
         # working directory throughout the pipeline lifetime don't
-        # foul us up.
-        self.path = os.path.abspath(self.path)
+        # foul us up. First check if the file doesn't have a path at all
+        # i.e., just a filename.  If so, and it is not an input file,
+        # place it in the output directory.
+        path = self.path
+        if os.path.split(path)[0] == '':
+            path = os.path.join(PipelineFile.output_dir, path)
+        self.path = os.path.abspath(path)
 
         self._is_fixed_up = True
 
@@ -253,11 +258,15 @@ class PipelineFile():
         bof =files[bo]
         bof.fix_up_file(files, circularity)
 
-        original_path = bof.path
+        # strip out any path before using the re, in case the replacement
+        # uses the leading strin twice.
+        original_path = os.path.basename(bof.path)
+
         #print >> sys.stderr, '\nBased on'
         #print >> sys.stderr, original_path
         #print >> sys.stderr, bof
         #print >> sys.stderr, self
+
         self.path = re.sub(self.pattern, self.replace, original_path)
         #print >> sys.stderr, self
 

@@ -104,7 +104,7 @@ class TorqueJobRunner(object):
         echo "Run time log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-run.log
         echo "Error log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-err.log
 
-        echo "Run begain on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo "Run began on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
@@ -137,8 +137,6 @@ class TorqueJobRunner(object):
         if [ $$VALIDATION_STATUS -eq 0 ]; then
 
             echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
-
-            ls output >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
             #optional version command
             $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log

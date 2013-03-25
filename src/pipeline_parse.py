@@ -109,7 +109,7 @@ class Pipeline(object):
         invocation = 0
         for step in self._steps:
             invocation += 1
-            name = '{0}_Step_{1}'.format(self.name, invocation)
+            name = '{0}_S{1}'.format(self.name, invocation)
             job_id = step.submit(depends_on, name)
             depends_on = [job_id]
 
@@ -125,7 +125,7 @@ class Pipeline(object):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
             self._job_runner =  TorqueJobRunner(self.log_dir, 
-                                                validation_cmd="/hpcdata/asimons/validate")
+                                                validation_cmd="validate")
         return self._job_runner
 
     def collect_files_to_validate(self):

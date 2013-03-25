@@ -60,7 +60,12 @@ try:
             sys.exit(1)
         # Enough good reads. We're happy.
         sys.exit(0)
+    #
+    # If we got here, we didn't find the right line. Something's wrong. Fail.
+    sys.exit(2)
+
 except :
     # Not sure what went wrong... Bail.
-    print >> sys.stderr, 'Unexpected error:', sys.exec_info[0]
-    sys.exit(2)
+    #print >> sys.stderr, 'Unexpected error:', sys.exc_info[0]
+    #sys.exit(2)
+    raise
