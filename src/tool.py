@@ -48,7 +48,11 @@ class Tool():
 
         self.options = {}
         self.commands = []
-        self.modules = ['python/2.7.3']
+
+        # Any pipeline will rely on having these modules loaded.
+        # Other modules must be specified in the tool descriptions.
+        self.modules = ['cga', 'python/2.7.3']
+
         self.verify_files = ['python']
         self.tool_files = {}
         self.pipelineFiles = pipelineFiles
@@ -75,7 +79,7 @@ class Tool():
         self.xml_file = xml_file
 
         # Verify that the tool definition file has not changed.
-        self.verify_files.append(xml_file)
+        self.verify_files.append(os.path.abspath(xml_file))
        
         tool = ET.parse(xml_file).getroot()
         atts = tool.attrib
@@ -132,7 +136,7 @@ class Tool():
                 if 'id' in a:
                     name = self.tool_files[a['id']].path
                 else:
-                    name = child.text
+                    name = os.path.abspath(child.text)
                 self.verify_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
@@ -250,17 +254,19 @@ class Option():
         self.value = ''
         try:
             name = e.attrib['name'].strip()
+            self.name = name
             command_text = e.attrib['command_text'].strip()
             if 'value' in e.attrib:
                 value = e.attrib['value'].strip()
             elif 'from_file' in e.attrib:
                 fid = e.attrib['from_file']
                 fn = tool_files[fid].path
-                value = open(fn).readline().rstrip()
+                value = '$(cat ' + fn + ') '
         except:
-            dumpElement(e, 0)
-            return
-        self.name = name
+            print >> sys.stderr, 'unexpected problem with {0}'.format(self)
+            print >> sys.stderr, sys.exc_info()[0]
+            raise
+
         self.isFile = False
         self.command_text = command_text
         self.value = value
