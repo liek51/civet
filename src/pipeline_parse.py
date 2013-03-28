@@ -96,7 +96,7 @@ class Pipeline(object):
     @property
     def log_dir(self):
         if not self._log_dir:
-            self._log_dir = os.path.join(PipelineFile.output_dir, 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            self._log_dir = os.path.join(PipelineFile.get_output_dir(), 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
         
     def submit(self):

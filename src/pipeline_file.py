@@ -17,6 +17,7 @@ class PipelineFile():
         ]
 
     valid_file_attributes = [
+        'create',
         'id',
         'input',
         'in_dir',
@@ -29,14 +30,14 @@ class PipelineFile():
         ]
 
     # Track the master output directory.
-    output_dir = '.'
+    output_dir = None
 
     # And the parameters to the pipeline
     params = None
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, based_on, pattern, replace, in_dir,
-                 is_parameter):
+                 is_parameter, create=True):
         self.id = id
         self.path = path
         self._is_file = is_file
@@ -49,6 +50,7 @@ class PipelineFile():
         self.replace = replace
         self.in_dir = in_dir
         self.is_parameter = is_parameter
+        self.create = create
         self._is_fixed_up = False
 
         if self.id in files:
@@ -96,6 +98,16 @@ class PipelineFile():
         if 'input' in att:
             is_input = att['input'].upper() == 'TRUE'
 
+        # Create directory?
+        if is_dir:
+            if 'create' in att:
+                create = att['create'].upper() == 'TRUE'
+            else:
+                create = True
+        else:
+            create = False
+                
+
         in_dir = None
         if 'in_dir' in att:
             in_dir = att['in_dir']
@@ -122,7 +134,8 @@ class PipelineFile():
 
         PipelineFile(
             id, path, is_file, is_temp, is_input, is_dir, files, 
-            path_is_path, based_on, pattern, replace, in_dir, is_parameter)
+            path_is_path, based_on, pattern, replace, in_dir,
+            is_parameter, create)
 
         # This routine latches the first output directory we see.
         # We call it arbitrarily for all files.
@@ -135,8 +148,19 @@ class PipelineFile():
     @staticmethod
     def from_filename(id, name, is_input, files):
         print >> sys.stderr, '****************from_filename() used:', name
-        PipelineFile(id, name, True, False, is_input, False, files,
-                     True, None, False)
+        PipelineFile(id, name, 
+                     True,     # is_file
+                     False,    # is_temp
+                     is_input,
+                     False,    # is_dir
+                     files,
+                     True,     # path_is_path
+                     None,     # based_on
+                     None,     # pattern
+                     None,     # replace
+                     None,     # in_dir
+                     False,    # is_parameter
+                     False)    # create
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -160,12 +184,21 @@ class PipelineFile():
     @staticmethod
     def set_output_dir(f):
         # Only register the first output dir that is not cwd
-        if PipelineFile.output_dir != '.':
+        if PipelineFile.output_dir:
             return
         if not f._is_dir:
             return
         if f.is_output_dir:
-            PipelineFile.output_dir = f.path
+            PipelineFile.output_dir = f
+
+    @staticmethod
+    def get_output_dir():
+        if not PipelineFile.output_dir:
+            return '.'
+        if not PipelineFile.output_dir._is_fixed_up:
+            raise Exception( "Using output_dir before fixed up...")
+            sys.exit(1)
+        return PipelineFile.output_dir.path
 
     @staticmethod
     def register_params(params):
@@ -174,7 +207,12 @@ class PipelineFile():
     @staticmethod
     def fix_up_files(files):
         #print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
+        # First off, fix up the output dir if we have one; others
+        # may depend on it.
         circularity = []
+        if PipelineFile.output_dir:
+            PipelineFile.output_dir.fix_up_file(files, circularity)
+
         for fid in files:
             files[fid].fix_up_file(files, circularity)
 
@@ -201,12 +239,10 @@ class PipelineFile():
         self.apply_based_on(files, circularity)
         self.apply_in_dir_and_create_temp(files, circularity)
 
-        # Don't do this.  If we need to do it for some, we'll need
-        # to invent an attribute for it, because some tools want
-        # to do the creating, and will fail if the directory exists.
-        
-        #if self._is_dir:
-        #    utilities.make_sure_path_exists(self.path)
+        # Make sure a directory exists, unless explicitly requested
+        # to not do so.
+        if self._is_dir and self.create:
+            utilities.make_sure_path_exists(self.path)
 
         # Turn all the paths into an absolute path, so changes in
         # working directory throughout the pipeline lifetime don't
@@ -214,8 +250,8 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         path = self.path
-        if os.path.split(path)[0] == '':
-            path = os.path.join(PipelineFile.output_dir, path)
+        if os.path.split(path)[0] == '' and self != PipelineFile.output_dir:
+            path = os.path.join(PipelineFile.get_output_dir(), path)
         self.path = os.path.abspath(path)
 
         self._is_fixed_up = True
@@ -232,8 +268,6 @@ class PipelineFile():
 
     def parameter_to_path(self):
         if self.is_parameter:
-            #print >> sys.stderr, '\nFixing parameter file.'
-            #print >> sys.stderr, self
             idx = self.path - 1
             params = PipelineFile.params
             if idx >= len(params):
@@ -243,7 +277,6 @@ class PipelineFile():
             self.path = params[idx]
             self.is_path = True
             self.is_parameter = False
-            #print >> sys.stderr, self
 
     def apply_based_on(self, files, circularity):
         bo = self.based_on
@@ -262,24 +295,20 @@ class PipelineFile():
         # uses the leading strin twice.
         original_path = os.path.basename(bof.path)
 
-        #print >> sys.stderr, '\nBased on'
-        #print >> sys.stderr, original_path
-        #print >> sys.stderr, bof
-        #print >> sys.stderr, self
-
         self.path = re.sub(self.pattern, self.replace, original_path)
-        #print >> sys.stderr, self
 
     def apply_in_dir_and_create_temp(self, files, circularity):
         ind = self.in_dir
         if (not ind) and (not self.is_temp):
             return
-        dir = PipelineFile.output_dir
+        dir = PipelineFile.get_output_dir()
 
         utilities.make_sure_path_exists(dir)
         if ind:
             if not ind in files:
-                print >> sys.stderr, 'ERROR: in_dir is unknown file:', ind
+                print >> sys.stderr, ('ERROR: while processing ' 
+                                      'file with id: ' + self.id +
+                                      ', in_dir is unknown file: ' + ind)
                 sys.exit(1)
             indf = files[ind]
             indf.fix_up_file(files, circularity)
