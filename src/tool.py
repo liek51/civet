@@ -48,6 +48,7 @@ class Tool():
 
         self.options = {}
         self.commands = []
+        self.tempfile_ids = []
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -146,13 +147,18 @@ class Tool():
 
         id = atts['id']
         # Ensure that the id is unique.
-        assert id not in self.options, ('tempfile id duplicates an option'
+        assert id not in self.options, ('file id duplicates an option'
                                         'name: ' + self.id)
-        assert id not in self.tool_files, ('tempfile id is a duplicate: ' +
+        assert id not in self.tool_files, ('file id is a duplicate: ' +
                                           self.id)
         
 
         PipelineFile.parse_XML(e, self.tool_files)
+
+        # Track all the tool temporary files, so that we can
+        # delete them at the end of the tool's execution.
+        if self.tool_files[id].is_temp:
+            self.tempfile_ids.append(id)
 
     def collect_files_to_validate(self):
         return self.verify_files
@@ -214,10 +220,23 @@ class Tool():
         for c in self.commands:
             multi_command_list.append('date; ' + c.real_command)
         multi_command_list.append('date')
+
+        # Tack on a final command to delete our temp files.
+        if self.tempfile_ids:
+            # Convert from file ids to paths.
+            for n in range(len(self.tempfile_ids)):
+                self.tempfile_ids[n] = tool_files[self.tempfile_ids[n]].path
+
+            rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
+            multi_command_list.append(rm_cmd)
+
         multi_command = '\n'.join(multi_command_list)
+
+
+
         """
         print 'Batch Job (', self.xml_file, '):\n' + multi_command
-        print '    workdir:', PipelineFile.output_dir
+        print '    workdir:', PipelineFile.get_output_dir()
         print '    files_to_verify:', self.verify_files
         print '    ppn:', self.threads
         print '    walltime:', self.walltime
@@ -229,13 +248,13 @@ class Tool():
 
         # Do the actual batch job sumbission
         batch_job = BatchJob(
-            multi_command, workdir=PipelineFile.output_dir, files_to_check=self.verify_files, 
+            multi_command, workdir=PipelineFile.get_output_dir(), files_to_check=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name)
     
         job_id = PL.job_runner.queue_job(batch_job)
 
-        print 'Job', self.name, 'submitted as job id:', job_id
+        print job_id + ':', self.name
         return job_id
 
     def getCommand(self):
