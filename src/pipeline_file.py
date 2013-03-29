@@ -17,6 +17,7 @@ class PipelineFile():
         ]
 
     valid_file_attributes = [
+        'append',
         'create',
         'id',
         'input',
@@ -36,7 +37,7 @@ class PipelineFile():
     params = None
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
-                 files, is_path, based_on, pattern, replace, in_dir,
+                 files, is_path, based_on, pattern, replace, append, in_dir,
                  is_parameter, create=True):
         self.id = id
         self.path = path
@@ -48,10 +49,13 @@ class PipelineFile():
         self.based_on = based_on
         self.pattern = pattern
         self.replace = replace
+        self.append = append
         self.in_dir = in_dir
         self.is_parameter = is_parameter
         self.create = create
         self._is_fixed_up = False
+        self.creator_job = None
+        self.consumer_jobs = []
 
         if self.id in files:
             # We've already seen this file ID.
@@ -60,6 +64,16 @@ class PipelineFile():
         else:
             # Register this file in the files/options namespace
             files[self.id] = self
+
+    # Track creator jobs to support file-based dependency scheduling.
+    def set_creator_job(self, j):
+        self.creator_job = j
+
+    # Track the jobs that use this file as an input.  This is needed
+    # to properly known when we can remove our temp files at the end 
+    # of a run.
+    def add_consumer_job(self, j):
+        self.consumer_jobs.append(j)
 
     @staticmethod        
     def parse_XML(e, files):
@@ -86,6 +100,7 @@ class PipelineFile():
         based_on = None
         pattern = None
         replace = None
+        append = None
         is_parameter = False
 
         # What kind of file?
@@ -126,15 +141,30 @@ class PipelineFile():
             assert (not path), (
                 'Must not have based_on and path or parameter attributes.')
             based_on = att['based_on']
-            pattern = att['pattern']
-            replace = att['replace']
+
+            if 'pattern' in att:
+                pattern = att['pattern']
+                if not 'replace' in att:
+                    print >> sys.stderrr, 'pattern specified without replace.'
+                    print >> sys.stderr, att
+                    sys.exit(1)
+                replace = att['replace']
+
+            if 'append' in att:
+                if pattern or replace:
+                    print >> sys.stderr, ('append is incompatible with '
+                                          'pattern and replace.')
+                    print >> sys.stderr, att
+                    sys.exit(1)
+                append = att['append']
+                    
 
         #if is_temp and not path:
         #    print >> sys.stderr, "temp", id, "has no path"
 
         PipelineFile(
             id, path, is_file, is_temp, is_input, is_dir, files, 
-            path_is_path, based_on, pattern, replace, in_dir,
+            path_is_path, based_on, pattern, replace, append, in_dir,
             is_parameter, create)
 
         # This routine latches the first output directory we see.
@@ -144,6 +174,11 @@ class PipelineFile():
     @property
     def is_output_dir(self):
         return self._is_dir and not self._is_input
+
+    """
+    FIXME
+    This routine is believed defunct.  It should be removed and parse_XML
+    remerged with __init__.
 
     @staticmethod
     def from_filename(id, name, is_input, files):
@@ -158,9 +193,11 @@ class PipelineFile():
                      None,     # based_on
                      None,     # pattern
                      None,     # replace
+                     None,     # append
                      None,     # in_dir
                      False,    # is_parameter
                      False)    # create
+    """
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -176,10 +213,10 @@ class PipelineFile():
         return self.__str__()
 
     def __str__(self):
-        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} inD:{9}'.format(
+        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} inD:{10}'.format(
             self.id, self.path, self.is_path, self._is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.in_dir)
+            self.pattern, self.append, self.in_dir)
 
     @staticmethod
     def set_output_dir(f):
@@ -250,7 +287,9 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         path = self.path
-        if os.path.split(path)[0] == '' and self != PipelineFile.output_dir:
+        if (os.path.split(path)[0] == '' and 
+            self != PipelineFile.output_dir and
+            PipelineFile.output_dir._is_fixed_up):
             path = os.path.join(PipelineFile.get_output_dir(), path)
         self.path = os.path.abspath(path)
 
@@ -295,7 +334,10 @@ class PipelineFile():
         # uses the leading strin twice.
         original_path = os.path.basename(bof.path)
 
-        self.path = re.sub(self.pattern, self.replace, original_path)
+        if self.append:
+            self.path = original_path + self.append
+        else:
+            self.path = re.sub(self.pattern, self.replace, original_path)
 
     def apply_in_dir_and_create_temp(self, files, circularity):
         ind = self.in_dir

@@ -41,7 +41,7 @@ class Tool():
         'walltime',
         ]
 
-    def __init__(self, xml_file, ins, outs, pipelineFiles):
+    def __init__(self, xml_file, ins, outs, pipeline_files):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -49,6 +49,8 @@ class Tool():
         self.options = {}
         self.commands = []
         self.tempfile_ids = []
+        self.ins = ins
+        self.outs = outs
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -56,12 +58,12 @@ class Tool():
 
         self.verify_files = ['python']
         self.tool_files = {}
-        self.pipelineFiles = pipelineFiles
+        self.pipeline_files = pipeline_files
         for n in range(len(ins)):
-            f = pipelineFiles[ins[n]]
+            f = pipeline_files[ins[n]]
             self.tool_files['in_' + str(n+1)] = f
         for n in range(len(outs)):
-            f = pipelineFiles[outs[n]]
+            f = pipeline_files[outs[n]]
             self.tool_files['out_' + str(n+1)] = f
 
         # First try to find the xml file in the current working directory,
@@ -171,7 +173,7 @@ class Tool():
         # certified for CLIA.
         pass
 
-    def submit(self, depends_on, name_prefix):
+    def submit(self, name_prefix):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
@@ -225,34 +227,45 @@ class Tool():
         if self.tempfile_ids:
             # Convert from file ids to paths.
             for n in range(len(self.tempfile_ids)):
-                self.tempfile_ids[n] = tool_files[self.tempfile_ids[n]].path
+                self.tempfile_ids[n] = (
+                    self.tool_files[self.tempfile_ids[n]].path)
 
             rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
 
         multi_command = '\n'.join(multi_command_list)
 
-
-
-        """
-        print 'Batch Job (', self.xml_file, '):\n' + multi_command
-        print '    workdir:', PipelineFile.get_output_dir()
-        print '    files_to_verify:', self.verify_files
-        print '    ppn:', self.threads
-        print '    walltime:', self.walltime
-        print '    modules:', self.modules
-        print '    depends_on:', depends_on
-        print '    name:', name
-        return "1"
-        """
+        # Determine what jobs we depend on based on our input files.
+        depends_on = []
+        for fid in self.ins:
+            f = self.pipeline_files[fid]
+            if f.creator_job:
+                j = f.creator_job
+                if j not in depends_on:
+                    depends_on.append(j)
 
         # Do the actual batch job sumbission
         batch_job = BatchJob(
-            multi_command, workdir=PipelineFile.get_output_dir(), files_to_check=self.verify_files, 
+            multi_command, workdir=PipelineFile.get_output_dir(), 
+            files_to_check=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name)
     
         job_id = PL.job_runner.queue_job(batch_job)
+
+        # Any files that we created and that will be passed to other jobs
+        # need to be marked with our job id.  It is OK if we overwrite
+        # a previous job.  I think. (FIXME?)
+        for fid in self.outs:
+            f = self.pipeline_files[fid]
+            f.set_creator_job(job_id)
+
+        # Mark the files we depend on so that they're not cleaned up too 
+        # early.  Really only needs to be done for temp files, but for
+        # simplicity, we mark them all.
+        for fid in self.ins:
+            f = self.pipeline_files[fid]
+            f.add_consumer_job(job_id)
 
         print job_id + ':', self.name
         return job_id

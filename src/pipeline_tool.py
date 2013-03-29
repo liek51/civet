@@ -20,8 +20,8 @@ class PipelineTool():
 
         self.tool = Tool(self.description, input, output, files)
         
-    def submit(self, depends_on, name_prefix):
-        return self.tool.submit(depends_on, name_prefix)
+    def submit(self, name_prefix):
+        return self.tool.submit(name_prefix)
 
     def collect_files_to_validate(self):
         return self.tool.collect_files_to_validate()

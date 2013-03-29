@@ -14,13 +14,13 @@ class Step():
             assert t in Step.validTags, 'Illegal tag in step: ' + t
             self.tools.append(PipelineTool(child, files))
 
-    def submit(self, depends_on, name_prefix):
+    def submit(self, name_prefix):
         invocation = 0
         for tool in self.tools:
             invocation += 1
             name = '{0}_{1}_T{2}'.format(name_prefix, self.name,
                                              invocation)
-            job_id = tool.submit(depends_on, name)
+            job_id = tool.submit(name)
             depends_on = [job_id]
         return job_id
             
