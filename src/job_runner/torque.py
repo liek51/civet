@@ -89,7 +89,7 @@ class TorqueJobRunner(object):
             # qdel them.  We don't care what the state is, or even if they still exit
             
             echo "Aborting pipeline" > $LOG_DIR/abort.log
-            while read ID NAME; do
+            while read ID NAME DEP; do
                 if [ "$$ID" != "$$PBS_JOBID" ]; then
                     echo "calling qdel on $$PBS_JOBID ($${NAME})" >> $LOG_DIR/abort.log
                     qdel $$ID >> $LOG_DIR/abort.log 2>&1
@@ -291,7 +291,7 @@ class TorqueJobRunner(object):
         if self.submit_with_hold and not batch_job.depends_on:
             self.held_jobs.append(id)
             
-        self._id_log.write(id + '\t' + batch_job.name + '\n')
+        self._id_log.write(id + '\t' + batch_job.name + '\t' + str(self._printable_dependencies(batch_job.depends_on)) + '\n')
         self._id_log.flush()
         return id
 
@@ -491,6 +491,16 @@ class TorqueJobRunner(object):
             #not a string, assume list of job ids to join
             return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, 
                                     ':'.join(batch_job.depends_on))
+                                    
+    def _printable_dependencies(self, dependency_list):
+        """
+            Return a list containing shortened (hostname removed) job depenedencies
+        """
+        shortened = []
+        for id in dependency_list:
+            shortened.append(id.split('.', 1)[0])
+            
+        return shortened
 
  
 """
@@ -515,7 +525,7 @@ def main():
     status = job_runner.query_job(id)
     if status:
         print "Status of job is " + status.state
-        
+    
     
     print "calling job_runner.release_all()"
     job_runner.release_all()
