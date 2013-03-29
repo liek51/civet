@@ -14,7 +14,7 @@ from tool import *
 from tool_logger import *
 
 from job_runner.torque import *
-
+from job_runner.batch_job import *
 import utilities
 
 
@@ -105,13 +105,32 @@ class Pipeline(object):
         # FIXME!
         # We should check that all the input files and input directories
         # exist before going farther.  Fail early.
-        depends_on = []
         invocation = 0
         for step in self._steps:
             invocation += 1
             name = '{0}_S{1}'.format(self.name, invocation)
-            job_id = step.submit(depends_on, name)
-            depends_on = [job_id]
+            job_id = step.submit(name)
+
+
+        # Submit a last job which deletes all the temp files.
+        tmps = []
+        # This job is about deleting files... Don't bother looking for the 
+        # file's creator_job.  What we really want are consumer jobs.
+        # We can't just wait for the last job to complete, because it is 
+        # possible to construct pipelines where the last submitted job
+        # completes before an earlier submitted job.
+        depends = []
+        for fid in self._files:
+            f = self._files[fid]
+            if f.is_temp:
+                tmps.append(f.path)
+                if f.consumer_jobs:
+                    for j in f.consumer_jobs:
+                        if j not in depends:
+                            depends.append(j)
+        cmd = 'rm ' + ' '.join(tmps)
+        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),depends_on=depends, name='Remove_temp_files')
+        self.job_runner.queue_job(batch_job)
 
         # We're done submitting all the jobs.  Release them and get on with it.
         # This is the last action of the pipeline submission process. WE'RE DONE!
