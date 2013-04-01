@@ -35,6 +35,7 @@ class Tool():
         ]
 
     validAtts = [
+        'error_strings',
         'name',
         'threads',
         'tool_config_prefix',
@@ -89,21 +90,40 @@ class Tool():
         # Validate the attributes
         for a in atts:
             assert a in Tool.validAtts, 'unknown attribute in tool tag: ' + a
-        
+
+        # The name attribute is required.  All others are optional.
         self.name = atts['name']
+
+        if 'error_strings' in atts:
+            self.error_strings = []
+            # The error strings are a comma-sep list of strings
+            # to search for.  Spaces have to be quoted or escaped.
+            estrings = atts['error_strings'].split(',')
+            for es in estrings:
+                self.error_strings.append(es.strip())
+        else:
+            self.error_strings = None
+
         if 'tool_config_prefix' in atts:
             self.config_prefix = atts['tool_config_prefix']
+        else:
+            self.config_prefix = None
+
         if 'threads' in atts:
             self.threads = atts['threads']
         else:
             self.threads = '1'
+
         if 'walltime' in atts:
             self.walltime = atts['walltime']
         else:
             self.walltime = '01:00:00'
 
 
-        # Process all our files first, then the other tags.
+        # We can't process any non-file tags until all our files
+        # are processed and fixed up.  Rather than force an order
+        # in the user's file, we simply stash the other tags in
+        # a "pending tags" list.
         pending = []
 
         # Now process our child tags
@@ -249,7 +269,7 @@ class Tool():
             multi_command, workdir=PipelineFile.get_output_dir(), 
             files_to_check=self.verify_files, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
-            depends_on=depends_on, name=name)
+            depends_on=depends_on, name=name, error_strings=self.error_strings)
     
         job_id = PL.job_runner.queue_job(batch_job)
 
@@ -373,7 +393,13 @@ class Command():
                 o = self.options[tok]
                 return o.command_text + ' ' + o.value
             if tok in self.tool_files:
-                return self.tool_files[tok].path
+                f = self.tool_files[tok]
+                if f.is_list:
+                    # Emit the code to invoke a file filter.
+                    return "$(process_filelist.py f.in_dir.path, f.pattern)"
+                return f.path
+
+            # We didn't match a known option, or a file id. Put out an error.
             print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", tok, 'in file', self.xml_file
             print >> sys.stderr, 'Tool files:', self.tool_files
             print >> sys.stderr, 'Options:', self.options, '\n\n'
