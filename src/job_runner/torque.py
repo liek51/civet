@@ -49,7 +49,7 @@ class JobStatus(object):
     def stdout_path(self):
         return self.status['Output_Path'][0]
             
-    # retrun the exit_status attribute if it exists, if it does not exist
+    # return the exit_status attribute if it exists, if it does not exist
     # return None.  Should only exist if the job is in the "C" state.
     @property
     def exit_status(Self):
@@ -157,7 +157,7 @@ class TorqueJobRunner(object):
             
             #check error log for list of keywords
             for str in $ERROR_STRINGS; do
-                if grep -q $$str $LOG_DIR/$${PBS_JOBNAME}-err.log; then
+                if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                     echo "found error string in stderr log. abort pipeline" >&2
                     abort_pipeline 1
                 fi

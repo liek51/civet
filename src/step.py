@@ -32,3 +32,12 @@ class Step():
                 if fn not in fns:
                     fns.append(fn)
         return fns
+
+    def check_files_exist(self):
+        missing = []
+        for tool in self.tools:
+            tmissing = tool.check_files_exist()
+            for fn in tmissing:
+                if fn not in missing:
+                    missing.append(fn)
+        return missing

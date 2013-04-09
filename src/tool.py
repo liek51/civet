@@ -79,6 +79,7 @@ class Tool():
             sys.exit(1)
 
         #print >> sys.stderr, '***Parsing tool file:', xml_file
+        #print >> sys.stderr, self.ins
 
         self.xml_file = xml_file
 
@@ -243,6 +244,7 @@ class Tool():
             multi_command_list.append('date; ' + c.real_command)
         multi_command_list.append('date')
 
+        """
         # Tack on a final command to delete our temp files.
         if self.tempfile_ids:
             # Convert from file ids to paths.
@@ -252,6 +254,7 @@ class Tool():
 
             rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
+        """
 
         multi_command = '\n'.join(multi_command_list)
 
@@ -299,6 +302,15 @@ class Tool():
         # Not sure this is the place to have this, or whether some place else
         # simply calls getCommand and writes it.
         pass
+
+    def check_files_exist(self):
+        missing = []
+        for fid in self.tool_files:
+            f = self.tool_files[fid]
+            if f.is_input:
+                if not os.path.exists(f.path):
+                    missing.append(f.path)
+        return missing
 
 class Option():
     def __init__(self, e, options, tool_files):
