@@ -25,3 +25,6 @@ class PipelineTool():
 
     def collect_files_to_validate(self):
         return self.tool.collect_files_to_validate()
+
+    def check_files_exist(self):
+        return self.tool.check_files_exist()

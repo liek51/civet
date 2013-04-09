@@ -13,6 +13,7 @@ class PipelineFile():
     """
     validFileTags = [
         'file',
+        'filelist',
         'dir',
         ]
 
@@ -38,12 +39,12 @@ class PipelineFile():
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, based_on, pattern, replace, append, in_dir,
-                 is_parameter, create=True):
+                 is_parameter, is_list, create=True):
         self.id = id
         self.path = path
         self._is_file = is_file
         self.is_temp = is_temp
-        self._is_input = is_input
+        self.is_input = is_input
         self._is_dir = is_dir
         self.is_path = is_path
         self.based_on = based_on
@@ -52,6 +53,7 @@ class PipelineFile():
         self.append = append
         self.in_dir = in_dir
         self.is_parameter = is_parameter
+        self.is_list = is_list
         self.create = create
         self._is_fixed_up = False
         self.creator_job = None
@@ -90,9 +92,11 @@ class PipelineFile():
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
         id = att['id']
-        # We are a file...
+
+        # What kind of file...
         is_file = t == 'file'
         is_dir = t == 'dir'
+        is_list = t == 'filelist'
 
         # Init some variables.
         path_is_path = False
@@ -101,6 +105,7 @@ class PipelineFile():
         pattern = None
         replace = None
         append = None
+        is_list = False
         is_parameter = False
 
         # What kind of file?
@@ -157,7 +162,11 @@ class PipelineFile():
                     print >> sys.stderr, att
                     sys.exit(1)
                 append = att['append']
-                    
+
+        if is_list and not (pattern and in_dir):
+            print >> sys.stderr, 'filelist requires in_dir and pattern.'
+            print >> sys.stderr, att
+            sys.exit(1)
 
         #if is_temp and not path:
         #    print >> sys.stderr, "temp", id, "has no path"
@@ -173,7 +182,7 @@ class PipelineFile():
 
     @property
     def is_output_dir(self):
-        return self._is_dir and not self._is_input
+        return self._is_dir and not self.is_input
 
     """
     FIXME
@@ -214,7 +223,7 @@ class PipelineFile():
 
     def __str__(self):
         return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} inD:{10}'.format(
-            self.id, self.path, self.is_path, self._is_input,
+            self.id, self.path, self.is_path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
             self.pattern, self.append, self.in_dir)
 
@@ -310,9 +319,11 @@ class PipelineFile():
             idx = self.path - 1
             params = PipelineFile.params
             if idx >= len(params):
-                print >> sys.stderr, ('Too few parameters... len(params): ' +
-                    str(len(params)) + 'File: ' + self.id + 
-                    ' referenced parameter ' + self.path)
+                print >> sys.stderr, ('Too few parameters...\n'
+                    '    len(params): ' +
+                    str(len(params)) + '\n    File: ' + self.id + 
+                    '\n    referenced parameter: ' + str(self.path))
+                sys.exit(1)
             self.path = params[idx]
             self.is_path = True
             self.is_parameter = False

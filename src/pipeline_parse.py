@@ -102,16 +102,20 @@ class Pipeline(object):
     def submit(self):
         print 'Executing pipeline', self.name
         
-        # FIXME!
-        # We should check that all the input files and input directories
-        # exist before going farther.  Fail early.
+        # Check that all files marked "input" exist.
+        missing = self.check_files_exist()
+        if missing:
+            print >> sys.stderr, 'The following required files are missing:'
+            print >> sys.stderr, '    ' + '\n    '.join(missing)
+            sys.exit(1)
+
         invocation = 0
         for step in self._steps:
             invocation += 1
             name = '{0}_S{1}'.format(self.name, invocation)
             job_id = step.submit(name)
 
-
+        """
         # Submit a last job which deletes all the temp files.
         tmps = []
         # This job is about deleting files... Don't bother looking for the 
@@ -131,7 +135,7 @@ class Pipeline(object):
         cmd = 'rm ' + ' '.join(tmps)
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),depends_on=depends, name='Remove_temp_files')
         self.job_runner.queue_job(batch_job)
-
+        """
         # We're done submitting all the jobs.  Release them and get on with it.
         # This is the last action of the pipeline submission process. WE'RE DONE!
         self.job_runner.release_all()
@@ -155,5 +159,15 @@ class Pipeline(object):
                 if fn not in fns:
                     fns.append(fn)
         return fns
+
+    def check_files_exist(self):
+        missing = []
+        for step in self._steps:
+            smissing = step.check_files_exist()
+            for fn in smissing:
+                if fn not in missing:
+                    missing.append(fn)
+        return missing
+
 
 sys.modules[__name__] = Pipeline()
