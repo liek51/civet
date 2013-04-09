@@ -115,7 +115,6 @@ class Pipeline(object):
             name = '{0}_S{1}'.format(self.name, invocation)
             job_id = step.submit(name)
 
-        """
         # Submit a last job which deletes all the temp files.
         tmps = []
         # This job is about deleting files... Don't bother looking for the 
@@ -135,7 +134,7 @@ class Pipeline(object):
         cmd = 'rm ' + ' '.join(tmps)
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),depends_on=depends, name='Remove_temp_files')
         self.job_runner.queue_job(batch_job)
-        """
+
         # We're done submitting all the jobs.  Release them and get on with it.
         # This is the last action of the pipeline submission process. WE'RE DONE!
         self.job_runner.release_all()

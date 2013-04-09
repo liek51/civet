@@ -244,7 +244,6 @@ class Tool():
             multi_command_list.append('date; ' + c.real_command)
         multi_command_list.append('date')
 
-        """
         # Tack on a final command to delete our temp files.
         if self.tempfile_ids:
             # Convert from file ids to paths.
@@ -254,7 +253,6 @@ class Tool():
 
             rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
-        """
 
         multi_command = '\n'.join(multi_command_list)
 
