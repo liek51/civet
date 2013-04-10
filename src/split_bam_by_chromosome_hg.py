@@ -36,8 +36,8 @@ if len(sys.argv) != 2 or sys.argv[1][-4:] != '.bam':
 inf = sys.argv[1]
 base = inf[:-4]
 for chr in chromosomes:
-    outf = '{1}_{2}.bam'.format(base, chr)
-    cmd = 'samtools view -b -o {1} {2} chr{3}'.format(outf, inf, chr)
+    outf = '{0}_{1}.bam'.format(base, chr)
+    cmd = 'samtools view -b -o {0} {1} chr{2}'.format(outf, inf, chr)
     run_process(cmd)
     
 # OK.  We've split our bam file by chromosome.  All set, right? Not quite.
