@@ -296,7 +296,8 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         path = self.path
-        if (os.path.split(path)[0] == '' and 
+        if (os.path.split(path)[0] == '' and
+            (not self.is_input) and
             self != PipelineFile.output_dir and
             PipelineFile.output_dir._is_fixed_up):
             path = os.path.join(PipelineFile.get_output_dir(), path)
