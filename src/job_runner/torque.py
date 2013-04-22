@@ -143,29 +143,34 @@ class TorqueJobRunner(object):
             #optional version command
             $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log
          
+         
             #execute the actual command line for this pipeline tool
             echo "Executing $CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            TIME_START="$$(date +%s)"
             $CMD
+            TIME_END="$$(date +%s)"
+            ELAPSED_TIME=$$(expr $$TIME_END - $$TIME_START)
+            ELAPSED_TIME_FORMATTED=$$(printf "%d:%d:%d" $$(($$ELAPSED_TIME/3600)) $$(($$ELAPSED_TIME%3600/60)) $$(($$ELAPSED_TIME%60)))
             
             CMD_EXIT_STATUS=$$?
             
             echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
                 echo "Command returned non-zero value.  abort pipeline" >&2
-                abort_pipeline $$CMD_EXIT_STATUS
+                abort_pipeline $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED
             fi
             
             #check error log for list of keywords
             for str in $ERROR_STRINGS; do
                 if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                     echo "found error string in stderr log. abort pipeline" >&2
-                    abort_pipeline 1
+                    abort_pipeline 1 $$ELAPSED_TIME_FORMATTED
                 fi
             done
             
         else
             echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >&2
-            abort_pipeline $$VALIDATION_STATUS            
+            abort_pipeline $$VALIDATION_STATUS "00:00:00"        
         fi
         
         #run supplied post-job checks
@@ -179,7 +184,7 @@ class TorqueJobRunner(object):
             abort_pipeline $$EPILOGUE_RETURN
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
-            echo "0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "0\t$$ELAPSED_TIME_FORMATTED" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
     
         fi
     
