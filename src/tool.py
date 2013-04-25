@@ -391,7 +391,10 @@ class Command():
             self.version_command = re.sub('\s+', ' ', child.text).strip()
 
         # Strip out excess white space in the command
-        self.command_template = re.sub('\s+', ' ', e.text).strip()
+        if e.text:
+            self.command_template = re.sub('\s+', ' ', e.text).strip()
+        else:
+            self.command_template = ''
         commands.append(self)
 
     def fixupOptionsFiles(self):
