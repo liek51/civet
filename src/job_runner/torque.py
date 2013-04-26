@@ -24,6 +24,42 @@ import utilities
 _DEFAULT_DEPEND_TYPE = "afterok"
 _BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 
+def jobs_from_logdir(logdir):
+    batch_jobs = []
+    for line in open(os.path.join(logdir, _BATCH_ID_LOG)):
+        batch_jobs.append(line.strip().split('\t'))
+        
+    return batch_jobs
+
+def get_exit_status(logdir, job_name):
+    status = {}
+    status_file_path = os.path.join(logdir, job_name + "-status.txt")
+    f = open(status_file_path, "r");
+    (exit_status, walltime) = f.readline().strip().split('\t')
+    f.close()
+    status['exit_status'] = exit_status
+    status['walltime'] = walltime
+    
+    return status
+
+def query_job(id, server=None):
+	"""
+		Query server for status of job specified by id.
+		
+		query_job will return None if the job does not exist on the server, 
+		otherwise it will return a JobStatus object.
+	""" 
+	pbsq = PBSQuery.PBSQuery(server=server)
+	job_status =  pbsq.getjob(id)
+	
+	# check to see if the job existed.  this is kind of lame, but we can't
+	# just do "if job_status:" because PBSQuery.getjob returns an empty 
+	# dictionary if the job is not found, but it returns some other object
+	# that acts like a dictionary but does not have a __nonzero__ attribute
+	if 'Job_Name' in job_status:
+		return JobStatus(job_status)
+	else:
+		return None
 
 class JobStatus(object):
     """
@@ -52,13 +88,18 @@ class JobStatus(object):
     # return the exit_status attribute if it exists, if it does not exist
     # return None.  Should only exist if the job is in the "C" state.
     @property
-    def exit_status(Self):
+    def exit_status(self):
         if 'exit_status' in self.status:
             return self.status['exit_status'][0]
         else:
             return None
-            
-
+    
+    @property
+    def walltime(self):
+        if 'resources_used' in self.status:
+            return self.status['resources_used']['walltime']
+        else:
+            return "00:00:00"       
     #TODO: implement more properties (like for resources_used.walltime)
 
 
@@ -95,7 +136,7 @@ class TorqueJobRunner(object):
                     qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
             done < $LOG_DIR/$ID_FILE
-            echo "$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "$$1\t$$2" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             exit $$1
         }
         
@@ -300,27 +341,6 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return id
 
-        
-   
-    def query_job(self, id):
-        """
-            Query server for status of job specified by id.
-            
-            query_job will return None if the job does not exist on the server, 
-            otherwise it will return a JobStatus object.
-        """ 
-        pbsq = PBSQuery.PBSQuery(server=self._server)
-        job_status =  pbsq.getjob(id)
-        
-        # check to see if the job existed.  this is kind of lame, but we can't
-        # just do "if job_status:" because PBSQuery.getjob returns an empty 
-        # dictionary if the job is not found, but it returns some other object
-        # that acts like a dictionary but does not have a __nonzero__ attribute
-        if 'Job_Name' in job_status:
-            return JobStatus(job_status)
-        else:
-            return None
-
     
     def delete_job(self, id):
         """
@@ -421,7 +441,6 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-
    
     def strerror(self, e):
         """
@@ -431,7 +450,6 @@ class TorqueJobRunner(object):
             these strings are out of sync with the integer error codes
         """
         return pbs.errors_txt[e]
-
 
        
     def _connect_to_server(self):
