@@ -24,7 +24,7 @@ def main():
     for job in batch_jobs:
         print "{0} ({1}):".format(job[1], job[0])
         if os.path.exists(os.path.join(log_dir, job[1] + "-status.txt")): 
-            status = job_runner.torque.get_exit_status(log_dir, job[1])
+            status = job_runner.torque.get_status_from_file(log_dir, job[1])
             print "\tExit Status={0}".format(status['exit_status'])
             print "\tWalltime={0}".format(status['walltime'])
         else:
