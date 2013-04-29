@@ -35,16 +35,9 @@ def jobs_from_logdir(logdir):
         
     return batch_jobs
 
-def get_exit_status(logdir, job_name):
-    status = {}
-    status_file_path = os.path.join(logdir, job_name + "-status.txt")
-    f = open(status_file_path, "r");
-    (exit_status, walltime) = f.readline().strip().split('\t')
-    f.close()
-    status['exit_status'] = exit_status
-    status['walltime'] = walltime
-    
-    return status
+def get_status_from_file(logdir, job_name):
+    return dict(line.strip().split('=') for line in open(os.path.join(logdir, job_name + "-status.txt")))
+
 
 def query_job(id, server=None):
 	"""
