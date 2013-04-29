@@ -6,11 +6,15 @@ job_runner/torque.py
 provide functionality for queueing and querying jobs on a TORQUE cluster
 
 """
+import sys
 
-
+#make sure we look in the parent directory for modules when running as a script
+if __name__ == "__main__":
+    sys.path.insert(0, "..")
+    
 import textwrap
 import os
-import socket #required by pbs_python
+import socket
 import string
 import errno
 
@@ -136,7 +140,8 @@ class TorqueJobRunner(object):
                     qdel $$ID >> $LOG_DIR/abort.log 2>&1
                 fi
             done < $LOG_DIR/$ID_FILE
-            echo "$$1\t$$2" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "exit_status=$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "walltime=$$2" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             exit $$1
         }
         
@@ -191,7 +196,7 @@ class TorqueJobRunner(object):
             $CMD
             TIME_END="$$(date +%s)"
             ELAPSED_TIME=$$(expr $$TIME_END - $$TIME_START)
-            ELAPSED_TIME_FORMATTED=$$(printf "%d:%d:%d" $$(($$ELAPSED_TIME/3600)) $$(($$ELAPSED_TIME%3600/60)) $$(($$ELAPSED_TIME%60)))
+            ELAPSED_TIME_FORMATTED=$$(printf "%02d:%02d:%02d" $$(($$ELAPSED_TIME/3600)) $$(($$ELAPSED_TIME%3600/60)) $$(($$ELAPSED_TIME%60)))
             
             CMD_EXIT_STATUS=$$?
             
@@ -222,10 +227,11 @@ class TorqueJobRunner(object):
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
             echo "Post job sanity check failed. Aborting pipeline!" >&2
-            abort_pipeline $$EPILOGUE_RETURN
+            abort_pipeline $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
-            echo "0\t$$ELAPSED_TIME_FORMATTED" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "walltime=$$ELAPSED_TIME_FORMATTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
     
         fi
     
