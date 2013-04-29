@@ -545,14 +545,14 @@ def main():
     
     print id
     
-    status = job_runner.query_job(id)
+    status = query_job(id)
     if status:
         print "Status of job is " + status.state
     
     
     print "calling job_runner.release_all()"
     job_runner.release_all()
-    status = job_runner.query_job(id)
+    status = query_job(id)
     if status:
         print "Status of job is " + status.state
     
