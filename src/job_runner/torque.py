@@ -280,11 +280,23 @@ class TorqueJobRunner(object):
         
         if batch_job.stdout_path:
             job_attributes[pbs.ATTR_o] = batch_job.stdout_path
+            
+            #XXX workaround for a TORQUE bug where local copies of stderr/stdout
+            # files to /dev/null don't work correctly but remote copies (to 
+            # submit host) are
+            if job_attributes[pbs.ATTR_o] == "/dev/null":
+                job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
         else:
             job_attributes[pbs.ATTR_o] = os.path.join(self.log_dir, batch_job.name + ".o")
             
         if batch_job.stderr_path:
             job_attributes[pbs.ATTR_e] = batch_job.stderr_path
+            
+            #XXX workaround for a TORQUE bug where local copies of stderr/stdout
+            # files to /dev/null don't work correctly but remote copies (to 
+            # submit host) are 
+            if job_attributes[pbs.ATTR_e] == "/dev/null":
+                job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
         else:
             job_attributes[pbs.ATTR_e] = os.path.join(self.log_dir, batch_job.name + ".e")
             
