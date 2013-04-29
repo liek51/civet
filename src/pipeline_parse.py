@@ -23,13 +23,14 @@ class Pipeline(object):
     A singleton module for information about the overall pipeline.
     
     For ease of access from other pipeline modules this class is inserted 
-    in the Python modules chain using sys.modules. This technique was gleaned 
-    from (URL on two lines... beware)
+    in the Python modules chain using sys.modules. This technique was
+    gleaned  from (URL on two lines... beware)
 
     http://stackoverflow.com/questions/880530/
     can-python-modules-have-properties-the-same-way-that-objects-can
 
-    This is done at the end of the file, after the full definition of the class
+    This is done at the end of the file, after the full definition
+    of the class
     """
     valid_tags = [
         'file',
@@ -56,8 +57,8 @@ class Pipeline(object):
         self.name = pipe.attrib['name']
         assert not pipe.text.strip()
 
-        # We need to process all our files before we process anything else.
-        # Stash anything not a file and process it in a later pass.
+        # We need to process all our files before we process anything
+        # else. Stash anything not a file and process it in a later pass.
         pending = []
 
         # Set up for some properties
@@ -84,8 +85,8 @@ class Pipeline(object):
 
         PipelineFile.fix_up_files(self._files)
 
-        # Now that our files are all processed and fixed up, we can process
-        # the rest of the XML involved with this pipeline.
+        # Now that our files are all processed and fixed up, we can
+        # process the rest of the XML involved with this pipeline.
         for child in pending:
             t = child.tag
             if t == 'step':
@@ -96,16 +97,19 @@ class Pipeline(object):
     @property
     def log_dir(self):
         if not self._log_dir:
-            self._log_dir = os.path.join(PipelineFile.get_output_dir(), 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            self._log_dir = os.path.join(PipelineFile.get_output_dir(), 
+                'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
-        
+
     def submit(self):
         print 'Executing pipeline', self.name
+        self.all_batch_jobs = []
         
         # Check that all files marked "input" exist.
         missing = self.check_files_exist()
         if missing:
-            print >> sys.stderr, 'The following required files are missing:'
+            print >> sys.stderr, ('The following required files are '
+                                  'missing:')
             print >> sys.stderr, '    ' + '\n    '.join(missing)
             sys.exit(1)
 
@@ -114,11 +118,14 @@ class Pipeline(object):
             invocation += 1
             name = '{0}_S{1}'.format(self.name, invocation)
             job_id = step.submit(name)
+            self.all_batch_jobs.append(job_id)
 
-        # Submit a last job which deletes all the temp files.
+        # Submit two last bookkeepingjobs
+
+        # 1. deletes all the temp files.
         tmps = []
-        # This job is about deleting files... Don't bother looking for the 
-        # file's creator_job.  What we really want are consumer jobs.
+        # This job is about deleting files... Don't bother looking for 
+        # the file's creator_job.  What we really want are consumer jobs.
         # We can't just wait for the last job to complete, because it is 
         # possible to construct pipelines where the last submitted job
         # completes before an earlier submitted job.
@@ -132,11 +139,22 @@ class Pipeline(object):
                         if j not in depends:
                             depends.append(j)
         cmd = 'rm ' + ' '.join(tmps)
-        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),depends_on=depends, name='Remove_temp_files')
+        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                             depends_on=depends,
+                             name='Remove_temp_files')
+        job_id = self.job_runner.queue_job(batch_job)
+        self.all_batch_jobs.append(job_id)
+
+        # 2. Consolidate all the log files.
+        cmd = 'consolidate_logs.py {0}'.format(self._log_dir)
+        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                             depends_on=self.all_batch_jobs, 
+                             name='Consolidate_log_files')
         self.job_runner.queue_job(batch_job)
 
-        # We're done submitting all the jobs.  Release them and get on with it.
-        # This is the last action of the pipeline submission process. WE'RE DONE!
+        # We're done submitting all the jobs.  Release them and get
+        # on with it. This is the last action of the pipeline
+        # submission process. WE'RE DONE!
         self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
