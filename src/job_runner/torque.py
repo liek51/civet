@@ -48,7 +48,6 @@ def query_job(id, server=None):
 	""" 
 	pbsq = PBSQuery.PBSQuery(server=server)
 	job_status =  pbsq.getjob(id)
-	
 	# check to see if the job existed.  this is kind of lame, but we can't
 	# just do "if job_status:" because PBSQuery.getjob returns an empty 
 	# dictionary if the job is not found, but it returns some other object
@@ -94,10 +93,17 @@ class JobStatus(object):
     @property
     def walltime(self):
         if 'resources_used' in self.status:
-            return self.status['resources_used']['walltime']
+            return self.status['resources_used']['walltime'][0]
         else:
             return "00:00:00"       
-    #TODO: implement more properties (like for resources_used.walltime)
+
+    @property
+    def requested_walltime(self):
+        if 'walltime' in self.status['Resource_List']:
+            return self.status['Resource_List']['walltime'][0]
+        else:
+            #no limit
+            return "unlimited"
 
 
        
@@ -135,6 +141,7 @@ class TorqueJobRunner(object):
             done < $LOG_DIR/$ID_FILE
             echo "exit_status=$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$2" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "requested_walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             exit $$1
         }
         
@@ -225,6 +232,7 @@ class TorqueJobRunner(object):
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$ELAPSED_TIME_FORMATTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "requested_walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
     
         fi
     
@@ -449,6 +457,11 @@ class TorqueJobRunner(object):
             tokens['ERROR_STRINGS'] = ' '.join(batch_job.error_strings)
         else:
             tokens['ERROR_STRINGS'] = ''
+            
+        if batch_job.walltime:
+            tokens['WALLTIME'] = batch_job.walltime
+        else:
+            tokens['WALLTIME'] = "unlimited"
         
         return string.Template(self.script_template).substitute(tokens)
 
