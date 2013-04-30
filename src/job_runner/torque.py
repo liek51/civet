@@ -141,7 +141,7 @@ class TorqueJobRunner(object):
             done < $LOG_DIR/$ID_FILE
             echo "exit_status=$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$2" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
-            echo "requested_walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "requested_walltime=$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             exit $$1
         }
         
@@ -232,7 +232,7 @@ class TorqueJobRunner(object):
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$ELAPSED_TIME_FORMATTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
-            echo "requested_walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            echo "requested_walltime=$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
     
         fi
     
