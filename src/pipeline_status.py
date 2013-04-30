@@ -59,8 +59,7 @@ def main():
             status = job_runner.torque.get_status_from_file(log_dir, job[1])
             print "\tExit Status={0}".format(status['exit_status'])
             print "\tWalltime={0}".format(status['walltime'])
-            if 'requested_walltime' in status:
-                print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
+            print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
             complete_jobs += 1
         else:
             status = query_job(job[0])
