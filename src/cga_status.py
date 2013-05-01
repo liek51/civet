@@ -79,7 +79,7 @@ def main():
                     print "\tDepends on {0}".format(job[2])
                     pending_jobs += 1
             else:
-                print "\tError querying pbs_server for job {0}".format(job[0])
+                print "\tError querying pbs_server for job {0}.  Job may have been deleted.".format(job[0])
                 unknown_state += 1
                 
     print "\n\nSummary: "
