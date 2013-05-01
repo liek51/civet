@@ -45,7 +45,9 @@ def main():
     print "\t{0}\n\n".format(log_dir)
     
     # check for the abort.log -- this will indicate something went wrong with
-    # the 
+    # the run
+    if os.path.exists(os.path.join(log_dir, "abort.log")):
+        print "Warning: Pipeline aborted due to non-zero exit value of at least one job.  Details below."
     
     complete_jobs = 0
     running_jobs = 0
