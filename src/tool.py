@@ -55,7 +55,7 @@ class Tool():
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
-        self.modules = ['cga/0.1', 'python/2.7.3']
+        self.modules = ['cga/0.0', 'python/2.7.3']
 
         self.verify_files = ['python']
         self.tool_files = {}
