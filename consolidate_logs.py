@@ -35,22 +35,22 @@ def get_file_names(dir):
             errs.append(f)
         elif f[-2:] == '.e':
             es.append(f)
-        elif f[-11:] == '-status.txt':
-            statuses.append(f)
         elif f[-3:] == '.sh':
             shells.append(f)
         else:
             # Ignore the other files.
+            # Note: We're intentionally NOT consolidating the
+            # status files, because the monitor program depends on
+            # them.
             pass
 
     runs.sort()
     o_s.sort()
     errs.sort()
     es.sort()
-    statuses.sort()
     shells.sort()
 
-    return(runs, o_s, errs, es, statuses, shells)
+    return(runs, o_s, errs, es, shells)
 
 
 """
@@ -126,29 +126,18 @@ def handle_es(dir, list):
         os.remove(os.path.join(dir, fn))
 
 
-"""
-Process status files
-"""
-def process_status(dir, list):
-    of = open(os.path.join(dir, 'process_statuses.txt'), 'w')
-    for fn in list:
-        df = os.path.join(dir, fn)
-        for line in open(df):
-            status = line.rstrip()
-        print >> of, '{0}\t{1}'.format(fn, status)
-        os.remove(df)
 
 """
 The main...
 """
 def main():
     dir = sys.argv[1]
-    (runs, o_s, errs, es, statuses, shells) = get_file_names(dir)
+    (runs, o_s, errs, es, shells) = get_file_names(dir)
+
     process_file_list(dir, runs, 'concatenated_run_logs.txt')
     process_file_list(dir, o_s, 'concatenated_stdout.txt')
     process_file_list(dir, errs, 'concatenated_stderr.txt')
     move_shell_scripts(dir, shells)
-    process_status(dir, statuses)
     handle_es(dir, es)
 
 main()
