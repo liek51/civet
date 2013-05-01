@@ -16,13 +16,14 @@ class Step():
 
     def submit(self, name_prefix):
         invocation = 0
+        job_ids = []
         for tool in self.tools:
             invocation += 1
             name = '{0}_{1}_T{2}'.format(name_prefix, self.name,
                                              invocation)
             job_id = tool.submit(name)
-            depends_on = [job_id]
-        return job_id
+            job_ids.append(job_id)
+        return job_ids
             
     def collect_files_to_validate(self):
         fns = []
