@@ -79,7 +79,8 @@ def main():
                     print "\tDepends on {0}".format(job[2])
                     pending_jobs += 1
             else:
-                print "Error querying pbs_server for job {0}".format(job[0])
+                print "\tError querying pbs_server for job {0}".format(job[0])
+                unknown_state += 1
                 
     print "\n\nSummary: "
     print "Total Pipeline Jobs: {0}".format(total_jobs)
