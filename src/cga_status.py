@@ -79,7 +79,7 @@ def main():
                     print "\tDepends on {0}".format(job[2])
                     pending_jobs += 1
             else:
-                print "\tError querying pbs_server for job {0}.  Job may have been deleted.".format(job[0])
+                print "\tpbs_server returned no information for job {0}.  Job may have been deleted.".format(job[0])
                 unknown_state += 1
                 
     print "\n\nSummary: "
@@ -88,7 +88,7 @@ def main():
     print "\tRunning Jobs: {0}".format(running_jobs)
     print "\tPending Jobs: {0}".format(pending_jobs)
     if unknown_state:
-        print "\t{0} jobs in an unknown state (status file not found and error querying pbs_server)".format(unknown_state)
+        print "\t{0} deleted jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
 
 if __name__ == '__main__':
     main()
