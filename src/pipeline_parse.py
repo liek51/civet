@@ -103,6 +103,12 @@ class Pipeline(object):
 
     def submit(self):
         print 'Executing pipeline', self.name
+
+        # Most of the dependencies are file-based; a job can run
+        # as soon as the files it needs are ready.  However, we
+        # have a final bookkeeping job that consolidates the log
+        # files, etc.  That one needs to run last.  So we track 
+        # all the batch job ids that are related to this pipeline.
         self.all_batch_jobs = []
         
         # Check that all files marked "input" exist.
@@ -118,7 +124,8 @@ class Pipeline(object):
             invocation += 1
             name = '{0}_S{1}'.format(self.name, invocation)
             job_id = step.submit(name)
-            self.all_batch_jobs.append(job_id)
+            for j in job_id:
+                self.all_batch_jobs.append(j)
 
         # Submit two last bookkeepingjobs
 
@@ -149,7 +156,8 @@ class Pipeline(object):
         cmd = 'consolidate_logs.py {0}'.format(self._log_dir)
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
-                             name='Consolidate_log_files')
+                             name='Consolidate_log_files',
+                             modules=['python/2.7.3', 'cga'])
         self.job_runner.queue_job(batch_job)
 
         # We're done submitting all the jobs.  Release them and get
