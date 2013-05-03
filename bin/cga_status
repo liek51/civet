@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 """
    report on the status of a pipeline.  The pipeline is specified by providing
    the path to its log directory, which is unique for each pipeline
@@ -53,12 +54,12 @@ def main():
     batch_jobs = job_runner.torque.jobs_from_logdir(log_dir)
     
     print "\n\nGetting status for pipeline with log directory at:"
-    print "\t{0}\n\n".format(log_dir)
+    print "\t{0}\n".format(log_dir)
     
     # check for the abort.log -- this will indicate something went wrong with
     # the run
     if os.path.exists(os.path.join(log_dir, "abort.log")):
-        print "Warning: Pipeline aborted due to non-zero exit value of at least one job.  Details below."
+        print "Warning: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
     
     complete_jobs = 0
     running_jobs = 0
@@ -67,7 +68,7 @@ def main():
     total_jobs = len(batch_jobs)
     
     for job in batch_jobs:
-        print "{0} ({1}):".format(job[1], job[0])
+        print "\n{0} ({1}):".format(job[1], job[0])
         if os.path.exists(os.path.join(log_dir, job[1] + "-status.txt")): 
             status = job_runner.torque.get_status_from_file(log_dir, job[1])
             if 'exit_status' in status:
