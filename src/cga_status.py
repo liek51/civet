@@ -64,6 +64,10 @@ def main():
         if os.path.exists(os.path.join(log_dir, job[1] + "-status.txt")): 
             status = job_runner.torque.get_status_from_file(log_dir, job[1])
             if 'exit_status' in status:
+                if status['exit_status'] == '0':
+                    print "\tFinished=Success"
+                else:
+                    print "\tFinished=Failure"
                 print "\tExit Status={0}".format(status['exit_status'])
             if 'walltime' in status:
                 print "\tWalltime={0}".format(status['walltime'])
@@ -75,12 +79,20 @@ def main():
             if status:
                 print "\tState={0}".format(status.state)
                 if status.state == 'R' or status.state == 'C':
-                    print "\tWalltime={0}".format(status.walltime)
-                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                     if status.state == 'R':
                         running_jobs += 1
                     else:
+                        # if we got here the job is in state "C" but no 
+                        # job_name-status.txt file was created.  Job must have 
+                        # crashed or was cancelled...
                         complete_jobs += 1
+                        if status.exit_status == "0":
+                            print "\tFinished=Success"
+                        else:
+                            print "\tFinished=Failure"
+                    print "\tExit Status={0}".format(status.exit_status)
+                    print "\tWalltime={0}".format(status.walltime)
+                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                 elif status.state == 'H':
                     print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                     print "\tDepends on {0}".format(job[2])
