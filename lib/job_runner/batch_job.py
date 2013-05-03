@@ -24,7 +24,7 @@ class BatchJob(object):
     
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path=None, files_to_check=None, 
+                 name=None, stdout_path=None, stderr_path="/dev/null", files_to_check=None, 
                  epilogue=None, version_cmd=None, error_strings=None):
         self.cmd = cmd
         self.ppn = ppn
