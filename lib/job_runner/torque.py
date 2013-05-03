@@ -334,7 +334,7 @@ class TorqueJobRunner(object):
         #connected to pbs_server
         
         #write batch script
-        script_dir = ospath.join(self.log_dir, "submitted_shell_scripts")
+        script_dir = os.path.join(self.log_dir, "submitted_shell_scripts")
         if not os.path.exists(script_dir):
             os.mkdir(script_dir)
         
