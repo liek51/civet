@@ -333,8 +333,12 @@ class TorqueJobRunner(object):
 
         #connected to pbs_server
         
-        #write batch script to temp file, will remove after pbs_submit
-        filename = os.path.join(self.log_dir, "{0}.sh".format(batch_job.name))
+        #write batch script
+        script_dir = ospath.join(self.log_dir, "submitted_shell_scripts")
+        if not os.path.exists(script_dir):
+            os.mkdir(script_dir)
+        
+        filename = os.path.join(script_dir, "{0}.sh".format(batch_job.name))
         script_file = open(filename, "w")
         script_file.write(self.generate_script(batch_job))
         script_file.close()
