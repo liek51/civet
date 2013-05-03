@@ -10,13 +10,19 @@
 import argparse
 import sys
 import os
+import inspect
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
+                              inspect.getfile( inspect.currentframe() ))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+     sys.path.insert(0, lib_folder)
 
 import validity
 
 def process_options():
 
-    #DEFAULT_MASTER_LIST='/opt/jax/cga/master_file_list'
-    DEFAULT_MASTER_LIST='./fred/master_file_list'
+    master = os.path.join(cmd_folder, '../data/master_file_list')
 
     parser = argparse.ArgumentParser('Validate files', 
         epilog='--generate overrides --add and --update; '
@@ -27,7 +33,7 @@ def process_options():
         default=False, help='Generate a file containing info about the '
                             'current state of the files.')
     parser.add_argument('-m', '--master-list', dest='master_list',
-                        default=DEFAULT_MASTER_LIST,
+                        default=master,
                         help='Specify an alternate file when creating '
                              'or modifying the master list.')
     parser.add_argument('-u', '--update', dest='update', action='store_true',
@@ -36,10 +42,10 @@ def process_options():
                         help='List of files to validate.')
     args = parser.parse_args()
     if not args.gen and not args.add and not args.update:
-        if args.master_list != DEFAULT_MASTER_LIST:
+        if args.master_list != master:
             print >> sys.stderr, ('Option --master list only available when '
                 'generating or modifying the master list. Ignoring.')
-            args.master_list = DEFAULT_MASTER_LIST
+            args.master_list = master
     if args.gen and (args.add or args.update):
         args.add = False
         arts.update = False
