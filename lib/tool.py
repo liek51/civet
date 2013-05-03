@@ -160,7 +160,7 @@ class Tool():
                 if 'id' in a:
                     name = self.tool_files[a['id']].path
                 else:
-                    name = os.path.abspath(child.text)
+                    name = child.text
                 self.verify_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
