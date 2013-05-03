@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+   report on the status of a pipeline.  The pipeline is specified by providing
+   the path to its log directory, which is unique for each pipeline
+"""
 
 import sys
 import os
@@ -59,9 +63,12 @@ def main():
         print "{0} ({1}):".format(job[1], job[0])
         if os.path.exists(os.path.join(log_dir, job[1] + "-status.txt")): 
             status = job_runner.torque.get_status_from_file(log_dir, job[1])
-            print "\tExit Status={0}".format(status['exit_status'])
-            print "\tWalltime={0}".format(status['walltime'])
-            print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
+            if 'exit_status' in status:
+                print "\tExit Status={0}".format(status['exit_status'])
+            if 'walltime' in status:
+                print "\tWalltime={0}".format(status['walltime'])
+            if 'requested_walltime' in status:
+                print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
             complete_jobs += 1
         else:
             status = query_job(job[0])
