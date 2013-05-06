@@ -110,3 +110,8 @@ def main():
     if unknown_jobs:
         print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
     print "\n\tCancel signal sent for all running and pending jobs"
+    
+    
+
+if __name__ == '__main__':
+    main()
