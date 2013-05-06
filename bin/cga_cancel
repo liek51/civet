@@ -107,6 +107,6 @@ def main():
     print "\tCompleted Jobs: {0}".format(len(complete_jobs))
     print "\tRunning Jobs: {0}".format(len(running_jobs))
     print "\tPending Jobs: {0}".format(len(held_jobs))
-    if unknown_jobs"
+    if unknown_jobs:
         print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
     print "\n\tCancel signal sent for all running and pending jobs"
