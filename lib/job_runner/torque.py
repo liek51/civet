@@ -28,9 +28,9 @@ import utilities
 #TODO: make dependency type settable per job
 _DEFAULT_DEPEND_TYPE = "afterok"
 
+
 def _release_job(connection, id):
     return pbs.pbs_rlsjob(connection, id, 'u', '')
-
 
     
 def _connect_to_server(server):
@@ -49,6 +49,9 @@ def _connect_to_server(server):
         
         
 class JobManager(object):
+
+    E_UNKNOWN = 15001
+    E_STATE = 15018
 
     def __init__(self, pbs_server=None):
        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)

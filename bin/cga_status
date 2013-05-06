@@ -14,33 +14,16 @@ lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
      sys.path.insert(0, lib_folder)
 
-import job_runner.torque
-import PBSQuery
+import job_runner.torque as batch_system
+import job_runner.common
 
-# need to reuse the same PBSQuery instance otherwise garbage collection doesn't happen fast enough 
-# and we seem to run out of connections on pbs_server for larger pipelines.
-pbsq = PBSQuery.PBSQuery()
+
 
 
 def usage():
     print "Usage: " + sys.argv[0] + " <path_to_pipeline_log_dir>"
 
-def query_job(id):
-	"""
-		Query server for status of job specified by id.
-		
-		query_job will return None if the job does not exist on the server, 
-		otherwise it will return a JobStatus object.
-	""" 
-	job_status =  pbsq.getjob(id)
-	# check to see if the job existed.  this is kind of lame, but we can't
-	# just do "if job_status:" because PBSQuery.getjob returns an empty 
-	# dictionary if the job is not found, but it returns some other object
-	# that acts like a dictionary but does not have a __nonzero__ attribute
-	if 'Job_Name' in job_status:
-		return job_runner.torque.JobStatus(job_status)
-	else:
-		return None
+
 
 def main():
     if len(sys.argv) != 2:
@@ -49,9 +32,11 @@ def main():
 
     log_dir = sys.argv[1]
     
+    jm = batch_system.JobManager()
+    
     # get listing of batch jobs from the pipeline's log directory
     # each line in batch_jobs is [batch_id, job_name, [dependencies]])
-    batch_jobs = job_runner.torque.jobs_from_logdir(log_dir)
+    batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
     
     print "\n\nGetting status for pipeline with log directory at:"
     print "\t{0}\n".format(log_dir)
@@ -69,8 +54,8 @@ def main():
     
     for job in batch_jobs:
         print "\n{0} ({1}):".format(job[1], job[0])
-        if os.path.exists(os.path.join(log_dir, job[1] + "-status.txt")): 
-            status = job_runner.torque.get_status_from_file(log_dir, job[1])
+        if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
+            status = job_runner.common.get_status_from_file(log_dir, job[1])
             if 'exit_status' in status:
                 if status['exit_status'] == '0':
                     print "\tFinished=Success"
@@ -83,7 +68,7 @@ def main():
                 print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
             complete_jobs += 1
         else:
-            status = query_job(job[0])
+            status = jm.query_job(job[0])
             if status:
                 print "\tState={0}".format(status.state)
                 if status.state == 'R' or status.state == 'C':

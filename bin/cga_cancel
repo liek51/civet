@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+
+"""
+    cancel a running pipeline instance.  pipeline is identified by 
+    passing the path to its log directory, which is unique to that 
+    pipeline
+"""
+
+import datetime
+import sys
+import os
+import inspect
+
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+     sys.path.insert(0, lib_folder)
+
+import job_runner.torque as batch_system
+import job_runner.common
+    
+CANCEL_LOG_FILENAME = "cancel.log"
+    
+def main():
+    if len(sys.argv) != 2:
+        print "Usage: " + sys.argv[0] + " <path_to_pipeline_log_dir>"
+        return 1
+
+    log_dir = sys.argv[1]
+    
+    jm = batch_system.JobManager()
+    
+    # get listing of batch jobs from the pipeline's log directory
+    # each line in batch_jobs is [batch_id, job_name, [dependencies]])
+    batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
+    
+    print "\n\nCancelling pipeline with log directory:"
+    print "\t{0}\n".format(log_dir)
+    
+    unfinished_jobs = []
+    complete_jobs = []
+    
+    for job in batch_jobs:
+        if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
+            unfinished_jobs.append(job[1])
+        else:
+            complete_jobs.append(job[1])
+    
+    if len(unfinished_jobs) == 0:
+        print "\tAll jobs are complete."
+        return 0
+    
+    # not all jobs have -status.txt files, need to check the queues and 
+    # possible send batch delete requests for them
+    cancel_log = open(os.path.join(log_dir, CANCEL_LOG_FILENAME), 'w')
+    cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
+    
+    unknown_jobs = []
+    running_jobs = []
+    held_jobs = []
+    
+    # check all job id's that don't have a -status.txt file and record their
+    # state (running or held) before we do anything else
+    for id in unfinished_jobs:
+        status = jm.query_job(id)
+        if status:
+            if status.state == 'R':
+                running_jobs.append(id)
+            elif status.state == 'H':
+                held_jobs.append(id)
+        else:
+            unknown_jobs.append(id)
+            
+    
+    # log status of jobs before issuing any qdels
+    cancel_log.write("COMPLETE_JOBS={0}\n".format(complete_jobs))
+    cancel_log.write("RUNNING_JOBS={0}\n".format(running_jobs))
+    cancel_log.write("PENDING_JOBS={0}\n".format(held_jobs))
+    if unknown_jobs:
+        cancel_log.write("UNKNOWN_STATE={0}\n".format(unknown_jobs))
+    
+    
+    
+    # delete held jobs first
+    for id in held_jobs:
+        rval = jm.delete_job(id)
+        if rval and (rval != batch_system.JobManager.E_UNKNOWN or ravl != batch_system.JobManager.E_STATE):
+            # rval is not zero and it is no an unknown job id or invalid state 
+            # error (job may have completed between when we last checked and 
+            # now, those return values may be expected)
+            print "Error deleting {0} from queue. ({1}).".format(id, rval)
+    
+    # delete running jobs    
+    for id in running_jobs:
+        rval = jm.delete_job(id)
+        if rval and (rval != batch_system.JobManager.E_UNKNOWN or ravl != batch_system.JobManager.E_STATE):
+            # rval is not zero and it is no an unknown job id or invalid state 
+            # error (job may have completed between when we last checked and 
+            # now, those return values may be expected)
+            print "Error deleting {0} from queue. ({1}).".format(id, rval)
+            
+    cancel_log.close()
+    
+    print "Pipeline Status:"
+    print "Total Pipeline Jobs: {0}".format(len(batch_jobs))
+    print "\tCompleted Jobs: {0}".format(len(complete_jobs))
+    print "\tRunning Jobs: {0}".format(len(running_jobs))
+    print "\tPending Jobs: {0}".format(len(held_jobs))
+    if unknown_jobs"
+        print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
+    print "\n\tCancel signal sent for all running and pending jobs"
