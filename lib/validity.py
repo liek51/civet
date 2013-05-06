@@ -44,11 +44,15 @@ class FileInfo(object):
         self.getHash()
 
     def reload(self, dct):
+        self.name = dct['name']
+        self.mode = dct['mode']
+        if self.mode == 'No such file.':
+            return
+
+        # The following attributes don't exist if the file was not found.
         self.sha1 = dct['sha1']
         self.uid = dct['uid']
         self.gid = dct['gid']
-        self.name = dct['name']
-        self.mode = dct['mode']
         self.mode_string = dct['mode_string']
         self.size = dct['size']
         
