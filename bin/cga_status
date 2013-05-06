@@ -57,7 +57,7 @@ def main():
         if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
             status = job_runner.common.get_status_from_file(log_dir, job[1])
             if 'cancelled' in status:
-                print "Job cancelled (state at cancel = {0})".format(status['state_at_cancel'])
+                print "\tJob cancelled (state at cancel = {0})".format(status['state_at_cancel'])
             if 'exit_status' in status:
                 if status['exit_status'] == '0':
                     print "\tFinished=Success"
