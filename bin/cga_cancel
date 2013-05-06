@@ -40,12 +40,14 @@ def main():
     
     unfinished_jobs = []
     complete_jobs = []
+    job_name_lookup = {}
     
     for job in batch_jobs:
+        job_name_lookup[job[0]] = job[1]
         if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
-            unfinished_jobs.append(job[1])
+            unfinished_jobs.append(job[0])
         else:
-            complete_jobs.append(job[1])
+            complete_jobs.append(job[0])
     
     if len(unfinished_jobs) == 0:
         print "\tAll jobs are complete."
@@ -109,8 +111,27 @@ def main():
     print "\tPending Jobs: {0}".format(len(held_jobs))
     if unknown_jobs:
         print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
-    print "\n\tCancel signal sent for all running and pending jobs"
     
+    if len(running_jobs) + len(held_jobs) > 0:
+        print "\n\tCancel signal sent for all running and pending jobs"
+        
+        for id in running_jobs:
+            if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
+                summary_file = open(os.path.join((log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
+                summary_file.write("CANCELED=TRUE\n")
+                summary_file.write("STATE_AT_CANCEL=R")
+                summary_file.close()
+                
+        for id in held_jobs:
+            if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
+                summary_file = open(os.path.join((log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
+                summary_file.write("CANCELED=TRUE\n")
+                summary_file.write("STATE_AT_CANCEL=H")
+                summary_file.close()
+        
+    else:
+        print "\n\tNo jobs to cancel; pipeline is not running or queued on the cluster."
+     
     
 
 if __name__ == '__main__':
