@@ -31,6 +31,10 @@ def main():
 
     log_dir = args.log_dir
     
+    if not os.path.isdir(log_dir):
+        parser.print_help()
+        return 1
+    
     jm = batch_system.JobManager()
     
     # get listing of batch jobs from the pipeline's log directory
@@ -40,23 +44,27 @@ def main():
     print "\n\nCancelling pipeline with log directory:"
     print "\t{0}\n".format(log_dir)
     
+    # we will build a list of unfinsihed and complete jobs
     unfinished_jobs = []
     complete_jobs = []
+    
+    # and a dict that lets us lookup the name associated with a job id
     job_name_lookup = {}
     
     for job in batch_jobs:
         job_name_lookup[job[0]] = job[1]
         if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
+            # for now if the job does not have a status file we assume it is still running or held
             unfinished_jobs.append(job[0])
         else:
             complete_jobs.append(job[0])
     
     if len(unfinished_jobs) == 0:
-        print "\tAll jobs are complete."
+        print "\tAll jobs are complete, no jobs to cancel."
         return 0
     
-    # not all jobs have -status.txt files, need to check the queues and 
-    # possible send batch delete requests for them
+    # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
+    # check the queues and send batch delete requests for them
     cancel_log = open(os.path.join(log_dir, CANCEL_LOG_FILENAME), 'w')
     cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
     
@@ -106,7 +114,7 @@ def main():
             
     cancel_log.close()
     
-    print "Pipeline Status:"
+    print "Pipeline status prior to cancel:"
     print "Total Pipeline Jobs: {0}".format(len(batch_jobs))
     print "\tCompleted Jobs: {0}".format(len(complete_jobs))
     print "\tRunning Jobs: {0}".format(len(running_jobs))
