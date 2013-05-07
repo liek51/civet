@@ -40,7 +40,7 @@ def main():
         batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
     except IOError, e:
         sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
-        sys.stderr.write(e + "\n")
+        sys.stderr.write("{0}\n".format(e))
         return 1
     
     print "\n\nGetting status for pipeline with log directory at:"
