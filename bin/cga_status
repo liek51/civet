@@ -5,6 +5,7 @@
    the path to its log directory, which is unique for each pipeline
 """
 
+import argparse
 import sys
 import os
 import inspect
@@ -19,18 +20,14 @@ import job_runner.common
 
 
 
-
-def usage():
-    print "Usage: " + sys.argv[0] + " <path_to_pipeline_log_dir>"
-
-
-
 def main():
-    if len(sys.argv) != 2:
-        usage()
-        return 1
 
-    log_dir = sys.argv[1]
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
+    parser.add_argument('--abort', action='store_true', help="Enable a special mode intended to be called automatically by civet when a pipeline aborts due to a self-detected error")
+    parser.add_argument('log_dir', help="Path to pipeline log directory")
+    args = parser.parse_args()
+
+    log_dir = args.log_dir
     
     jm = batch_system.JobManager()
     

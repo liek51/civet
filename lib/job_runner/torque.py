@@ -20,20 +20,33 @@ from batch_job import *
 import common
 
 #make sure we look in the parent directory for modules when running as a script
+#so that we can find the utilities module
 if __name__ == "__main__":
     sys.path.insert(0, "..")
     
 import utilities
 
 #TODO: make dependency type settable per job
-_DEFAULT_DEPEND_TYPE = "afterok"
+__DEFAULT_DEPEND_TYPE = "afterok"
 
+__SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
-def _release_job(connection, id):
+def __release_job(connection, id):
+    """
+        release a user hold on a job specified by id
+        
+        this function is shared between JobManager and TorqueJobRunner
+    """  
     return pbs.pbs_rlsjob(connection, id, 'u', '')
 
     
-def _connect_to_server(server):
+def __connect_to_server(server):
+    """
+        open a connection to a pbs_server at hostname server, if server is None 
+        then connect to the default server.
+        
+        This function is shared between JobManager and TorqueJobRunner
+    """
     if server:    
         connection = pbs.pbs_connect(server)
     else:
@@ -47,15 +60,37 @@ def _connect_to_server(server):
         
     return connection
         
+
+def strerror(e):
+    """
+        Look up the string associated with a given pbs error code.
+            
+        NOTE: Until the pbs_python developers update their source, most of 
+        these strings are out of sync with the integer error codes
+    """
+    return pbs.errors_txt[e]
         
 class JobManager(object):
+    """
+        This class encapsulates the functionality for monitoring and controlling
+        a Torque job. 
+        
+        An instance will hold a connection to pbs_server open 
+        and reuse it for multiple client commands.  We have had problems
+        with rapidly opening and closing connections -- it seems you use up
+        connections faster than they get cleaned up and you run out.
+    """
 
+
+    #constants with the return codes for unknown job id and invalid state (complete)
+    # these are valid for TORQUE 4.x,  pbs_python has outdated error 
+    # codes -> error string mappings
     E_UNKNOWN = 15001
     E_STATE = 15018
 
     def __init__(self, pbs_server=None):
        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
-       self.connection = _connect_to_server(pbs_server)
+       self.connection = __connect_to_server(pbs_server)
         
         
     def query_job(self, id):
@@ -86,7 +121,10 @@ class JobManager(object):
       
         
     def release_job(self, id):
-        return _release_job(self.connection, id)
+        """
+        Release a user hold on a job
+        """
+        return __release_job(self.connection, id)
 
     
 
@@ -135,7 +173,7 @@ class JobStatus(object):
         if 'walltime' in self.status['Resource_List']:
             return self.status['Resource_List']['walltime'][0]
         else:
-            #no limit
+            #no walltime in Resource_List means no limit
             return "unlimited"
 
 
@@ -278,13 +316,14 @@ class TorqueJobRunner(object):
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
         self._log_dir = os.path.abspath(log_dir)
-        self._job_names = []   
+        self._job_names = []
+        self._server = pbs_server
         
         utilities.make_sure_path_exists(self._log_dir)
           
         self._id_log = open(os.path.join(log_dir, common.BATCH_ID_LOG), 'w')
         
-        self._server = pbs_server
+
 
   
   
@@ -301,9 +340,11 @@ class TorqueJobRunner(object):
           queue     : optional destination queue
         """
         
+        # batch job names should be unique for cga pipelines because the 
+        # job name is used to name log files and other output
         assert batch_job.name not in self._job_names
             
-        
+        # build up our torque job attributes and resources
         job_attributes = {}
         job_resources = {}
         
@@ -360,12 +401,12 @@ class TorqueJobRunner(object):
             
         # we've initialized pbs_attrs with all the attributes we need to set
         # now we can connect to the server and submit the job
-        connection = _connect_to_server(self._server)
+        connection = __connect_to_server(self._server)
 
         #connected to pbs_server
         
         #write batch script
-        script_dir = os.path.join(self.log_dir, "submitted_shell_scripts")
+        script_dir = os.path.join(self.log_dir, __SHELL_SCRIPT_DIR)
         if not os.path.exists(script_dir):
             os.mkdir(script_dir)
         
@@ -408,9 +449,9 @@ class TorqueJobRunner(object):
         if connection:
             c = connection
         else:
-            c = _connect_to_server(self._server)
+            c = __connect_to_server(self._server)
         
-        rval = _release_job(c, id)
+        rval = __release_job(c, id)
         
         if not connection:
             pbs.pbs_disconnect(c)
@@ -428,7 +469,7 @@ class TorqueJobRunner(object):
         # copy the list of held jobs to iterate over because release_job mutates
         # self.held_jobs
         jobs = list(self.held_jobs)  
-        connection = _connect_to_server(self._server)
+        connection = __connect_to_server(self._server)
         for id in jobs:
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
@@ -486,16 +527,6 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-   
-    def strerror(self, e):
-        """
-            Look up the string associated with a given pbs error code.
-            
-            NOTE: Until the pbs_python developers update their source, most of 
-            these strings are out of sync with the integer error codes
-        """
-        return pbs.errors_txt[e]
-
     
     def _generate_env(self, batch_job):
         """
@@ -539,10 +570,10 @@ class TorqueJobRunner(object):
             return ""
         elif isinstance(batch_job.depends_on, basestring):  #basestring = str in Python3
             #handle string case
-            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, batch_job.depends_on)
+            return "{0}:{1}".format(__DEFAULT_DEPEND_TYPE, batch_job.depends_on)
         else:
             #not a string, assume list of job ids to join
-            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, 
+            return "{0}:{1}".format(__DEFAULT_DEPEND_TYPE, 
                                     ':'.join(batch_job.depends_on))
                                     
     def _printable_dependencies(self, dependency_list):
@@ -586,6 +617,7 @@ def main():
     status = jm.query_job(id)
     if status:
         print "Status of job is " + status.state
+
     
 if __name__ == '__main__': 
     main() 
