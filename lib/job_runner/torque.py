@@ -27,11 +27,11 @@ if __name__ == "__main__":
 import utilities
 
 #TODO: make dependency type settable per job
-__DEFAULT_DEPEND_TYPE = "afterok"
+_DEFAULT_DEPEND_TYPE = "afterok"
 
-__SHELL_SCRIPT_DIR = "submitted_shell_scripts"
+_SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
-def __release_job(connection, id):
+def _release_job(connection, id):
     """
         release a user hold on a job specified by id
         
@@ -40,7 +40,7 @@ def __release_job(connection, id):
     return pbs.pbs_rlsjob(connection, id, 'u', '')
 
     
-def __connect_to_server(server):
+def _connect_to_server(server):
     """
         open a connection to a pbs_server at hostname server, if server is None 
         then connect to the default server.
@@ -90,7 +90,7 @@ class JobManager(object):
 
     def __init__(self, pbs_server=None):
        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
-       self.connection = __connect_to_server(pbs_server)
+       self.connection = _connect_to_server(pbs_server)
         
         
     def query_job(self, id):
@@ -124,7 +124,7 @@ class JobManager(object):
         """
         Release a user hold on a job
         """
-        return __release_job(self.connection, id)
+        return _release_job(self.connection, id)
 
     
 
@@ -401,12 +401,12 @@ class TorqueJobRunner(object):
             
         # we've initialized pbs_attrs with all the attributes we need to set
         # now we can connect to the server and submit the job
-        connection = __connect_to_server(self._server)
+        connection = _connect_to_server(self._server)
 
         #connected to pbs_server
         
         #write batch script
-        script_dir = os.path.join(self.log_dir, __SHELL_SCRIPT_DIR)
+        script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
         if not os.path.exists(script_dir):
             os.mkdir(script_dir)
         
@@ -449,9 +449,9 @@ class TorqueJobRunner(object):
         if connection:
             c = connection
         else:
-            c = __connect_to_server(self._server)
+            c = _connect_to_server(self._server)
         
-        rval = __release_job(c, id)
+        rval = _release_job(c, id)
         
         if not connection:
             pbs.pbs_disconnect(c)
@@ -469,7 +469,7 @@ class TorqueJobRunner(object):
         # copy the list of held jobs to iterate over because release_job mutates
         # self.held_jobs
         jobs = list(self.held_jobs)  
-        connection = __connect_to_server(self._server)
+        connection = _connect_to_server(self._server)
         for id in jobs:
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
@@ -570,10 +570,10 @@ class TorqueJobRunner(object):
             return ""
         elif isinstance(batch_job.depends_on, basestring):  #basestring = str in Python3
             #handle string case
-            return "{0}:{1}".format(__DEFAULT_DEPEND_TYPE, batch_job.depends_on)
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, batch_job.depends_on)
         else:
             #not a string, assume list of job ids to join
-            return "{0}:{1}".format(__DEFAULT_DEPEND_TYPE, 
+            return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, 
                                     ':'.join(batch_job.depends_on))
                                     
     def _printable_dependencies(self, dependency_list):
