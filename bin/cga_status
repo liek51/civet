@@ -28,6 +28,10 @@ def main():
 
     log_dir = args.log_dir
     
+    if not os.path.isdir(log_dir):
+        parser.print_help()
+        return 1
+    
     jm = batch_system.JobManager()
     
     # get listing of batch jobs from the pipeline's log directory
