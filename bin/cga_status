@@ -29,7 +29,7 @@ def main():
     log_dir = args.log_dir
     
     if not os.path.isdir(log_dir):
-        parser.print_help()
+        sys.stderr.write("{0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
         return 1
     
     jm = batch_system.JobManager()
