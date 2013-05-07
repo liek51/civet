@@ -36,7 +36,11 @@ def main():
     
     # get listing of batch jobs from the pipeline's log directory
     # each line in batch_jobs is [batch_id, job_name, [dependencies]])
-    batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
+    try:
+        batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
+    except FileNotFoundException:
+        sys.stderr.write("{0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
+        return 1
     
     print "\n\nGetting status for pipeline with log directory at:"
     print "\t{0}\n".format(log_dir)
