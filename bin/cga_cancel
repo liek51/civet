@@ -26,7 +26,6 @@ CANCEL_LOG_FILENAME = "cancel.log"
 def main():
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('--abort', action='store_true', help="Enable a special mode intended to be called automatically by civet when a pipeline aborts due to a self-detected error")
     parser.add_argument('log_dir', help="Path to pipeline log directory")
     args = parser.parse_args()
 
