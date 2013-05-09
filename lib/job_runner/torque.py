@@ -340,7 +340,7 @@ class TorqueJobRunner(object):
           queue     : optional destination queue
         """
         
-        # batch job names should be unique for cga pipelines because the 
+        # batch job names should be unique for civet pipelines because the 
         # job name is used to name log files and other output
         assert batch_job.name not in self._job_names
             
