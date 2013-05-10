@@ -10,6 +10,7 @@ import argparse
 import datetime
 import sys
 import os
+import pwd
 import inspect
 
 
@@ -71,7 +72,8 @@ def main():
     # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
     # check the queues and send batch delete requests for them
     cancel_log = open(os.path.join(log_dir, CANCEL_LOG_FILENAME), 'w')
-    cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n")
+    cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
+    cancel_log.write("CANCELED_BY=" + pwd.getpwuid(os.getuid()).pw_name + '\n')
     
     unknown_jobs = []
     running_jobs = []
@@ -97,7 +99,7 @@ def main():
     if unknown_jobs:
         cancel_log.write("UNKNOWN_STATE={0}\n".format(unknown_jobs))
     
-    
+    cancel_log.close()
     
     # delete held jobs first
     for id in held_jobs:
@@ -117,8 +119,7 @@ def main():
             # now, those return values may be expected)
             print "Error deleting {0} from queue. ({1}).".format(id, rval)
             
-    cancel_log.close()
-    
+            
     print "Pipeline status prior to cancel:"
     print "Total Pipeline Jobs: {0}".format(len(batch_jobs))
     print "\tCompleted Jobs: {0}".format(len(complete_jobs))
