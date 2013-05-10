@@ -49,7 +49,15 @@ def main():
     # check for the abort.log -- this will indicate something went wrong with
     # the run
     if os.path.exists(os.path.join(log_dir, "abort.log")):
-        print "Warning: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
+        print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
+        
+    if os.path.exists(os.path.join(log_dir, "cancel.log")):
+        cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, "cancel.log")))
+        #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
+        if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
+            print "Pipeline was canceled by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
+        else:
+            print "Pipeline was canceled by user.\n"
     
     complete_jobs = 0
     running_jobs = 0
