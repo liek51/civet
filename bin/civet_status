@@ -97,7 +97,7 @@ def main():
         else:
             status = jm.query_job(job[0])
             if status:
-                print "\tState={0}".format(status.state)
+                print "\tState={0}".format(format_state(status.state))
                 if status.state == 'R' or status.state == 'C':
                     if status.state == 'R':
                         running_jobs += 1
