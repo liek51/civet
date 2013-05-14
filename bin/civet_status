@@ -24,7 +24,7 @@ def format_state(state):
         return "Running"
     elif state == 'Q':
         return "Queued (eligible to run)"
-    elif staet == 'H':
+    elif state == 'H':
         return "Queued (waiting on dependency)"
     
     return state
