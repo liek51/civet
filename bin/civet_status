@@ -22,8 +22,10 @@ import job_runner.common
 def format_state(state):
     if state == 'R':
         return "Running"
-    elif state == 'Q' or state == 'H':
-        return "Queued"
+    elif state == 'Q':
+        return "Queued (eligible to run)"
+    elif staet == 'H':
+        return "Queued (waiting on dependency)"
     
     return state
 
