@@ -19,6 +19,14 @@ import job_runner.torque as batch_system
 import job_runner.common
 
 
+def format_state(state):
+    if state == 'R':
+        return "Running"
+    elif state == 'Q' or state == 'H':
+        return "Queued"
+    
+    return state
+
 
 def main():
 
@@ -55,11 +63,12 @@ def main():
         cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, "cancel.log")))
         #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
         if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
-            print "Pipeline was canceled by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
+            print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
         else:
-            print "Pipeline was canceled by user.\n"
+            print "PIPELINE WAS CANCELED by user.\n"
     
     complete_jobs = 0
+    canceled_jobs = 0
     running_jobs = 0
     pending_jobs = 0
     unknown_state = 0
@@ -70,7 +79,11 @@ def main():
         if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
             status = job_runner.common.get_status_from_file(log_dir, job[1])
             if 'cancelled' in status:
-                print "\tJob cancelled (state at cancel = {0})".format(status['state_at_cancel'])
+                print "\tJob cancelled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
+                canceled_jobs += 1
+            else:
+                complete_jobs += 1
+                
             if 'exit_status' in status:
                 if status['exit_status'] == '0':
                     print "\tFinished=Success"
@@ -81,7 +94,6 @@ def main():
                 print "\tWalltime={0}".format(status['walltime'])
             if 'requested_walltime' in status:
                 print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
-            complete_jobs += 1
         else:
             status = jm.query_job(job[0])
             if status:
@@ -98,7 +110,7 @@ def main():
                             print "\tFinished=Success"
                         else:
                             print "\tFinished=Failure"
-                    print "\tExit Status={0}".format(status.exit_status)
+                        print "\tExit Status={0}".format(status.exit_status)
                     print "\tWalltime={0}".format(status.walltime)
                     print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                 elif status.state == 'H':
@@ -112,6 +124,8 @@ def main():
     print "\n\nSummary: "
     print "Total Pipeline Jobs: {0}".format(total_jobs)
     print "\tCompleted Jobs: {0}".format(complete_jobs)
+    if canceled_jobs:
+        print "\tCanceled Jobs: {0}".format(canceled_jobs)
     print "\tRunning Jobs: {0}".format(running_jobs)
     print "\tPending Jobs: {0}".format(pending_jobs)
     if unknown_state:
