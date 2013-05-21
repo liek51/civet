@@ -223,6 +223,9 @@ class TorqueJobRunner(object):
         #then load modulefiles specified by the tool xml
         $MODULE_LOAD_CMDS
         
+        #add the cga bin directory to our PATH
+        PATH=${CIVET_BIT}:$$PATH
+        
         cd $$PBS_O_WORKDIR
 
 
@@ -516,6 +519,7 @@ class TorqueJobRunner(object):
             tokens['WALLTIME'] = "unlimited"
             
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
+        tokens['CIVET_BIT'] = os.path.join(common.CIVET_HOME, "bin")
         
         return string.Template(self.script_template).substitute(tokens)
 
