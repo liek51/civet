@@ -199,22 +199,8 @@ class TorqueJobRunner(object):
         #!/bin/bash
         
         #define some useful functions
-        function abort_pipeline {
-            # just iterate over all of the job ids in this pipeline and try to 
-            # qdel them.  We don't care what the state is, or even if they still exit
-            
-            echo "Aborting pipeline" > $LOG_DIR/abort.log
-            while read ID NAME DEP; do
-                if [ "$$ID" != "$$PBS_JOBID" ]; then
-                    echo "calling qdel on $$PBS_JOBID ($${NAME})" >> $LOG_DIR/abort.log
-                    qdel $$ID >> $LOG_DIR/abort.log 2>&1
-                fi
-            done < $LOG_DIR/$ID_FILE
-            echo "exit_status=$$1" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
-            echo "walltime=$$2" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
-            echo "requested_walltime=$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
-            exit $$1
-        }
+        source $FUNCTIONS
+        
         
         DATE=$$(date)
         
@@ -231,6 +217,10 @@ class TorqueJobRunner(object):
         # sleep to overcome any issues with NFS file attribute cacheing
         sleep 60
         
+        #first unload any loaded modulefiles
+        unload_all_modules
+        
+        #then load modulefiles specified by the tool xml
         $MODULE_LOAD_CMDS
         
         cd $$PBS_O_WORKDIR
@@ -274,20 +264,20 @@ class TorqueJobRunner(object):
             echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
                 echo "Command returned non-zero value.  abort pipeline" >&2
-                abort_pipeline $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED
+                abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED
             fi
             
             #check error log for list of keywords
             for str in $ERROR_STRINGS; do
                 if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                     echo "found error string in stderr log. abort pipeline" >&2
-                    abort_pipeline 1 $$ELAPSED_TIME_FORMATTED
+                    abort_pipeline $LOG_DIR 1 $$ELAPSED_TIME_FORMATTED
                 fi
             done
             
         else
             echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >&2
-            abort_pipeline $$VALIDATION_STATUS "00:00:00"        
+            abort_pipeline $LOG_DIR $$VALIDATION_STATUS "00:00:00"        
         fi
         
         #run supplied post-job checks
@@ -298,7 +288,7 @@ class TorqueJobRunner(object):
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
             echo "Post job sanity check failed. Aborting pipeline!" >&2
-            abort_pipeline $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED
+            abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
@@ -524,6 +514,8 @@ class TorqueJobRunner(object):
             tokens['WALLTIME'] = batch_job.walltime
         else:
             tokens['WALLTIME'] = "unlimited"
+            
+        tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
         
         return string.Template(self.script_template).substitute(tokens)
 
@@ -594,6 +586,8 @@ class TorqueJobRunner(object):
 def main():
     job_runner = TorqueJobRunner()
     jm = JobManager()
+    
+    print common.CIVET_HOME
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
                    modules=["python"])
