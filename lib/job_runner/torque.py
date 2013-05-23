@@ -31,13 +31,6 @@ _DEFAULT_DEPEND_TYPE = "afterok"
 
 _SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
-def _release_job(connection, id):
-    """
-        release a user hold on a job specified by id
-        
-        this function is shared between JobManager and TorqueJobRunner
-    """  
-    return pbs.pbs_rlsjob(connection, id, 'u', '')
 
     
 def _connect_to_server(server):
@@ -124,7 +117,7 @@ class JobManager(object):
         """
         Release a user hold on a job
         """
-        return _release_job(self.connection, id)
+        return pbs.pbs_rlsjob(self.connection, id, 'u', '')
 
     
 
@@ -444,7 +437,7 @@ class TorqueJobRunner(object):
         else:
             c = _connect_to_server(self._server)
         
-        rval = _release_job(c, id)
+        rval = pbs.pbs_rlsjob(c, id, 'u', '')
         
         if not connection:
             pbs.pbs_disconnect(c)
