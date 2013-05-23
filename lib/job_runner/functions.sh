@@ -39,6 +39,8 @@ function abort_pipeline {
 # The purpose is to start with a clean slate and only load modules specified
 # by the pipeline tool if the user has modulefiles loaded automatically in 
 # their .bashrc
+# If a user loaded some modulefiles automatically it is possible that they 
+# could conflict with specific versions specified in the tool xml
 function unload_all_modules {
     saveIFS=$IFS
     IFS=:
