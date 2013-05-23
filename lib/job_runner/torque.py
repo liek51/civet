@@ -191,7 +191,7 @@ class TorqueJobRunner(object):
     script_template = textwrap.dedent("""\
         #!/bin/bash
         
-        #define some useful functions
+        #define civet shell functions
         source $FUNCTIONS
         
         
@@ -234,8 +234,6 @@ class TorqueJobRunner(object):
         #
         echo "PREVALIDATION: NOT PERFORMED! FIXME BY RENABLING IN torque.py" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         VALIDATION_STATUS=$$?
-
-
 
 
         
