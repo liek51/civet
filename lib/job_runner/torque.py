@@ -217,7 +217,7 @@ class TorqueJobRunner(object):
         $MODULE_LOAD_CMDS
         
         #add the cga bin directory to our PATH
-        PATH=${CIVET_BIT}:$$PATH
+        PATH=${CIVET_BIN}:$$PATH
         
         cd $$PBS_O_WORKDIR
 
@@ -260,20 +260,20 @@ class TorqueJobRunner(object):
             echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             if [ $$CMD_EXIT_STATUS -ne 0 ]; then
                 echo "Command returned non-zero value.  abort pipeline" >&2
-                abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED
+                abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
             fi
             
             #check error log for list of keywords
             for str in $ERROR_STRINGS; do
                 if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                     echo "found error string in stderr log. abort pipeline" >&2
-                    abort_pipeline $LOG_DIR 1 $$ELAPSED_TIME_FORMATTED
+                    abort_pipeline $LOG_DIR 1 $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
                 fi
             done
             
         else
             echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >&2
-            abort_pipeline $LOG_DIR $$VALIDATION_STATUS "00:00:00"        
+            abort_pipeline $LOG_DIR $$VALIDATION_STATUS "00:00:00" $WALLTIME_REQUESTED
         fi
         
         #run supplied post-job checks
@@ -284,7 +284,7 @@ class TorqueJobRunner(object):
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
             echo "Post job sanity check failed. Aborting pipeline!" >&2
-            abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED
+            abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
         else
             # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
@@ -507,12 +507,12 @@ class TorqueJobRunner(object):
             tokens['ERROR_STRINGS'] = ''
             
         if batch_job.walltime:
-            tokens['WALLTIME'] = batch_job.walltime
+            tokens['WALLTIME_REQUESTED'] = batch_job.walltime
         else:
-            tokens['WALLTIME'] = "unlimited"
+            tokens['WALLTIME_REQUESTED'] = "unlimited"
             
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
-        tokens['CIVET_BIT'] = os.path.join(common.CIVET_HOME, "bin")
+        tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
         
         return string.Template(self.script_template).substitute(tokens)
 
