@@ -1,16 +1,26 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
-#The "main" program of the development pipeline.
+#civet pipeline driver program
 
 import sys
+import inspect
+import os
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+     sys.path.insert(0, lib_folder)
+
+
 import pipeline_parse as PL
+
 def main():
     # The name of the pipeline description is passed on the command line.
     #
-    # This is a sample.  Requires three args.  Real one would take a variable
-    # list.
-    if len(sys.argv) < 4:
-        print >> sys.stderr, 'This test version requires four arguments: XML, input1, input2.'
+    if len(sys.argv) < 2:
+        write(sys.stderr, 'civet_run requires at least one argument (the xml '
+                          'pipeline description), any additional parameters are '
+                          'passed to the pipeline.')
         sys.exit(1)
 
     PL.parse_XML(sys.argv[1], sys.argv[2:])
