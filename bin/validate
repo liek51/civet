@@ -41,11 +41,6 @@ def process_options():
     parser.add_argument('files', metavar='F', type=str, nargs='+',
                         help='List of files to validate.')
     args = parser.parse_args()
-    if not args.gen and not args.add and not args.update:
-        if args.master_list != master:
-            print >> sys.stderr, ('Option --master list only available when '
-                'generating or modifying the master list. Ignoring.')
-            args.master_list = master
     if args.gen and (args.add or args.update):
         args.add = False
         arts.update = False

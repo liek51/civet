@@ -184,7 +184,10 @@ class Tool():
             self.tempfile_ids.append(id)
 
     def collect_files_to_validate(self):
-        return self.verify_files
+        v = self.verify_files
+        for c in self.commands:
+            v.append(c.program)
+        return v
 
     def logVersion(self):
         pass

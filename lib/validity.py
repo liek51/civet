@@ -148,25 +148,27 @@ class FileInfo(object):
             raise Exception('Other instance must be a FileInfo!')
         if self.sha1 != other.sha1:
             self.update_compare_failures('sha1', other.sha1, self.sha1)
-        if self.uid != other.uid:
-            self.update_compare_failures('uid', other.uid, self.uid)
-        if self.name != other.name:
-            self.update_compare_failures('name', other.name, self.name)
-            self.compare_failures += (
-                '        (This indicates a logic failure in the program. '
-                'Please report it.)\n')
-        if self.gid != other.gid:
-            self.update_compare_failures('gid', other.gid, self.gid)
-        if self.mode != other.mode:
-            self.update_compare_failures('mode', other.mode, self.mode)
+        #if self.uid != other.uid:
+        #    self.update_compare_failures('uid', other.uid, self.uid)
+        #if self.name != other.name:
+        #    self.update_compare_failures('name', other.name, self.name)
+        #    self.compare_failures += (
+        #        '        (This indicates a logic failure in the program. '
+        #        'Please report it.)\n')
+        #if self.gid != other.gid:
+        #    self.update_compare_failures('gid', other.gid, self.gid)
+        #if self.mode != other.mode:
+        #    self.update_compare_failures('mode', other.mode, self.mode)
+
         # Special check: If either file doesn't exist, we fail.
         if self.mode == 'No such file.':
             self.update_compare_failures('mode', other.mode, self.mode)
-        if self.mode_string != other.mode_string:
-            self.update_compare_failures('mode_string', other.mode_string, 
-                                         self.mode_string)
-        if self.size != other.size:
-            self.update_compare_failures('size', other.size, self.size)
+
+        #if self.mode_string != other.mode_string:
+        #    self.update_compare_failures('mode_string', other.mode_string, 
+        #                                 self.mode_string)
+        #if self.size != other.size:
+        #    self.update_compare_failures('size', other.size, self.size)
 
         # Equal if no failures
         return self.compare_failures is None

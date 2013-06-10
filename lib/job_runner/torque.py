@@ -227,6 +227,8 @@ class TorqueJobRunner(object):
         $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 
         VALIDATION_STATUS=$$?
 
+        # FIXME! Remove next line debugging code.
+        echo "Validation status: $$VALIDATION_STATUS" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
 
         #

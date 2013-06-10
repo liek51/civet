@@ -65,6 +65,7 @@ class Pipeline(object):
         self._output_dir = None
         self._log_dir = None
         self._job_runner = None
+        self.validation_file = os.path.splitext(xmlfile)[0] + '_validation.data'
         
         # And track the major components of the pipeline
         self._steps = []
@@ -173,7 +174,8 @@ class Pipeline(object):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
             self._job_runner =  TorqueJobRunner(self.log_dir, 
-                                                validation_cmd="validate")
+                                                validation_cmd="validate -m "
+                                                + self.validation_file )
         return self._job_runner
 
     def collect_files_to_validate(self):
