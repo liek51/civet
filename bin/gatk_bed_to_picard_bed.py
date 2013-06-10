@@ -22,8 +22,7 @@ ofn = ifn[:-4] + '_picard.bed'
 
 of = open(ofn, 'w')
 
-header="""
-@HD     VN:1.4  SO:coordinate
+header="""@HD     VN:1.4  SO:coordinate
 @SQ     SN:chrM LN:16571
 @SQ     SN:chr1 LN:249250621
 @SQ     SN:chr2 LN:243199373
@@ -49,12 +48,11 @@ header="""
 @SQ     SN:chr22        LN:51304566
 @SQ     SN:chrX LN:155270560
 @SQ     SN:chrY LN:59373566
-@RG     ID:317panel     PL:ILLUMINA     LB:LI317panel  SM:317panel
-@PG     ID:bwa  PN:bwa  VN:0.5.9-r26-dev
-"""
+@RG     ID:371panel     PL:ILLUMINA     LB:LI371panel  SM:371panel
+@PG     ID:bwa  PN:bwa  VN:0.5.9-r26-dev"""
 
-# Print out the header without an extra CR.
-print >> of, header,
+# Print out the header.
+print >> of, header
 
 for line in open(ifn):
 	# There shouldn't be any header in this input, but skip it in case,
@@ -67,8 +65,8 @@ for line in open(ifn):
     if "_" in parts[0]:
         continue
 
-	parts.append('+')
-	parts.append('--')
-    print >> of, ' '.join(parts)
+    parts.append('+')
+    parts.append('--')
+    print >> of, '\t'.join(parts)
 
 of.close()
