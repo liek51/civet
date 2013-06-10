@@ -30,12 +30,6 @@ def make_fake():
 
     ts = time.strftime('%H%M%S')
 
-    # FIXME DEVELOPMENT HACK
-    # For development, we want bam files and downstream products to be completely deterministic.  Temporarily, use a fixed timestamp.
-    print >> sys.stderr, 'FIXME: read_group_from_fastq.py timestamps disabled.  Fix before production release!  FIXME.'
-    ts = '120000'
-    # END OF DEVELOPMENT HACK
-
     id = 'ID_' + ts
     lb = 'LIB_' + ts
     sm = 'SAMPLE_' + ts
