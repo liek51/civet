@@ -18,9 +18,9 @@ def main():
     # The name of the pipeline description is passed on the command line.
     #
     if len(sys.argv) < 2:
-        write(sys.stderr, 'civet_run requires at least one argument (the xml '
+        sys.stderr.write( 'civet_run requires at least one argument (the xml '
                           'pipeline description), any additional parameters are '
-                          'passed to the pipeline.')
+                          'passed to the pipeline.\n\n')
         sys.exit(1)
 
     PL.parse_XML(sys.argv[1], sys.argv[2:])
