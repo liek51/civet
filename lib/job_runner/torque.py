@@ -283,7 +283,7 @@ class TorqueJobRunner(object):
     """)
   
     
-    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
+    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None 
                  validation_cmd="ls -l"):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
@@ -291,6 +291,7 @@ class TorqueJobRunner(object):
         self._log_dir = os.path.abspath(log_dir)
         self._job_names = []
         self._server = pbs_server
+        self._pipeline_bin = pipeline_bin
         
         utilities.make_sure_path_exists(self._log_dir)
           
@@ -499,7 +500,11 @@ class TorqueJobRunner(object):
             tokens['WALLTIME_REQUESTED'] = "unlimited"
             
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
-        tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
+        
+        if self._pipeline_bin:
+            tokens['CIVET_BIN'] = "{0}:{1}".format(self._pipeline_bin, os.path.join(common.CIVET_HOME, "bin"))
+        else
+            tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
         
         return string.Template(self.script_template).substitute(tokens)
 
