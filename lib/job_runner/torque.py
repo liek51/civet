@@ -503,7 +503,7 @@ class TorqueJobRunner(object):
         
         if self._pipeline_bin:
             tokens['CIVET_BIN'] = "{0}:{1}".format(self._pipeline_bin, os.path.join(common.CIVET_HOME, "bin"))
-        else
+        else:
             tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
         
         return string.Template(self.script_template).substitute(tokens)
