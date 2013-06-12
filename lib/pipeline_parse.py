@@ -102,7 +102,7 @@ class Pipeline(object):
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
 
-    def submit(self):
+    def submit(self, validate=True):
         print 'Executing pipeline', self.name
 
         # Most of the dependencies are file-based; a job can run
@@ -158,7 +158,7 @@ class Pipeline(object):
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
-                             modules=['python/2.7.3', 'cga'])
+                             modules=['python/2.7.3'])
         self.job_runner.queue_job(batch_job)
 
         # We're done submitting all the jobs.  Release them and get
@@ -176,7 +176,7 @@ class Pipeline(object):
             self._job_runner =  TorqueJobRunner(self.log_dir, 
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
-                                                pipeline_bin=self.master_XML_dir)
+                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, bin)))
         return self._job_runner
 
     def collect_files_to_validate(self):
