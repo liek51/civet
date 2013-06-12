@@ -283,7 +283,7 @@ class TorqueJobRunner(object):
     """)
   
     
-    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None 
+    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
                  validation_cmd="ls -l"):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
