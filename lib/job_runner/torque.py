@@ -231,7 +231,7 @@ class TorqueJobRunner(object):
             echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
             #optional version command
-            $VERSION_CMD >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log
          
          
             #execute the actual command line for this pipeline tool
@@ -479,9 +479,9 @@ class TorqueJobRunner(object):
             tokens['PRE_RUN_VALIDATION'] = "true"
             
         if batch_job.version_cmd:
-            tokens['VERSION_CMD'] = batch_job.version_cmd
+            tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmd))
         else:
-            tokens['VERSION_CMD'] = "#[none given]"
+            tokens['VERSION_CMDS'] = "#[none given]"
             
         if batch_job.epilogue:
             tokens['EPILOGUE'] = batch_job.epilogue
