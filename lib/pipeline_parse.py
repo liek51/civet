@@ -177,7 +177,7 @@ class Pipeline(object):
             self._job_runner =  TorqueJobRunner(self.log_dir, 
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
-                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, bin)))
+                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")))
         return self._job_runner
 
     def collect_files_to_validate(self):
