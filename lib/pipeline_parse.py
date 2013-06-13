@@ -91,9 +91,9 @@ class Pipeline(object):
         for child in pending:
             t = child.tag
             if t == 'step':
-                self._steps.append(Step(child, self._files))
+                self._steps.append(Step(child, self._files, skip_validation))
             elif t == 'foreach':
-                self._steps.append(ForEach(child, self._files))
+                self._steps.append(ForEach(child, self._files, skip_validation))
 
     @property
     def log_dir(self):
@@ -102,7 +102,7 @@ class Pipeline(object):
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
 
-    def submit(self, validate=True):
+    def submit(self, skip_validation=False):
         print 'Executing pipeline', self.name
 
         # Most of the dependencies are file-based; a job can run

@@ -24,7 +24,7 @@ def main():
         sys.exit(1)
 
     PL.parse_XML(sys.argv[1], sys.argv[2:])
-    PL.submit()
+    PL.submit(skip_validation=True)
 
 if __name__ == "__main__":
     main()

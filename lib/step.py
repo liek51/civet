@@ -3,7 +3,7 @@ from pipeline_tool import *
 class Step():
     validTags = [
         'tool' ]
-    def __init__(self, e, files):
+    def __init__(self, e, files, skip_validation=False):
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
         self.name = e.attrib['name']
@@ -12,7 +12,7 @@ class Step():
             t = child.tag
             # print 'Step child:', t, child.attrib
             assert t in Step.validTags, 'Illegal tag in step: ' + t
-            self.tools.append(PipelineTool(child, files))
+            self.tools.append(PipelineTool(child, files, skip_validation))
 
     def submit(self, name_prefix):
         invocation = 0
