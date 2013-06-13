@@ -6,6 +6,7 @@
 import sys
 import re
 import datetime
+import os
 import xml.etree.ElementTree as ET
 
 from foreach import *
