@@ -41,7 +41,7 @@ class Pipeline(object):
     def __init__(self):
         pass
         
-    def parse_XML(self, xmlfile, params):
+    def parse_XML(self, xmlfile, params, skip_validation=False):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -102,7 +102,7 @@ class Pipeline(object):
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
 
-    def submit(self, skip_validation=False):
+    def submit(self):
         print 'Executing pipeline', self.name
 
         # Most of the dependencies are file-based; a job can run
