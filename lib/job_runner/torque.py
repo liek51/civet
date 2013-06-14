@@ -234,10 +234,13 @@ class TorqueJobRunner(object):
             $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log
          
          
-            #execute the actual command line for this pipeline tool
-            echo "Executing $CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            #execute the actual command line(s) for this pipeline tool
+            echo "Executing\n$CMD\nEND CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             TIME_START="$$(date +%s)"
+            
+            # command(s) passed into BatchJob:
             $CMD
+            
             TIME_END="$$(date +%s)"
             ELAPSED_TIME=$$(expr $$TIME_END - $$TIME_START)
             ELAPSED_TIME_FORMATTED=$$(printf "%02d:%02d:%02d" $$(($$ELAPSED_TIME/3600)) $$(($$ELAPSED_TIME%3600/60)) $$(($$ELAPSED_TIME%60)))
