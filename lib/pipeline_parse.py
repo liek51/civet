@@ -194,7 +194,7 @@ class Pipeline(object):
         vcs = []
         for step in self._steps:
             svcs = step.collect_version_commands()
-            for vc in svcfs:
+            for vc in svcs:
                 if vc not in vcs:
                     vcs.append(vc)
         return vcs

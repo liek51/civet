@@ -196,7 +196,7 @@ class Tool():
             if c.version_command:
                 vc = c.version_command
                 if vc not in vcs:
-                    vcs.append(c.program)
+                    vcs.append(c.version_command)
         return vcs
 
     def logVersion(self):
@@ -401,7 +401,20 @@ class Command():
         else:
             self.stderr_id = None
 
+        # The command text can be either in the command element's text,
+        # or as the "tail" of the child <version_command> tag. Sigh.
+        # Therefore we'll process it in parts.
+        if e.text:
+            command_text = e.text
+        else:
+            command_text = ""
+
+        # Only allow one child in a Command tag
+        child_found = False
         for child in e:
+            assert not child_found, ('only one subtag allowed in '
+                                           'command tag')
+            child_found = True
             t = child.tag
             assert t == 'version_command', ('unknown child tag in a command'
                                             ' tag: ' + t)
@@ -409,11 +422,17 @@ class Command():
                                               'version command: ' + t)
             self.version_command = re.sub('\s+', ' ', child.text).strip()
 
+            # Get any command text that the parser considers part of this
+            # child.
+            if child.tail:
+                command_text += child.tail
+
         # Strip out excess white space in the command
-        if e.text:
-            self.command_template = re.sub('\s+', ' ', e.text).strip()
+        if command_text:
+            self.command_template = re.sub('\s+', ' ', command_text).strip()
         else:
             self.command_template = ''
+
         commands.append(self)
 
     def fixupOptionsFiles(self):
