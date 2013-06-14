@@ -4,7 +4,7 @@
 consolidate_logs.py
 
 A program to concatenate all the various log files into three,
-with header sections separating the content fro different input
+with header sections separating the content from different input
 logs.
 """
 
@@ -25,6 +25,7 @@ def get_file_names(dir):
     es = []
     statuses = []
     shells = []
+    versions = []
 
     all = os.listdir(dir)
     for f in all:
@@ -38,6 +39,8 @@ def get_file_names(dir):
             es.append(f)
         elif f[-3:] == '.sh':
             shells.append(f)
+        elif f[-12:] == '-version.log':
+            versions.append(f)
         else:
             # Ignore the other files.
             # Note: We're intentionally NOT consolidating the
@@ -50,8 +53,9 @@ def get_file_names(dir):
     errs.sort()
     es.sort()
     shells.sort()
+    versions.sort()
 
-    return(runs, o_s, errs, es, shells)
+    return(runs, o_s, errs, es, shells, versions)
 
 
 def write_header(of, fn):
@@ -135,11 +139,12 @@ def main():
     output and error log files created by the various batch jobs.
     """
     dir = sys.argv[1]
-    (runs, o_s, errs, es, shells) = get_file_names(dir)
+    (runs, o_s, errs, es, shells, versions) = get_file_names(dir)
 
     process_file_list(dir, runs, 'concatenated_run_logs.txt')
     process_file_list(dir, o_s, 'concatenated_stdout.txt')
     process_file_list(dir, errs, 'concatenated_stderr.txt')
+    process_file_list(dir, versions, 'concatenated_versions.txt')
     handle_es(dir, es)
 
 main()
