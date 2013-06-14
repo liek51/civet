@@ -231,7 +231,7 @@ class TorqueJobRunner(object):
             echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
             #optional version command
-            $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log
+            $VERSION_CMDS 2>&1 > $LOG_DIR/$${PBS_JOBNAME}-version.log
          
          
             #execute the actual command line(s) for this pipeline tool
