@@ -42,7 +42,7 @@ class Tool():
         'walltime',
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files):
+    def __init__(self, xml_file, ins, outs, pipeline_files, skip_validation=False):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -52,6 +52,7 @@ class Tool():
         self.tempfile_ids = []
         self.ins = ins
         self.outs = outs
+        self.skip_validation=skip_validation
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -278,9 +279,13 @@ class Tool():
                     depends_on.append(j)
 
         # Do the actual batch job sumbission
+        if self.skip_validation:
+            verify_file_list = None
+        else:
+            verify_file_list = self.verify_files  
         batch_job = BatchJob(
             multi_command, workdir=PipelineFile.get_output_dir(), 
-            files_to_check=self.verify_files, 
+            files_to_check=verify_file_list, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name, error_strings=self.error_strings)
     

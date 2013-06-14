@@ -6,6 +6,7 @@
 import sys
 import re
 import datetime
+import os
 import xml.etree.ElementTree as ET
 
 from foreach import *
@@ -42,7 +43,7 @@ class Pipeline(object):
     def __init__(self):
         pass
         
-    def parse_XML(self, xmlfile, params):
+    def parse_XML(self, xmlfile, params, skip_validation=False):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -92,9 +93,9 @@ class Pipeline(object):
         for child in pending:
             t = child.tag
             if t == 'step':
-                self._steps.append(Step(child, self._files))
+                self._steps.append(Step(child, self._files, skip_validation))
             elif t == 'foreach':
-                self._steps.append(ForEach(child, self._files))
+                self._steps.append(ForEach(child, self._files, skip_validation))
 
     @property
     def log_dir(self):
@@ -103,7 +104,7 @@ class Pipeline(object):
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
 
-    def submit(self, validate=True):
+    def submit(self):
         print 'Executing pipeline', self.name
 
         # Most of the dependencies are file-based; a job can run
@@ -177,7 +178,7 @@ class Pipeline(object):
             self._job_runner =  TorqueJobRunner(self.log_dir, 
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
-                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, bin)))
+                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")))
         return self._job_runner
 
     def collect_files_to_validate(self):

@@ -10,7 +10,7 @@ class ForEach():
         'file',
         'related',
         'step' ]
-    def __init__(self, e, pipelineFiles):
+    def __init__(self, e, pipelineFiles, skip_validation=False):
         self.file = None
         self.relatedFiles = {}
         self.steps = []
@@ -22,7 +22,7 @@ class ForEach():
             t = child.tag
             assert t in ForEach.validTags, 'invalid tag in ForEach:' + t
             if t == 'step':
-                self.steps.append(Step(child, pipelineFiles))
+                self.steps.append(Step(child, pipelineFiles, skip_validation))
             elif t == 'file':
                 assert not self.file, 'the foreach tag must contain exactly one file tag.'
                 self.file = ForEachFile(child, self.pipelineFiles)
