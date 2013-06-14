@@ -3,7 +3,7 @@ from pipeline_tool import *
 class Step():
     validTags = [
         'tool' ]
-    def __init__(self, e, files, skip_validation=False):
+    def __init__(self, e, files):
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
         self.name = e.attrib['name']
@@ -12,7 +12,7 @@ class Step():
             t = child.tag
             # print 'Step child:', t, child.attrib
             assert t in Step.validTags, 'Illegal tag in step: ' + t
-            self.tools.append(PipelineTool(child, files, skip_validation))
+            self.tools.append(PipelineTool(child, files))
 
     def submit(self, name_prefix):
         invocation = 0
@@ -34,16 +34,16 @@ class Step():
                     fns.append(fn)
         return fns
 
-	def collect_version_commands(self):
-		vcs = []
-		for tool in self.tools:
-			tvcs = tool.collect_version_commands()
-			for vc in tvcs:
-				if vc not in vcs:
-					vcs.append(vc)
-		return vcs
+    def collect_version_commands(self):
+        vcs = []
+        for tool in self.tools:
+            tvcs = tool.collect_version_commands()
+            for vc in tvcs:
+                if vc not in vcs:
+                    vcs.append(vc)
+        return vcs
 
-		def check_files_exist(self):
+        def check_files_exist(self):
         missing = []
         for tool in self.tools:
             tmissing = tool.check_files_exist()

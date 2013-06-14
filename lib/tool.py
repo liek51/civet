@@ -193,10 +193,10 @@ class Tool():
     def collect_version_commands(self):
         vcs = []
         for c in self.commands:
-			if c.version_command:
-				vc = c.version_command
-				if vc not in vcs:
-				    vcs.append(c.program)
+            if c.version_command:
+                vc = c.version_command
+                if vc not in vcs:
+                    vcs.append(c.program)
         return vcs
 
     def logVersion(self):
@@ -405,7 +405,7 @@ class Command():
             assert t == 'version_command', ('unknown child tag in a command'
                                             ' tag: ' + t)
             assert not self.version_command, ('a command must have at most one'
-											  'version command: ' + t)
+                                              'version command: ' + t)
             self.version_command = re.sub('\s+', ' ', child.text).strip()
 
         # Strip out excess white space in the command

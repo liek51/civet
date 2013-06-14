@@ -1,4 +1,7 @@
+The civet software implements the pipeline driver for XML-defined pipelines. 
+Originally implemented for, and as part of, the cga project, this pipeline 
+software was split off so that it could be used in more projects.
 
-This file will eventually tell us about the Civet software
+This file will eventually tell us more about the Civet software
 
 Signed: The Management

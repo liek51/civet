@@ -190,14 +190,14 @@ class Pipeline(object):
                     fns.append(fn)
         return fns
 
-	def collect_version_commands(self):
-		vcs = []
-		for step in self._steps:
-			svcs = step.collect_version_commands()
-			for vc in svcfs:
-				if vc not in vcs:
-					vcs.append(vc)
-		return vcs
+    def collect_version_commands(self):
+        vcs = []
+        for step in self._steps:
+            svcs = step.collect_version_commands()
+            for vc in svcfs:
+                if vc not in vcs:
+                    vcs.append(vc)
+        return vcs
 
     def check_files_exist(self):
         missing = []

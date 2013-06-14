@@ -1,12 +1,18 @@
 #! /usr/bin/env python
 
-# This is an alternate mail program for the pipeline code, that 
-# collects all the files that need to be validated, and 
-# generates a json file with their data.  The created file
-# must be moved into the proper directory for the pipeline's use.
+"""
+This is an alternate maim program for the pipeline code, that 
+collects all the files that need to be validated, and 
+generates a json file with their data.  The created file
+must be moved into the proper directory for the pipeline's use
+(the same directory as the pipeline's main xml file).
 
-# For compatibility with the pipeline XML, this command must be invoked
-# with the same parameters as a regular pipeline invocation.
+Invoke the command with the path to the pipeline's top level 
+xml file.  The same cluster software modules as will be 
+eventually loaded by the pipeline must be loaded prior to 
+execution, and it must be run on one of the cluster's execution
+nodes, i.e., it must be run as part of a qsub'd job.
+"""
 
 import os, sys, inspect
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
