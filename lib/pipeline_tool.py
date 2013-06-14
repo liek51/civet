@@ -23,6 +23,9 @@ class PipelineTool():
     def submit(self, name_prefix):
         return self.tool.submit(name_prefix)
 
+	def collect_version_commands(self):
+		return self.tool.collect_version_commands()
+
     def collect_files_to_validate(self):
         return self.tool.collect_files_to_validate()
 

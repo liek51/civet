@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 from foreach import *
 from pipeline_file import *
+from step import *
 from tool import *
 from tool_logger import *
 
@@ -187,6 +188,15 @@ class Pipeline(object):
                 if fn not in fns:
                     fns.append(fn)
         return fns
+
+	def collect_version_commands(self):
+		vcs = []
+		for step in self._steps:
+			svcs = step.collect_version_commands()
+			for vc in svcfs:
+				if vc not in vcs:
+					vcs.append(vc)
+		return vcs
 
     def check_files_exist(self):
         missing = []

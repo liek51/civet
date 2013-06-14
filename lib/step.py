@@ -34,7 +34,16 @@ class Step():
                     fns.append(fn)
         return fns
 
-    def check_files_exist(self):
+	def collect_version_commands(self):
+		vcs = []
+		for tool in self.tools:
+			tvcs = tool.collect_version_commands()
+			for vc in tvcs:
+				if vc not in vcs:
+					vcs.append(vc)
+		return vcs
+
+		def check_files_exist(self):
         missing = []
         for tool in self.tools:
             tmissing = tool.check_files_exist()
