@@ -216,7 +216,7 @@ class TorqueJobRunner(object):
         #then load modulefiles specified by the tool xml
         $MODULE_LOAD_CMDS
         
-        #add the cga bin directory to our PATH
+        #add the Civet bin directory to our PATH
         PATH=${CIVET_BIN}:$$PATH
         
         cd $$PBS_O_WORKDIR
