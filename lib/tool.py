@@ -287,7 +287,8 @@ class Tool():
             multi_command, workdir=PipelineFile.get_output_dir(), 
             files_to_check=verify_file_list, 
             ppn=self.threads, walltime = self.walltime, modules=self.modules,
-            depends_on=depends_on, name=name, error_strings=self.error_strings)
+            depends_on=depends_on, name=name, error_strings=self.error_strings, 
+            version_cmds=self.collect_version_commands())
     
         job_id = PL.job_runner.queue_job(batch_job)
 

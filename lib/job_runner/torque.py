@@ -478,8 +478,8 @@ class TorqueJobRunner(object):
             #force "empty" prologue to return 0
             tokens['PRE_RUN_VALIDATION'] = "true"
             
-        if batch_job.version_cmd:
-            tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmd))
+        if batch_job.version_cmds:
+            tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmds))
         else:
             tokens['VERSION_CMDS'] = "#[none given]"
             

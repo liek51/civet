@@ -19,13 +19,13 @@ class BatchJob(object):
     stderr_path : path to final location for job's stderr spool (default = resource manager default)
     files_to_check : files to validate before running command
     epilogue : optional post-job checks
-    version_cmd : command to report version of the tool being used 
+    version_cmds : list of command lines to report version of the executables being used
     """
     
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
                  name=None, stdout_path=None, stderr_path="/dev/null", files_to_check=None, 
-                 epilogue=None, version_cmd=None, error_strings=None):
+                 epilogue=None, version_cmds=None, error_strings=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -38,7 +38,7 @@ class BatchJob(object):
         self.name = name
         self.files_to_check = files_to_check
         self.epilogue = epilogue
-        self.version_cmd = version_cmd
+        self.version_cmds = version_cmds
         self.error_strings = error_strings
         
     
