@@ -447,8 +447,9 @@ class Command():
 
         # Similarly, fix up a version_command by replacing all the delimited 
         # option names and file ids with the real option text and file paths.
-        self.real_version_command = (self.replacePattern.sub(tokenReplace,
-                                                     self.version_command))
+        if self.version_command:
+            self.real_version_command = (self.replacePattern.sub(tokenReplace,
+                                         self.version_command))
 
         # Set up to capture output and error redirection, if requested.
         if self.stdout_id:
