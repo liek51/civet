@@ -193,19 +193,11 @@ class Tool():
     def collect_version_commands(self):
         vcs = []
         for c in self.commands:
-            if c.version_command:
-                vc = c.version_command
+            if c.real_version_command:
+                vc = c.real_version_command
                 if vc not in vcs:
-                    vcs.append(c.version_command)
+                    vcs.append(vc)
         return vcs
-
-    def logVersion(self):
-        pass
-
-    def validate(self):
-        # Determine whether this tool is unchanged from those that were
-        # certified for CLIA.
-        pass
 
     def submit(self, name_prefix):
         """
@@ -309,16 +301,6 @@ class Tool():
         print job_id + ':', self.name
         return job_id
 
-    def getCommand(self):
-        # return the command as a string
-        pass
-
-    def logCommand(self):
-        # write the command to be executed to a log file.
-        # Not sure this is the place to have this, or whether some place else
-        # simply calls getCommand and writes it.
-        pass
-
     def check_files_exist(self):
         missing = []
         for fid in self.tool_files:
@@ -377,6 +359,7 @@ class Command():
         self.tool_files = tool_files
         self.xml_file = xml_file
         self.version_command = None
+        self.real_version_command = None
         atts = e.attrib
         for a in atts:
             assert a in Command.validAtts, 'Unknown attribute in command tag: ' + a
@@ -461,6 +444,11 @@ class Command():
         self.real_command = (self.program + ' ' +
                              self.replacePattern.sub(tokenReplace,
                                                      self.command_template))
+
+        # Similarly, fix up a version_command by replacing all the delimited 
+        # option names and file ids with the real option text and file paths.
+        self.real_version_command = (self.replacePattern.sub(tokenReplace,
+                                                     self.version_command))
 
         # Set up to capture output and error redirection, if requested.
         if self.stdout_id:
