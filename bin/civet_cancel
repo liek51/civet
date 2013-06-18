@@ -21,10 +21,13 @@ if lib_folder not in sys.path:
 
 import job_runner.torque as batch_system
 import job_runner.common
+import version
     
 CANCEL_LOG_FILENAME = "cancel.log"
     
 def main():
+
+    version.parse_options()
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument('log_dir', help="Path to pipeline log directory")

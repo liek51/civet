@@ -19,6 +19,7 @@ if lib_folder not in sys.path:
      sys.path.insert(0, lib_folder)
 
 import validity
+import version
 
 def process_options():
 
@@ -62,6 +63,8 @@ def ensure_directory_exists(dir):
         sys.exit(1)
     
 def main():
+    version.parse_options()
+
     args = process_options()
 
     files = validity.FileCollection()

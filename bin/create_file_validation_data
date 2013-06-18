@@ -23,8 +23,11 @@ if lib_folder not in sys.path:
 
 import pipeline_parse as PL
 import validity
+import version
 
 def main():
+    version.parse_options()
+    
     # Pass in dummy arguments to let the parse succeed.
     # we're not going to run the pipeline, just parse it. Don't need real
     # files.

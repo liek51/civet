@@ -13,8 +13,12 @@ if lib_folder not in sys.path:
 
 
 import pipeline_parse as PL
+import version
+
 
 def main():
+    version.parse_options()
+    
     # The name of the pipeline description is passed on the command line.
     #
     if len(sys.argv) < 2:
