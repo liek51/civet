@@ -25,6 +25,7 @@ if __name__ == "__main__":
     sys.path.insert(0, "..")
     
 import utilities
+import version
 
 #TODO: make dependency type settable per job
 _DEFAULT_DEPEND_TYPE = "afterok"
@@ -200,6 +201,8 @@ class TorqueJobRunner(object):
         exec 2> $LOG_DIR/$${PBS_JOBNAME}-err.log
         
         echo "Run time log for $$PBS_JOBNAME ($$PBS_JOBID)" > $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo "Using Civet $CIVET_VERSION" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        
         echo "stderr log for $$PBS_JOBNAME ($$PBS_JOBID)" >&2
 
         echo "Run began on $$DATE" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
@@ -508,6 +511,8 @@ class TorqueJobRunner(object):
             tokens['CIVET_BIN'] = "{0}:{1}".format(self._pipeline_bin, os.path.join(common.CIVET_HOME, "bin"))
         else:
             tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
+            
+        tokens['CIVET_VERSION'] = version.CIVET_VERSION
         
         return string.Template(self.script_template).substitute(tokens)
 
