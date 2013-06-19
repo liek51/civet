@@ -53,6 +53,7 @@ class Tool():
         self.ins = ins
         self.outs = outs
         self.skip_validation=skip_validation
+        self.verify_replacement_pattern = None
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -165,6 +166,10 @@ class Tool():
                 self.verify_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
+        #
+        # And fix up any replacement file id tokens in the validate tags.
+        #
+        self.fixup_validate_files()
 
     def file(self, e):
         atts = e.attrib
@@ -309,6 +314,38 @@ class Tool():
                 if not os.path.exists(f.path):
                     missing.append(f.path)
         return missing
+
+    def fixup_validate_files(self):
+        """
+        This function is a simpler version of Command.fixupOptionsFiles(),
+        Rather than complexify the code flow to handle both cases, we have
+        two similar functions.
+        """
+        # The token replacement function is an inner function, so that
+        # it has access to the self attributes.
+        def tokenReplace(m):
+            tok = m.group(1)
+            if tok in self.tool_files:
+                f = self.tool_files[tok]
+                if f.is_list:
+                    # Emit the code to invoke a file filter.
+                    return "$(process_filelist.py f.in_dir.path, f.pattern)"
+                return f.path
+
+            # We didn't match a file id. Put out an error.
+            print >> sys.stderr, ("\n\nUNKNOWN FILE ID: " + tok + 
+                                  ' in file ' + self.xml_file)
+            print >> sys.stderr, 'Tool files:', self.tool_files
+            return 'UNKNOWN FILE ID: ' + tok 
+
+        # pre-compile the pattern
+        if not self.verify_replacement_pattern:
+            self.verify_replacement_pattern = re.compile('{(.*?)}')
+
+        # Fix up all the files in the verify_files list.
+        for n in range(len(self.verify_files)):
+            self.verify_files[n] = self.verify_replacement_pattern.sub(
+                token_replace, self.verify_files[n])
 
 class Option():
     def __init__(self, e, options, tool_files):
@@ -462,5 +499,3 @@ class Command():
             self.real_command += ' > ' + self.tool_files[self.stdout_id].path
         if self.stderr_id:
             self.real_command += ' 2> ' + self.tool_files[self.stderr_id].path
-
-
