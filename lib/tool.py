@@ -323,7 +323,7 @@ class Tool():
         """
         # The token replacement function is an inner function, so that
         # it has access to the self attributes.
-        def tokenReplace(m):
+        def token_replace(m):
             tok = m.group(1)
             if tok in self.tool_files:
                 f = self.tool_files[tok]
