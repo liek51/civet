@@ -372,7 +372,13 @@ class Command():
             assert len(self.delims) == 2, 'command tag delimiters must be exactly two characters.'
         else:
             self.delims = '{}'
-        self.replacePattern = re.compile(self.delims[0] + '(.*?)' + self.delims[1])
+        delim_1 = self.delims[0]
+        delim_2 = self.delims[1]
+        if delim_1 in '|':
+            delim_1 = '\\' + delim_1
+        if delim_2 in '|':
+            delim_2 = '\\' + delim_2
+        self.replacePattern = re.compile(delim_1 + '(.*?)' + delim_2)
 
         # Capture desired output redirection
         if 'stdout_id' in atts:
@@ -456,5 +462,3 @@ class Command():
             self.real_command += ' > ' + self.tool_files[self.stdout_id].path
         if self.stderr_id:
             self.real_command += ' 2> ' + self.tool_files[self.stderr_id].path
-
-

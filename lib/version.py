@@ -10,19 +10,28 @@ import sys
 CIVET_VERSION='V0.5.0'
 
 def parse_options():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--version', '-v', action='store_true', 
-                        help='display program version')
-    # Even though we don't use it, we have to accommodate multiple arguments
-    # for when we're really running!
-    parser.add_argument('others', nargs="*")
-    args = parser.parse_args()
-    #print args
+    #
+    # "But there are libraries that do option parsing! Why do it by hand?"
+    #
+    # True, but this module is included in a variety of others that all have
+    # their own (real) options.  This code only needs to see whether the
+    # command has a single option which is either -v or --version. If
+    # so, print out the version string and exit; else simply return and
+    # let the rest of the program flow happen.
+    #
+    # If we use argparse, we have to teach it about all the possible options
+    # in all the scripts that import this. Trust us.  We tried that way first.
+    #
+    options = ['-v', '--version']
+    if len(sys.argv) == 2:
+        if sys.argv[1] in options:
+            print_version_string_and_exit()
 
-    if args.version:
-        path = os.path.abspath(sys.argv[0])
-        script = os.path.split(path)[1]
-        print script, CIVET_VERSION, path
-        sys.exit(0)
+def print_version_string_and_exit():
+    path = os.path.abspath(sys.argv[0])
+    script = os.path.split(path)[1]
+    print script, CGA_VERSION, path
+    sys.exit(0)
+
 if __name__ == '__main__':
     parse_options()
