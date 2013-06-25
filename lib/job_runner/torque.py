@@ -174,16 +174,22 @@ class JobStatus(object):
        
 class TorqueJobRunner(object):
     """
-       TorqueJobRunner is a class that encapsulates the functionality of 
-       submitting jobs to a TORQUE cluster.
+        TorqueJobRunner is a class that encapsulates the functionality of 
+        submitting jobs to a TORQUE cluster.
        
-       attributes
-       held_jobs  : a list of job_id,server pairs that were submitted with a 
-                    user hold
-       submit_with_hold : if True any root job (job with no dependency) will be
-                          submitted with a user hold
-       log_dir : directory to store log files, will be created if it doesn't 
-                 exist
+        attributes
+        held_jobs  : a list of job_id,server pairs that were submitted with a 
+                     user hold
+        submit_with_hold : if True any root job (job with no dependency) will be
+                           submitted with a user hold
+        log_dir : directory to store log files, will be created if it doesn't 
+                  exist
+        execution_log_dir : log directory on execution host if different 
+                            than log_dir
+        pipeline_bin : allow a pipeline specific bin directory to be added to the PATH.
+                       if set, this string will be prepended to the user's PATH 
+                       at job run time
+        validation_cmd : command used to validate files
     """ 
     
     # the template script, which will be customized for each job
@@ -290,21 +296,23 @@ class TorqueJobRunner(object):
   
     
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
-                 validation_cmd="ls -l", log_dir_local_path=None):
+                 validation_cmd="ls -l", execution_log_dir=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
         self._log_dir = os.path.abspath(log_dir)
         self._job_names = []
         self._server = pbs_server
-        self._pipeline_bin = pipeline_bin
-        self._log_dir_local_path = log_dir_local_path
+        self.pipeline_bin = pipeline_bin
+        self.execution_log_dir = execution_log_dir
         
         utilities.make_sure_path_exists(self._log_dir)
           
         self._id_log = open(os.path.join(log_dir, common.BATCH_ID_LOG), 'w')
         
-            
+    @property
+    def log_dir(self):
+        return self._log_dir        
             
     def queue_job(self, batch_job, queue=None):
         """
@@ -340,7 +348,7 @@ class TorqueJobRunner(object):
             if job_attributes[pbs.ATTR_o] == "/dev/null":
                 job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
         else:
-            job_attributes[pbs.ATTR_o] = os.path.join(self.log_dir_local_path, batch_job.name + ".o")
+            job_attributes[pbs.ATTR_o] = os.path.join(self.execution_log_dir, batch_job.name + ".o")
             
         if batch_job.stderr_path:
             job_attributes[pbs.ATTR_e] = batch_job.stderr_path
@@ -463,8 +471,8 @@ class TorqueJobRunner(object):
         tokens['CMD'] = batch_job.cmd
         
 
-        if self.log_dir_local_path:
-            tokens['LOG_DIR'] = self.log_dir_local_path
+        if self.execution_log_dir:
+            tokens['LOG_DIR'] = self.execution_log_dir
         else:
             tokens['LOG_DIR'] = self.log_dir
             
@@ -504,8 +512,8 @@ class TorqueJobRunner(object):
             
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
         
-        if self._pipeline_bin:
-            tokens['CIVET_BIN'] = "{0}:{1}".format(self._pipeline_bin, os.path.join(common.CIVET_HOME, "bin"))
+        if self.pipeline_bin:
+            tokens['CIVET_BIN'] = "{0}:{1}".format(self.pipeline_bin, os.path.join(common.CIVET_HOME, "bin"))
         else:
             tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
             
