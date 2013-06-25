@@ -290,7 +290,7 @@ class TorqueJobRunner(object):
   
     
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
-                 validation_cmd="ls -l"):
+                 validation_cmd="ls -l", log_dir_local_path=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -298,18 +298,12 @@ class TorqueJobRunner(object):
         self._job_names = []
         self._server = pbs_server
         self._pipeline_bin = pipeline_bin
+        self._log_dir_local_path = log_dir_local_path
         
         utilities.make_sure_path_exists(self._log_dir)
           
         self._id_log = open(os.path.join(log_dir, common.BATCH_ID_LOG), 'w')
         
-
-
-  
-  
-    @property
-    def log_dir(self):
-        return self._log_dir
             
             
     def queue_job(self, batch_job, queue=None):
@@ -346,7 +340,7 @@ class TorqueJobRunner(object):
             if job_attributes[pbs.ATTR_o] == "/dev/null":
                 job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
         else:
-            job_attributes[pbs.ATTR_o] = os.path.join(self.log_dir, batch_job.name + ".o")
+            job_attributes[pbs.ATTR_o] = os.path.join(self.log_dir_local_path, batch_job.name + ".o")
             
         if batch_job.stderr_path:
             job_attributes[pbs.ATTR_e] = batch_job.stderr_path
@@ -468,9 +462,12 @@ class TorqueJobRunner(object):
         
         tokens['CMD'] = batch_job.cmd
         
-        #expand log_dir to absolute path because a job can have a different
-        #working directory
-        tokens['LOG_DIR'] = self.log_dir 
+
+        if self.log_dir_local_path:
+            tokens['LOG_DIR'] = self.log_dir_local_path
+        else:
+            tokens['LOG_DIR'] = self.log_dir
+            
         tokens['ID_FILE'] = common.BATCH_ID_LOG
         
         tokens['MODULE_LOAD_CMDS'] = ""  
