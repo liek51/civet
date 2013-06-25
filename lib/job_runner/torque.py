@@ -325,6 +325,11 @@ class TorqueJobRunner(object):
         # batch job names should be unique for civet pipelines because the 
         # job name is used to name log files and other output
         assert batch_job.name not in self._job_names
+        
+        if self.execution_log_dir:
+            log_dir = self.execution_log_dir
+        else:
+            log_dir = self.log_dir
             
         # build up our torque job attributes and resources
         job_attributes = {}
@@ -348,7 +353,7 @@ class TorqueJobRunner(object):
             if job_attributes[pbs.ATTR_o] == "/dev/null":
                 job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
         else:
-            job_attributes[pbs.ATTR_o] = os.path.join(self.execution_log_dir, batch_job.name + ".o")
+            job_attributes[pbs.ATTR_o] = os.path.join(log_dir, batch_job.name + ".o")
             
         if batch_job.stderr_path:
             job_attributes[pbs.ATTR_e] = batch_job.stderr_path
@@ -359,7 +364,7 @@ class TorqueJobRunner(object):
             if job_attributes[pbs.ATTR_e] == "/dev/null":
                 job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
         else:
-            job_attributes[pbs.ATTR_e] = os.path.join(self.log_dir, batch_job.name + ".e")
+            job_attributes[pbs.ATTR_e] = os.path.join(log_dir, batch_job.name + ".e")
             
         if batch_job.depends_on:
             job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
