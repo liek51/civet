@@ -2,6 +2,7 @@ import sys
 import os
 import tempfile
 import re
+import datetime
 
 import utilities
 
@@ -20,6 +21,8 @@ class PipelineFile():
     valid_file_attributes = [
         'append',
         'create',
+        'datestamp_append',
+        'datestamp_prepend',
         'id',
         'input',
         'in_dir',
@@ -38,7 +41,8 @@ class PipelineFile():
     params = None
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
-                 files, is_path, based_on, pattern, replace, append, in_dir,
+                 files, is_path, based_on, pattern, replace, append,
+                 datestamp, datestamp_append, in_dir,
                  is_parameter, is_list, create=True):
         self.id = id
         self.path = path
@@ -51,6 +55,8 @@ class PipelineFile():
         self.pattern = pattern
         self.replace = replace
         self.append = append
+        self.datestamp = datestamp
+        self.datestamp_append = datestamp_append
         self.in_dir = in_dir
         self.is_parameter = is_parameter
         self.is_list = is_list
@@ -105,6 +111,8 @@ class PipelineFile():
         pattern = None
         replace = None
         append = None
+        datestamp = None
+        datestamp_append = False
         is_list = False
         is_parameter = False
 
@@ -155,10 +163,22 @@ class PipelineFile():
                     sys.exit(1)
                 replace = att['replace']
 
-            if 'append' in att:
+            if 'datestamp_append' in att or 'datestamp_prepend' in att:
                 if pattern or replace:
-                    print >> sys.stderr, ('append is incompatible with '
+                    print >> sys.stderr, ('datestamp is incompatible with '
                                           'pattern and replace.')
+                    print >> sys.stderr, att
+                    sys.exit(1)
+                if 'datestamp_append' in att:
+                    datestamp = att['datestamp_append']
+                    datestamp_append = True
+                else:
+                    datestamp = att['datestamp_prepend']
+
+            if 'append' in att:
+                if pattern or replace or datestamp:
+                    print >> sys.stderr, ('append is incompatible with '
+                                          'datestamp, pattern and replace.')
                     print >> sys.stderr, att
                     sys.exit(1)
                 append = att['append']
@@ -173,7 +193,8 @@ class PipelineFile():
 
         PipelineFile(
             id, path, is_file, is_temp, is_input, is_dir, files, 
-            path_is_path, based_on, pattern, replace, append, in_dir,
+            path_is_path, based_on, pattern, replace, append, 
+            datestamp, datestamp_append, in_dir,
             is_parameter, create)
 
         # This routine latches the first output directory we see.
@@ -222,10 +243,11 @@ class PipelineFile():
         return self.__str__()
 
     def __str__(self):
-        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} inD:{10}'.format(
+        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} DS:{10} DSA:{11} inD:{12}'.format(
             self.id, self.path, self.is_path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.append, self.in_dir)
+            self.pattern, self.append, self.datestamp, self.datestamp_append,
+            self.in_dir)
 
     @staticmethod
     def set_output_dir(f):
@@ -343,12 +365,18 @@ class PipelineFile():
         bof.fix_up_file(files, circularity)
 
         # strip out any path before using the re, in case the replacement
-        # uses the leading strin twice.
+        # uses the leading string twice.
         original_path = os.path.basename(bof.path)
 
         if self.append:
             self.path = original_path + self.append
-        else:
+        elif self.datestamp:
+            ds = datetime.datetime.now().strftime(self.datestamp)
+            if self.datestamp_append:
+                self.path = original_path + ds
+            else:
+                self.path = ds + original_path
+        else: # replace
             self.path = re.sub(self.pattern, self.replace, original_path)
 
     def apply_in_dir_and_create_temp(self, files, circularity):
