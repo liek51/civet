@@ -61,11 +61,13 @@ def main():
     
     # check for the abort.log -- this will indicate something went wrong with
     # the run
+    run_aborted = False
     if os.path.exists(os.path.join(log_dir, "abort.log")):
+        run_aborted = True
         print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
         
-    if os.path.exists(os.path.join(log_dir, "cancel.log")):
-        cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, "cancel.log")))
+    if os.path.exists(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)):
+        cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)))
         #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
         if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
             print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
@@ -123,7 +125,10 @@ def main():
                     print "\tDepends on {0}".format(job[2])
                     pending_jobs += 1
             else:
-                print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
+                if run_aborted:
+                    print "pbs_server returned no information for job {0} (job aborted)"
+                else:
+                    print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
                 unknown_state += 1
                 
     print "\n\nSummary: "

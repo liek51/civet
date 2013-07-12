@@ -23,7 +23,6 @@ import job_runner.torque as batch_system
 import job_runner.common
 import version
     
-CANCEL_LOG_FILENAME = "cancel.log"
     
 def main():
 
@@ -74,7 +73,7 @@ def main():
     
     # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
     # check the queues and send batch delete requests for them
-    cancel_log = open(os.path.join(log_dir, CANCEL_LOG_FILENAME), 'w')
+    cancel_log = open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME), 'w')
     cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
     cancel_log.write("CANCELED_BY=" + pwd.getpwuid(os.getuid()).pw_name + '\n')
     

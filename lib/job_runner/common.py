@@ -4,6 +4,7 @@ import inspect
 
 BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 JOB_STATUS_SUFFIX = "-status.txt"
+CANCEL_LOG_FILENAME = "cancel.log"
 
 CIVET_HOME = os.path.normpath(os.path.join(os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0])), "../../"))
 
