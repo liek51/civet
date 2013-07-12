@@ -242,9 +242,6 @@ class TorqueJobRunner(object):
             #optional version command
             $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1
          
-         
-            #execute the actual command line(s) for this pipeline tool
-            echo "Executing\n$CMD\nEND CMD" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             TIME_START="$$(date +%s)"
             
             # command(s) passed into BatchJob:
