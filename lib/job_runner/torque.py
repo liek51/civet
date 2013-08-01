@@ -293,7 +293,7 @@ class TorqueJobRunner(object):
   
     
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
-                 validation_cmd="ls -l", execution_log_dir=None):
+                 validation_cmd="ls -l", execution_log_dir=None, queue=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -302,6 +302,7 @@ class TorqueJobRunner(object):
         self._server = pbs_server
         self.pipeline_bin = pipeline_bin
         self.execution_log_dir = execution_log_dir
+        self.queue = queue
         
         utilities.make_sure_path_exists(self._log_dir)
           
@@ -311,12 +312,11 @@ class TorqueJobRunner(object):
     def log_dir(self):
         return self._log_dir        
             
-    def queue_job(self, batch_job, queue=None):
+    def queue_job(self, batch_job):
         """
           queue a BatchJob.
           
           batch_job : description of the job to queue
-          queue     : optional destination queue
         """
         
         # batch job names should be unique for civet pipelines because the 
@@ -400,7 +400,7 @@ class TorqueJobRunner(object):
         script_file.close()
             
         #submit job
-        id = pbs.pbs_submit(connection, pbs_attrs, filename, queue, None)
+        id = pbs.pbs_submit(connection, pbs_attrs, filename, self.queue, None)
        
         #check to see if the job was submitted sucessfully. 
         if not id:
