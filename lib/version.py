@@ -30,7 +30,7 @@ def parse_options():
 def print_version_string_and_exit():
     path = os.path.abspath(sys.argv[0])
     script = os.path.split(path)[1]
-    print script, CGA_VERSION, path
+    print script, CIVET_VERSION, path
     sys.exit(0)
 
 if __name__ == '__main__':
