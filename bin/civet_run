@@ -2,6 +2,7 @@
 
 #civet pipeline driver program
 
+import argparse
 import sys
 import inspect
 import os
@@ -19,6 +20,12 @@ import version
 def main():
     version.parse_options()
     
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--queue', default=None, help="submission queue [default = TORQUE default]")
+    parser.add_argument("pipeline", help="pipeline XML definition", nargs=1)
+    parser.add_argument("pipeline_args", help="pipeline arguments", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    
     # The name of the pipeline description is passed on the command line.
     #
     if len(sys.argv) < 2:
@@ -27,7 +34,7 @@ def main():
                           'passed to the pipeline.\n\n')
         sys.exit(1)
 
-    PL.parse_XML(sys.argv[1], sys.argv[2:], skip_validation=True)
+    PL.parse_XML(args.pipeline[0], args.pipeline_args, skip_validation=True, queue=args.queue)
     PL.submit()
 
 if __name__ == "__main__":
