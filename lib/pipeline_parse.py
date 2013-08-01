@@ -43,7 +43,7 @@ class Pipeline(object):
     def __init__(self):
         pass
         
-    def parse_XML(self, xmlfile, params, skip_validation=False):
+    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -68,6 +68,7 @@ class Pipeline(object):
         self._log_dir = None
         self._job_runner = None
         self.validation_file = os.path.splitext(xmlfile)[0] + '_validation.data'
+        self.queue = queue
         
         # And track the major components of the pipeline
         self._steps = []
@@ -178,7 +179,8 @@ class Pipeline(object):
             self._job_runner =  TorqueJobRunner(self.log_dir, 
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
-                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")))
+                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
+                                                queue=self.queue)
         return self._job_runner
 
     def collect_files_to_validate(self):
