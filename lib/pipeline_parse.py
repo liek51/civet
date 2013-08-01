@@ -135,8 +135,9 @@ class Pipeline(object):
 
         # 1. deletes all the temp files.
         tmps = []
-        # This job is about deleting files... Don't bother looking for 
-        # the file's creator_job.  What we really want are consumer jobs.
+        # This job is about deleting files...
+        # For each temp file, depend on the job(s) that use it in any
+        # way, either creating it or consuming it.
         # We can't just wait for the last job to complete, because it is 
         # possible to construct pipelines where the last submitted job
         # completes before an earlier submitted job.
@@ -149,12 +150,16 @@ class Pipeline(object):
                     for j in f.consumer_jobs:
                         if j not in depends:
                             depends.append(j)
+                if f.creator_job:
+                    if f.creator_job not in depends:
+                        depends.append(f.creator_job)
         cmd = 'rm ' + ' '.join(tmps)
-        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
-                             depends_on=depends,
-                             name='Remove_temp_files')
-        job_id = self.job_runner.queue_job(batch_job)
-        self.all_batch_jobs.append(job_id)
+        if len(tmps):
+            batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                                 depends_on=depends,
+                                 name='Remove_temp_files')
+            job_id = self.job_runner.queue_job(batch_job)
+            self.all_batch_jobs.append(job_id)
 
         # 2. Consolidate all the log files.
         cmd = 'consolidate_logs.py {0}'.format(self._log_dir)
