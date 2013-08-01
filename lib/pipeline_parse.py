@@ -66,6 +66,7 @@ class Pipeline(object):
         # Set up for some properties
         self._output_dir = None
         self._log_dir = None
+        self._job_runner = None
         self.validation_file = os.path.splitext(xmlfile)[0] + '_validation.data'
         
         # And track the major components of the pipeline
@@ -103,14 +104,8 @@ class Pipeline(object):
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
         return self._log_dir
 
-    def submit(self, queue=None):
+    def submit(self):
         print 'Executing pipeline', self.name
-        
-        job_runner =  TorqueJobRunner(self.log_dir, 
-                                      validation_cmd="validate -m "
-                                      + self.validation_file,
-                                      pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin"))
-                                      queue=queue)
 
         # Most of the dependencies are file-based; a job can run
         # as soon as the files it needs are ready.  However, we
@@ -157,7 +152,7 @@ class Pipeline(object):
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=depends,
                              name='Remove_temp_files')
-        job_id = job_runner.queue_job(batch_job)
+        job_id = self.job_runner.queue_job(batch_job)
         self.all_batch_jobs.append(job_id)
 
         # 2. Consolidate all the log files.
@@ -166,15 +161,25 @@ class Pipeline(object):
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
                              modules=['python/2.7.3'])
-        job_runner.queue_job(batch_job)
+        self.job_runner.queue_job(batch_job)
 
         # We're done submitting all the jobs.  Release them and get
         # on with it. This is the last action of the pipeline
         # submission process. WE'RE DONE!
-        job_runner.release_all()
+        self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
         print 'Log directory: ', self.log_dir
+
+    @property
+    def job_runner(self):
+        # The pipeline will use a single Torque job runner.
+        if not self._job_runner:
+            self._job_runner =  TorqueJobRunner(self.log_dir, 
+                                                validation_cmd="validate -m "
+                                                + self.validation_file,
+                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")))
+        return self._job_runner
 
     def collect_files_to_validate(self):
         fns = []
