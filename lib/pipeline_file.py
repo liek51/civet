@@ -195,7 +195,7 @@ class PipelineFile():
             id, path, is_file, is_temp, is_input, is_dir, files, 
             path_is_path, based_on, pattern, replace, append, 
             datestamp, datestamp_append, in_dir,
-            is_parameter, create)
+            is_parameter, is_list, create)
 
         # This routine latches the first output directory we see.
         # We call it arbitrarily for all files.
@@ -204,30 +204,6 @@ class PipelineFile():
     @property
     def is_output_dir(self):
         return self._is_dir and not self.is_input
-
-    """
-    FIXME
-    This routine is believed defunct.  It should be removed and parse_XML
-    remerged with __init__.
-
-    @staticmethod
-    def from_filename(id, name, is_input, files):
-        print >> sys.stderr, '****************from_filename() used:', name
-        PipelineFile(id, name, 
-                     True,     # is_file
-                     False,    # is_temp
-                     is_input,
-                     False,    # is_dir
-                     files,
-                     True,     # path_is_path
-                     None,     # based_on
-                     None,     # pattern
-                     None,     # replace
-                     None,     # append
-                     None,     # in_dir
-                     False,    # is_parameter
-                     False)    # create
-    """
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
