@@ -43,7 +43,7 @@ class Pipeline(object):
     def __init__(self):
         pass
         
-    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None):
+    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, submit_jobs=True):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -69,6 +69,7 @@ class Pipeline(object):
         self._job_runner = None
         self.validation_file = os.path.splitext(xmlfile)[0] + '_validation.data'
         self.queue = queue
+        self.submit_jobs = submit_jobs
         
         # And track the major components of the pipeline
         self._steps = []
@@ -185,7 +186,7 @@ class Pipeline(object):
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
                                                 pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
-                                                queue=self.queue)
+                                                queue=self.queue, submit=self.submit_jobs)
         return self._job_runner
 
     def collect_files_to_validate(self):

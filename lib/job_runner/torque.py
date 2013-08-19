@@ -190,6 +190,9 @@ class TorqueJobRunner(object):
                        if set, this string will be prepended to the user's PATH 
                        at job run time
         validation_cmd : command used to validate files
+        queue  : optional Torque queue, if None Torque default will be used
+        submit  :  If False job scripts will be generated but jobs will not be
+                   submitted.  Useful for debugging pipelines.
     """ 
     
     # the template script, which will be customized for each job
@@ -293,7 +296,7 @@ class TorqueJobRunner(object):
   
     
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
-                 validation_cmd="ls -l", execution_log_dir=None, queue=None):
+                 validation_cmd="ls -l", execution_log_dir=None, queue=None, submit=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -303,6 +306,8 @@ class TorqueJobRunner(object):
         self.pipeline_bin = pipeline_bin
         self.execution_log_dir = execution_log_dir
         self.queue = queue
+        self.submit = submit
+        self._id_seq = 0  #used to fake Torque job IDs when self.submit is False
         
         utilities.make_sure_path_exists(self._log_dir)
           
@@ -328,67 +333,6 @@ class TorqueJobRunner(object):
         else:
             log_dir = self.log_dir
             
-        # build up our torque job attributes and resources
-        job_attributes = {}
-        job_resources = {}
-        
-        job_resources['nodes'] = "{0}:ppn={1}".format(batch_job.nodes, 
-                                                      batch_job.ppn)
-        job_resources['walltime'] = batch_job.walltime
-        
-        job_attributes[pbs.ATTR_v] = self._generate_env(batch_job)
-        
-        if batch_job.name:
-            job_attributes[pbs.ATTR_N] = batch_job.name
-        
-        if batch_job.stdout_path:
-            job_attributes[pbs.ATTR_o] = batch_job.stdout_path
-            
-            #XXX workaround for a TORQUE bug where local copies of stderr/stdout
-            # files to /dev/null don't work correctly but remote copies (to 
-            # submit host) are
-            if job_attributes[pbs.ATTR_o] == "/dev/null":
-                job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
-        else:
-            job_attributes[pbs.ATTR_o] = os.path.join(log_dir, batch_job.name + ".o")
-            
-        if batch_job.stderr_path:
-            job_attributes[pbs.ATTR_e] = batch_job.stderr_path
-            
-            #XXX workaround for a TORQUE bug where local copies of stderr/stdout
-            # files to /dev/null don't work correctly but remote copies (to 
-            # submit host) are 
-            if job_attributes[pbs.ATTR_e] == "/dev/null":
-                job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
-        else:
-            job_attributes[pbs.ATTR_e] = os.path.join(log_dir, batch_job.name + ".e")
-            
-        if batch_job.depends_on:
-            job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
-        elif self.submit_with_hold:
-            job_attributes[pbs.ATTR_h] = 'u'
-       
-        pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
-        
-        # populate pbs_attrs
-        attr_idx = 0
-        for resource,val in job_resources.iteritems():
-            pbs_attrs[attr_idx].name = pbs.ATTR_l
-            pbs_attrs[attr_idx].resource = resource
-            pbs_attrs[attr_idx].value = val
-            attr_idx += 1
-            
-        for attribute,val in job_attributes.iteritems():
-            pbs_attrs[attr_idx].name = attribute
-            pbs_attrs[attr_idx].value = val
-            attr_idx += 1
-            
-        # we've initialized pbs_attrs with all the attributes we need to set
-        # now we can connect to the server and submit the job
-        connection = _connect_to_server(self._server)
-
-        #connected to pbs_server
-        
         #write batch script
         script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
         if not os.path.exists(script_dir):
@@ -398,24 +342,93 @@ class TorqueJobRunner(object):
         script_file = open(filename, "w")
         script_file.write(self.generate_script(batch_job))
         script_file.close()
-            
-        #submit job
-        id = pbs.pbs_submit(connection, pbs_attrs, filename, self.queue, None)
-       
-        #check to see if the job was submitted sucessfully. 
-        if not id:
-            e, e_msg = pbs.error()
-            pbs.pbs_disconnect(connection)
-            # the batch system returned an error, throw exception 
-            raise Exception("Error submitting job.  {0}: {1}".format(e, e_msg))
-       
-        pbs.pbs_disconnect(connection)
         
+        if self.submit:
+            
+			# build up our torque job attributes and resources
+			job_attributes = {}
+			job_resources = {}
+		
+			job_resources['nodes'] = "{0}:ppn={1}".format(batch_job.nodes, 
+														  batch_job.ppn)
+			job_resources['walltime'] = batch_job.walltime
+		
+			job_attributes[pbs.ATTR_v] = self._generate_env(batch_job)
+		
+			if batch_job.name:
+				job_attributes[pbs.ATTR_N] = batch_job.name
+		
+			if batch_job.stdout_path:
+				job_attributes[pbs.ATTR_o] = batch_job.stdout_path
+			
+				#XXX workaround for a TORQUE bug where local copies of stderr/stdout
+				# files to /dev/null don't work correctly but remote copies (to 
+				# submit host) are
+				if job_attributes[pbs.ATTR_o] == "/dev/null":
+					job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
+			else:
+				job_attributes[pbs.ATTR_o] = os.path.join(log_dir, batch_job.name + ".o")
+			
+			if batch_job.stderr_path:
+				job_attributes[pbs.ATTR_e] = batch_job.stderr_path
+			
+				#XXX workaround for a TORQUE bug where local copies of stderr/stdout
+				# files to /dev/null don't work correctly but remote copies (to 
+				# submit host) are 
+				if job_attributes[pbs.ATTR_e] == "/dev/null":
+					job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
+			else:
+				job_attributes[pbs.ATTR_e] = os.path.join(log_dir, batch_job.name + ".e")
+			
+			if batch_job.depends_on:
+				job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
+			elif self.submit_with_hold:
+				job_attributes[pbs.ATTR_h] = 'u'
+	   
+			pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
+		
+			# populate pbs_attrs
+			attr_idx = 0
+			for resource,val in job_resources.iteritems():
+				pbs_attrs[attr_idx].name = pbs.ATTR_l
+				pbs_attrs[attr_idx].resource = resource
+				pbs_attrs[attr_idx].value = val
+				attr_idx += 1
+			
+			for attribute,val in job_attributes.iteritems():
+				pbs_attrs[attr_idx].name = attribute
+				pbs_attrs[attr_idx].value = val
+				attr_idx += 1
+			
+			# we've initialized pbs_attrs with all the attributes we need to set
+			# now we can connect to the server and submit the job
+			connection = _connect_to_server(self._server)
+
+			#connected to pbs_server
+		
+			
+			#submit job
+			id = pbs.pbs_submit(connection, pbs_attrs, filename, self.queue, None)
+	   
+			#check to see if the job was submitted sucessfully. 
+			if not id:
+				e, e_msg = pbs.error()
+				pbs.pbs_disconnect(connection)
+				# the batch system returned an error, throw exception 
+				raise Exception("Error submitting job.  {0}: {1}".format(e, e_msg))
+	   
+			pbs.pbs_disconnect(connection)
+			
+			if self.submit_with_hold and not batch_job.depends_on:
+			    self.held_jobs.append(id)
+        
+        else:
+            #self.submit is False, fake a job ID
+            id = "{0}.civet".format(self._id_seq)
+            self._id_seq += 1
+            
         self._job_names.append(batch_job.name)
         
-        if self.submit_with_hold and not batch_job.depends_on:
-            self.held_jobs.append(id)
-            
         self._id_log.write(id + '\t' + batch_job.name + '\t' + str(self._printable_dependencies(batch_job.depends_on)) + '\n')
         self._id_log.flush()
         return id
@@ -457,7 +470,7 @@ class TorqueJobRunner(object):
         for id in jobs:
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
-
+        
     
       
     def generate_script(self, batch_job):
