@@ -59,6 +59,11 @@ def main():
     print "\n\nGetting status for pipeline with log directory at:"
     print "\t{0}\n".format(log_dir)
     
+    # check to see if the log directory was created with civet_run --no-submit
+    if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
+        print "This pipeline was run with --no-submit, so no status is applicable.\n\n"
+        return 0
+    
     # check for the abort.log -- this will indicate something went wrong with
     # the run
     run_aborted = False

@@ -313,6 +313,11 @@ class TorqueJobRunner(object):
           
         self._id_log = open(os.path.join(log_dir, common.BATCH_ID_LOG), 'w')
         
+        if not self.submit:
+            # we aren't actually submitting jobs,  create a file in the log 
+            # directory that civet_status can use to detect this case
+            open(os.path.join(log_dir, common.NO_SUB_FLAG), 'w').close()
+        
     @property
     def log_dir(self):
         return self._log_dir        
