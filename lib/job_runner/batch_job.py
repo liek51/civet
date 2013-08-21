@@ -1,5 +1,6 @@
 import os
 import string
+import re
 
 _DEFAULT_WALLTIME = "01:00:00"
 
@@ -25,7 +26,7 @@ class BatchJob(object):
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
                  name=None, stdout_path=None, stderr_path="/dev/null", files_to_check=None, 
-                 epilogue=None, version_cmds=None, error_strings=None):
+                 epilogue=None, version_cmds=None, error_strings=None, mail_option="n", email=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -33,6 +34,8 @@ class BatchJob(object):
         self.depends_on = depends_on
         self.stdout_path = stdout_path
         self.stderr_path = stderr_path
+        self._mail_option = mail_option
+        self.email = email
         self.workdir = workdir
         self.walltime = walltime
         self.name = name
@@ -71,3 +74,13 @@ class BatchJob(object):
         return self._name
 
     name = property(get_name, set_name)
+
+    @property
+    def mail_option(self):
+        return self._mail_option
+
+    @mail_option.setter
+    def mail_option(self, val):
+        if val and re.match(r'[^abe]', val) and val != 'n':
+            raise ValueError("Invalid mail_option. Must be n|{abe}|None")
+        self._mail_option = val

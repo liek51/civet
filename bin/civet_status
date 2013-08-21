@@ -59,6 +59,11 @@ def main():
     print "\n\nGetting status for pipeline with log directory at:"
     print "\t{0}\n".format(log_dir)
     
+    # check to see if the log directory was created with civet_run --no-submit
+    if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
+        print "This pipeline was run with --no-submit, so no status is applicable.\n\n"
+        return 0
+    
     # check for the abort.log -- this will indicate something went wrong with
     # the run
     run_aborted = False
@@ -77,7 +82,8 @@ def main():
     complete_jobs = 0
     canceled_jobs = 0
     running_jobs = 0
-    pending_jobs = 0
+    held_jobs = 0
+    queued_jobs = 0
     unknown_state = 0
     total_jobs = len(batch_jobs)
     
@@ -123,7 +129,10 @@ def main():
                 elif status.state == 'H':
                     print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                     print "\tDepends on {0}".format(job[2])
-                    pending_jobs += 1
+                    held_jobs += 1
+                elif status.state == 'Q':
+                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                    queued_jobs += 1
             else:
                 if run_aborted:
                     print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
@@ -137,7 +146,8 @@ def main():
     if canceled_jobs:
         print "\tCanceled Jobs: {0}".format(canceled_jobs)
     print "\tRunning Jobs: {0}".format(running_jobs)
-    print "\tPending Jobs: {0}".format(pending_jobs)
+    print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
+    print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
     if unknown_state:
         print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
 
