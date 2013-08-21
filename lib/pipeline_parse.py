@@ -167,7 +167,7 @@ class Pipeline(object):
         cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
         
         # 3. And (finally) send completion email 
-        cmd.append("mail -s \"Pipeline completed\" $USER" << EOF)
+        cmd.append("mail -s \"Pipeline completed\" $USER << EOF")
         cmd.append("The pipeline running in:")
         cmd.append(self.output_dir)
         cmd.append("has now completed.")
