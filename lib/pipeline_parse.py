@@ -162,7 +162,16 @@ class Pipeline(object):
             self.all_batch_jobs.append(job_id)
 
         # 2. Consolidate all the log files.
-        cmd = 'consolidate_logs.py {0}'.format(self._log_dir)
+        cmd = []
+        cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
+        
+        # 3. And (finally) send completion email 
+        cmd.append("mail -s \"Pipeline completed\" $USER" << EOF)
+        cmd.append("The pipeline running in:")
+        cmd.append(self.output_dir)
+        cmd.append("has now completed.")
+        cmd.append("EOF")
+        cmd = '\n'.join(cmd)
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
