@@ -169,7 +169,7 @@ class Pipeline(object):
         # 3. And (finally) send completion email 
         cmd.append("mail -s \"Pipeline completed\" $USER << EOF")
         cmd.append("The pipeline running in:")
-        cmd.append(self.output_dir)
+        cmd.append(PipelineFile.get_output_dir())
         cmd.append("has now completed.")
         cmd.append("EOF")
         cmd = '\n'.join(cmd)
