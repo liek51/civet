@@ -176,7 +176,8 @@ class Pipeline(object):
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
-                             modules=['python/2.7.3'])
+                             modules=['python/2.7.3'],
+                             mail_option='a')
         self.job_runner.queue_job(batch_job)
 
         # We're done submitting all the jobs.  Release them and get
