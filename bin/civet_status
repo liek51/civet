@@ -36,120 +36,158 @@ def main():
     version.parse_options()
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('log_dir', help="Path to pipeline log directory")
+    parser.add_argument('-s', '--summary', dest='summary', action='store_true', help="Run in summary mode (processing entire directory trees)")
+    parser.add_argument('dirs', help="Log directory (can be list of directores when run in --summary mode)", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    log_dir = args.log_dir
+    summarize = args.summary
+
+    if summarize:
+        dirs = []
+        for d in args.dirs:
+            for root, children, files in os.walk(d):
+                if job_runner.common.BATCH_ID_LOG in files:
+                    dirs.append(root)
+    else:
+        dirs = args.dirs
+
+
+    for log_dir in dirs:
     
-    if not os.path.isdir(log_dir):
-        sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
-        return 1
+        print "\n\nGetting status for pipeline with log directory at:"
+        print "\t{0}\n".format(log_dir)
     
-    jm = batch_system.JobManager()
+        if not os.path.isdir(log_dir):
+            sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
+            continue
     
-    # get listing of batch jobs from the pipeline's log directory
-    # each line in batch_jobs is [batch_id, job_name, [dependencies]])
-    try:
-        batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
-    except IOError, e:
-        sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory:\n".format(log_dir))
-        sys.stderr.write("\t{0}\n".format(e))
-        return 1
+        jm = batch_system.JobManager()
     
-    print "\n\nGetting status for pipeline with log directory at:"
-    print "\t{0}\n".format(log_dir)
+        # get listing of batch jobs from the pipeline's log directory
+        # each line in batch_jobs is [batch_id, job_name, [dependencies]])
+        try:
+            batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
+        except IOError, e:
+            sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory:\n".format(log_dir))
+            sys.stderr.write("\t{0}\n".format(e))
+            continue
     
-    # check to see if the log directory was created with civet_run --no-submit
-    if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
-        print "This pipeline was run with --no-submit, so no status is applicable.\n\n"
-        return 0
+        # check to see if the log directory was created with civet_run --no-submit
+        if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
+            print "This pipeline was run with --no-submit, so no status is applicable.\n\n"
+            continue
     
-    # check for the abort.log -- this will indicate something went wrong with
-    # the run
-    run_aborted = False
-    if os.path.exists(os.path.join(log_dir, "abort.log")):
-        run_aborted = True
-        print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
+        # check for the abort.log -- this will indicate something went wrong with
+        # the run
+        run_aborted = False
+        if os.path.exists(os.path.join(log_dir, "abort.log")):
+            run_aborted = True
+            print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
         
-    if os.path.exists(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)):
-        cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)))
-        #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
-        if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
-            print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
-        else:
-            print "PIPELINE WAS CANCELED by user.\n"
-    
-    complete_jobs = 0
-    canceled_jobs = 0
-    running_jobs = 0
-    held_jobs = 0
-    queued_jobs = 0
-    unknown_state = 0
-    total_jobs = len(batch_jobs)
-    
-    for job in batch_jobs:
-        print "\n{0} ({1}):".format(job[1], job[0])
-        if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
-            status = job_runner.common.get_status_from_file(log_dir, job[1])
-            if 'cancelled' in status:
-                print "\tJob cancelled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
-                canceled_jobs += 1
+        if os.path.exists(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)):
+            cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)))
+            #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
+            if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
+                print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
             else:
-                complete_jobs += 1
+                print "PIPELINE WAS CANCELED by user.\n"
+    
+        complete_jobs_success = 0
+        complete_jobs_failure = 0
+        canceled_jobs = 0
+        running_jobs = 0
+        held_jobs = 0
+        queued_jobs = 0
+        unknown_state = 0
+        total_jobs = len(batch_jobs)
+    
+        for job in batch_jobs:
+            if not summarize:
+                print "\n{0} ({1}):".format(job[1], job[0])
+            
+            
+            if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
+                status = job_runner.common.get_status_from_file(log_dir, job[1])
+                if 'cancelled' in status:
+                    if not summarize:
+                        print "\tJob cancelled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
+                    canceled_jobs += 1
                 
-            if 'exit_status' in status:
-                if status['exit_status'] == '0':
-                    print "\tFinished=Success"
-                else:
-                    print "\tFinished=Failure"
-                print "\tExit Status={0}".format(status['exit_status'])
-            if 'walltime' in status:
-                print "\tWalltime={0}".format(status['walltime'])
-            if 'requested_walltime' in status:
-                print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
-        else:
-            status = jm.query_job(job[0])
-            if status:
-                print "\tState={0}".format(format_state(status.state))
-                if status.state == 'R' or status.state == 'C':
-                    if status.state == 'R':
-                        running_jobs += 1
-                    else:
-                        # if we got here the job is in state "C" but no 
-                        # job_name-status.txt file was created.  Job must have 
-                        # crashed or was cancelled...
-                        complete_jobs += 1
-                        if status.exit_status == "0":
+                if 'exit_status' in status:
+                    if status['exit_status'] == '0':
+                        complete_jobs_success += 1
+                        if not summarize:
                             print "\tFinished=Success"
-                        else:
+                    else:
+                        complete_jobs_failure += 1
+                        if not summarize:
                             print "\tFinished=Failure"
-                        print "\tExit Status={0}".format(status.exit_status)
-                    print "\tWalltime={0}".format(status.walltime)
-                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
-                elif status.state == 'H':
-                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
-                    print "\tDepends on {0}".format(job[2])
-                    held_jobs += 1
-                elif status.state == 'Q':
-                    print "\tWalltime(Requested)={0}".format(status.requested_walltime)
-                    queued_jobs += 1
+                    if not summarize:
+                        print "\tExit Status={0}".format(status['exit_status'])
+                if not summarize:
+                    if 'walltime' in status:
+                        print "\tWalltime={0}".format(status['walltime'])
+                    if 'requested_walltime' in status:
+                        print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
             else:
-                if run_aborted:
-                    print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
+                status = jm.query_job(job[0])
+                if status:
+                    if not summarize:
+                        print "\tState={0}".format(format_state(status.state))
+                    if status.state == 'R' or status.state == 'C':
+                        if status.state == 'R':
+                            running_jobs += 1
+                        else:
+                            # if we got here the job is in state "C" but no 
+                            # job_name-status.txt file was created.  Job must have 
+                            # crashed or was cancelled...
+                            if status.exit_status == "0":
+                                #This shouldn't happen... if there isn't
+                                #a job_name-status.txt the exit status should be non-zero
+                                #maybe we should print a warning here about the
+                                #unexpected state
+                                complete_jobs_sucess += 1
+                                if not summarize:
+                                    print "\tFinished=Success"
+                            else:
+                                complete_jobs_failure += 1
+                                if not summarize:
+                                    print "\tFinished=Failure"
+                            if not summarize:
+                                print "\tExit Status={0}".format(status.exit_status)
+                        if not summarize:
+                            print "\tWalltime={0}".format(status.walltime)
+                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                    elif status.state == 'H':
+                        held_jobs += 1
+                        if not summarize:
+                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                            print "\tDepends on {0}".format(job[2])             
+                    elif status.state == 'Q':
+                        queued_jobs += 1
+                        if not summarize:
+                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                        
                 else:
-                    print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
-                unknown_state += 1
+                    if not summarize:
+                        if run_aborted:
+                            print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
+                        else:
+                            print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
+                    unknown_state += 1
                 
-    print "\n\nSummary: "
-    print "Total Pipeline Jobs: {0}".format(total_jobs)
-    print "\tCompleted Jobs: {0}".format(complete_jobs)
-    if canceled_jobs:
-        print "\tCanceled Jobs: {0}".format(canceled_jobs)
-    print "\tRunning Jobs: {0}".format(running_jobs)
-    print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
-    print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
-    if unknown_state:
-        print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
+        print "\nSummary: "
+        print "Total Pipeline Jobs: {0}".format(total_jobs)
+        print "\tCompleted Jobs (success): {0}".format(complete_jobs_success)
+        print "\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
+        print "\tRunning Jobs: {0}".format(running_jobs)
+        print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
+        print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
+        if canceled_jobs:
+            print "\tCanceled Jobs: {0}".format(canceled_jobs)
+        if unknown_state:
+            print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
+        print "\n\n"
 
 if __name__ == '__main__':
     main()
