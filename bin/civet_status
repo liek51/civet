@@ -34,12 +34,15 @@ def format_state(state):
 def main():
 
     version.parse_options()
+ 
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument('-s', '--summary', dest='summary', action='store_true', help="Run in summary mode (processing entire directory trees)")
+    parser.add_argument('--verbose', dest='verbose', action='store_true', help="More verbose output")
     parser.add_argument('dirs', help="Log directory (can be list of directores when run in --summary mode)", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
+    verbose = args.verbose
     summarize = args.summary
 
     if summarize:
@@ -59,8 +62,9 @@ def main():
 
     for log_dir in dirs:
     
-        print "\n\nGetting status for pipeline with log directory at:"
-        print "\t{0}\n".format(log_dir)
+        if verbose:
+            print "\n\nGetting status for pipeline with log directory at:"
+            print "\t{0}\n".format(log_dir)
     
         if not os.path.isdir(log_dir):
             sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
@@ -106,29 +110,29 @@ def main():
         total_jobs = len(batch_jobs)
     
         for job in batch_jobs:
-            if not summarize:
+            if verbose:
                 print "\n{0} ({1}):".format(job[1], job[0])
             
             
             if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
                 status = job_runner.common.get_status_from_file(log_dir, job[1])
                 if 'cancelled' in status:
-                    if not summarize:
+                    if verbose:
                         print "\tJob cancelled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
                     canceled_jobs += 1
                 
                 if 'exit_status' in status:
                     if status['exit_status'] == '0':
                         complete_jobs_success += 1
-                        if not summarize:
+                        if verbose:
                             print "\tFinished=Success"
                     else:
                         complete_jobs_failure += 1
-                        if not summarize:
+                        if verbose:
                             print "\tFinished=Failure"
-                    if not summarize:
+                    if verbose:
                         print "\tExit Status={0}".format(status['exit_status'])
-                if not summarize:
+                if verbose:
                     if 'walltime' in status:
                         print "\tWalltime={0}".format(status['walltime'])
                     if 'requested_walltime' in status:
@@ -136,7 +140,7 @@ def main():
             else:
                 status = jm.query_job(job[0])
                 if status:
-                    if not summarize:
+                    if verbose:
                         print "\tState={0}".format(format_state(status.state))
                     if status.state == 'R' or status.state == 'C':
                         if status.state == 'R':
@@ -151,47 +155,63 @@ def main():
                                 #maybe we should print a warning here about the
                                 #unexpected state
                                 complete_jobs_sucess += 1
-                                if not summarize:
+                                if verbose:
                                     print "\tFinished=Success"
                             else:
                                 complete_jobs_failure += 1
-                                if not summarize:
+                                if verbose:
                                     print "\tFinished=Failure"
-                            if not summarize:
+                            if verbose:
                                 print "\tExit Status={0}".format(status.exit_status)
-                        if not summarize:
+                        if verbose:
                             print "\tWalltime={0}".format(status.walltime)
                             print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                     elif status.state == 'H':
                         held_jobs += 1
-                        if not summarize:
+                        if verbose:
                             print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                             print "\tDepends on {0}".format(job[2])             
                     elif status.state == 'Q':
                         queued_jobs += 1
-                        if not summarize:
+                        if verbose:
                             print "\tWalltime(Requested)={0}".format(status.requested_walltime)
                         
                 else:
-                    if not summarize:
+                    if verbose:
                         if run_aborted:
                             print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
                         else:
                             print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
                     unknown_state += 1
                 
-        print "\nSummary: "
-        print "Total Pipeline Jobs: {0}".format(total_jobs)
-        print "\tCompleted Jobs (success): {0}".format(complete_jobs_success)
-        print "\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
-        print "\tRunning Jobs: {0}".format(running_jobs)
-        print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
-        print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
-        if canceled_jobs:
-            print "\tCanceled Jobs: {0}".format(canceled_jobs)
-        if unknown_state:
-            print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
-        print "\n\n"
+
+        if complete_jobs_failure:
+            summary_status = "FAILED"
+        elif canceled_jobs:
+            summary_status = "CANCELED"
+        elif complete_jobs_success == total_jobs:
+            summary_status = "completed sucessfully"
+        else:
+            summary_status = "running"
+         
+        if verbose:
+            print "\nSummary:"
+        else:
+            print "{0}: {1}".format(log_dir, summary_status)
+            
+        if verbose or complete_jobs_success != total_jobs:
+            print "Total Pipeline Jobs: {0}".format(total_jobs)
+            print "\tCompleted Jobs (success): {0}".format(complete_jobs_success)
+            print "\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
+            print "\tRunning Jobs: {0}".format(running_jobs)
+            print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
+            print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
+            if canceled_jobs:
+                print "\tCanceled Jobs: {0}".format(canceled_jobs)
+            if unknown_state:
+                print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
+        if verbose:
+            print "\n\n"
 
 if __name__ == '__main__':
     main()
