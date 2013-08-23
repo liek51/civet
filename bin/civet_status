@@ -48,9 +48,14 @@ def main():
             for root, children, files in os.walk(d):
                 if job_runner.common.BATCH_ID_LOG in files:
                     dirs.append(root)
+        if len(dirs) == 0:
+            for root, children, files in os.walk('.'):
+                if job_runner.common.BATCH_ID_LOG in files:
+                    dirs.append(root)
     else:
         dirs = args.dirs
 
+    jm = batch_system.JobManager()
 
     for log_dir in dirs:
     
@@ -61,7 +66,6 @@ def main():
             sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
             continue
     
-        jm = batch_system.JobManager()
     
         # get listing of batch jobs from the pipeline's log directory
         # each line in batch_jobs is [batch_id, job_name, [dependencies]])
