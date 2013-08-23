@@ -43,7 +43,8 @@ class Pipeline(object):
     def __init__(self):
         pass
         
-    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, submit_jobs=True):
+    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
+                  submit_jobs=True, completion_mail=True):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -70,6 +71,7 @@ class Pipeline(object):
         self.validation_file = os.path.splitext(xmlfile)[0] + '_validation.data'
         self.queue = queue
         self.submit_jobs = submit_jobs
+        self.completion_mail = completion_mail
         
         # And track the major components of the pipeline
         self._steps = []
@@ -165,13 +167,19 @@ class Pipeline(object):
         # 2. Consolidate all the log files.
         cmd = []
         cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
+        cmd.append('CONSOLIDATE_STATUS=$?')
         
-        # 3. And (finally) send completion email 
-        cmd.append("mail -s \"Pipeline completed\" $USER << EOF")
-        cmd.append("The pipeline running in:")
-        cmd.append(PipelineFile.get_output_dir())
-        cmd.append("has now completed.")
-        cmd.append("EOF")
+        # 3. And (finally) send completion email
+        if self.completion_mail:
+            cmd.append("ssh " +
+                       os.uname()[1] +
+                       " \"echo 'The pipeline running in:\n    " + 
+                       PipelineFile.get_output_dir() +
+                       "\nhas completed.'" +
+                       " | mailx -s 'Pipeline completed' ${USER}\"")
+            # Mask any potential mail failures.
+            cmd.append("true")
+        cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
         cmd = '\n'.join(cmd)
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
