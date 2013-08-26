@@ -1,0 +1,29 @@
+CIVET Release Notes
+This document describes the high-level changes made to the civet software
+from release to release.  It is cumulative, with the most recent changes
+listed first.  The most up-to-date version is in the civet git repository
+redmine:/var/git/civet.git
+
+Version 1.1.0
+-------------
+Bug fixes
+ - Fix problem creating directories when create="False" was specified.
+   Sometimes this attribute was ignored. Reported by Anu.
+   
+Features
+ - Enhanced civet_status:
+    - default is now an abbreviated status listing
+    - the --verbose option now outputs the original job-by-job status
+    - the --recurse (short form -r) option searches the specified tree for 
+      log directories and outputs status for each one found
+ - Mail is now set to the submitting user at the end of each run.
+ - In the event of a cancelled or aborted pipeline run, the user only receives
+   one email, not one per cancelled / aborted cluster job.
+
+Features added that are not used by cga pipelines:
+  - For pipeline implementers: add civet_run option --no-submit (short form -n)
+    ability to generate scripts but not actually submit them to the cluster
+
+Version 1.0.0
+-------------
+Initial production release
