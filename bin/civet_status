@@ -37,26 +37,31 @@ def main():
  
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('-s', '--summary', dest='summary', action='store_true', help="Run in summary mode (processing entire directory trees)")
+    parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="Run in recursive mode")
     parser.add_argument('--verbose', dest='verbose', action='store_true', help="More verbose output")
-    parser.add_argument('dirs', help="Log directory (can be list of directores when run in --summary mode)", nargs=argparse.REMAINDER)
+    parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     verbose = args.verbose
-    summarize = args.summary
+    dir_list_arg = []
+    
+    if len(args.dirs) > 0:
+        dir_list_arg = args.dirs
+    else:
+        dir_list_arg.append('.')
 
-    if summarize:
+    if args.recursive:
         dirs = []
-        for d in args.dirs:
+        for d in dir_list_arg:
             for root, children, files in os.walk(d):
                 if job_runner.common.BATCH_ID_LOG in files:
                     dirs.append(root)
+        
         if len(dirs) == 0:
-            for root, children, files in os.walk('.'):
-                if job_runner.common.BATCH_ID_LOG in files:
-                    dirs.append(root)
+            sys.stderr.write("ERROR: no valid log directory found!\n")
+            return 1
     else:
-        dirs = args.dirs
+        dirs = dir_list_arg
 
     jm = batch_system.JobManager()
 
@@ -76,7 +81,7 @@ def main():
         try:
             batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
         except IOError, e:
-            sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory:\n".format(log_dir))
+            sys.stderr.write("ERROR: '{0}' does not appear to be a valid pipeline log directory:\n".format(log_dir))
             sys.stderr.write("\t{0}\n".format(e))
             continue
     
