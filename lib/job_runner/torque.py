@@ -186,7 +186,7 @@ class TorqueJobRunner(object):
                   exist
         execution_log_dir : log directory on execution host if different 
                             than log_dir
-        pipeline_bin : allow a pipeline specific bin directory to be added to the PATH.
+        pipeline_bin : allow a pipeline bin directory to be added to PATH.
                        if set, this string will be prepended to the user's PATH 
                        at job run time
         validation_cmd : command used to validate files
@@ -295,8 +295,9 @@ class TorqueJobRunner(object):
     """)
   
     
-    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, pipeline_bin=None,
-                 validation_cmd="ls -l", execution_log_dir=None, queue=None, submit=True):
+    def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
+                 pipeline_bin=None, validation_cmd="ls -l", 
+                 execution_log_dir=None, queue=None, submit=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -366,24 +367,26 @@ class TorqueJobRunner(object):
             if batch_job.stdout_path:
                 job_attributes[pbs.ATTR_o] = batch_job.stdout_path
             
-                #XXX workaround for a TORQUE bug where local copies of stderr/stdout
-                # files to /dev/null don't work correctly but remote copies (to 
-                # submit host) are
+                #XXX workaround for a TORQUE bug where local copies of stderr &
+                # stdout files to /dev/null don't work correctly but remote  
+                # copies (to submit host) are
                 if job_attributes[pbs.ATTR_o] == "/dev/null":
                     job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
             else:
-                job_attributes[pbs.ATTR_o] = os.path.join(log_dir, batch_job.name + ".o")
+                job_attributes[pbs.ATTR_o] = os.path.join(log_dir, 
+                                                          batch_job.name + ".o")
             
             if batch_job.stderr_path:
                 job_attributes[pbs.ATTR_e] = batch_job.stderr_path
             
-                #XXX workaround for a TORQUE bug where local copies of stderr/stdout
-                # files to /dev/null don't work correctly but remote copies (to 
-                # submit host) are 
+                #XXX workaround for a TORQUE bug where local copies of stderr &
+                # stdout files to /dev/null don't work correctly but remote  
+                # copies (to submit host) are 
                 if job_attributes[pbs.ATTR_e] == "/dev/null":
                     job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
             else:
-                job_attributes[pbs.ATTR_e] = os.path.join(log_dir, batch_job.name + ".e")
+                job_attributes[pbs.ATTR_e] = os.path.join(log_dir, 
+                                                          batch_job.name + ".e")
             
             if batch_job.depends_on:
                 job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
@@ -419,7 +422,8 @@ class TorqueJobRunner(object):
         
             
             #submit job
-            id = pbs.pbs_submit(connection, pbs_attrs, filename, self.queue, None)
+            id = pbs.pbs_submit(connection, pbs_attrs, filename, 
+                                self.queue, None)
        
             #check to see if the job was submitted sucessfully. 
             if not id:
