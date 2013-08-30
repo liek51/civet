@@ -56,9 +56,9 @@ class Tool():
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
-        self.modules = ['python/2.7.3']
+        self.modules = []
 
-        self.verify_files = ['python']
+        self.verify_files = []
         self.tool_files = {}
         self.pipeline_files = pipeline_files
         for n in range(len(ins)):
