@@ -1,0 +1,135 @@
+15000	no error
+15001	Unknown Job Id Error
+15002	Undefined attribute
+15003	Cannot set attribute, read only or insufficient permission
+15004	Invalid request
+15005	Unknown request
+15006	Too many submit retries
+15007	Unauthorized Request
+15008	trqauthd unable to authenticate
+15009	munge executable not found, unable to authenticate
+15010	Access from host not allowed, or unknown host
+15011	Job with requested ID already exists
+15012	System error:
+15013	PBS server internal error
+15014	Dependent parent job currently in routing queue
+15015	Unknown/illegal signal name
+15016	Illegal attribute or resource value for
+15017	Cannot modify attribute while job running
+15018	Request invalid for state of job
+15019	UNKNOWN
+15020	Unknown queue
+15021	Invalid credential
+15022	Expired credential
+15023	Queue is not enabled
+15024	Access to queue is denied
+15025	Bad UID for job execution
+15026	Job routing over too many hops
+15027	Queue already exists
+15028	Incompatible type
+15029	Cannot delete busy queue
+15030	Queue name too long
+15031	No support for requested service
+15032	Cannot enable queue, incomplete definition
+15033	Batch protocol error
+15034	Bad attribute list structure
+15035	No free connections
+15036	No server specified
+15037	Unknown resource type
+15038	Job exceeds queue resource limits
+15039	No default queue specified
+15040	job is not rerunnable
+15041	Job rejected by all possible destinations (check syntax, queue resources, ...)
+15042	Time in Route Queue Expired
+15043	Execution server rejected request
+15044	(qsub) cannot access script file
+15045	Stage In of files failed
+15046	Resource temporarily unavailable
+15047	Bad GID for job execution
+15048	Maximum number of jobs already in queue
+15049	Checkpoint busy, may retry
+15050	Resource limit exceeds allowable
+15051	Invalid Account
+15052	Job already in exit state
+15053	Job files not copied
+15054	unknown job id after clean init
+15055	No master found for sync job set
+15056	Invalid Job Dependency
+15057	Duplicate entry in list
+15058	Bad DIS based Request Protocol
+15059	Cannot execute at specified host because of checkpoint or stagein files
+15060	sister rejected
+15061	sister could not communicate
+15062	Request not allowed: Server shutting down
+15063	not all tasks could checkpoint
+15064	Unknown node
+15065	Unknown node-attribute 
+15066	Server has no node list
+15067	Node name is too big
+15068	Node name already exists
+15069	Illegal value for
+15070	Mutually exclusive values for
+15071	Modification failed for
+15072	Server could not connect to MOM
+15073	No time-share node available
+15074	Wrong job type
+15075	Bad ACL entry in host list
+15076	Maximum number of jobs already in queue for user
+15077	Bad type in disallowed_types list
+15078	Queue does not allow interactive jobs
+15079	Queue does not allow batch jobs
+15080	Queue does not allow rerunable jobs
+15081	Queue does not allow nonrerunable jobs
+15082	Unknown Array ID
+15083	Bad Job Array Request
+15084	Bad data reading job array from file
+15085	Time out
+15086	Job not found
+15087	Queue does not allow fault tolerant jobs
+15088	Queue does not allow fault intolerant jobs
+15089	Queue does not allow job arrays
+15090	request was relayed to a MOM
+15091	Error allocating memory - out of memory
+15092	Error allocating controling mutex (lock/unlock)
+15093	Error setting thread attributes
+15094	Error creating thread
+15095	Error in socket select
+15096	Unable to get connection to socket
+15097	Error writing data to socket
+15098	Error reading data from socket
+15099	Socket close detected
+15100	Error listening on socket
+15101	Invalid auth type in request
+15102	This functionality is not yet implemented
+15103	Queue is currently not available
+15104	tmpdir owned by another user
+15105	tmpdir exists but is not a directory
+15106	tmpdir cannot be named for job
+15107	cannot open demux sockets
+15108	cannot send join job to all sisters
+15109	cannot create tmpdir for job
+15110	Mom is down, cannot run job
+15111	socket information is not accessible
+15112	data on socket does not process correctly
+15113	client is not allowed/trusted
+15114	Premature End of File
+15115	Error saving file
+15116	Error opening file
+15117	Error writing file
+15118	Job file corrupt
+15119	Job can not be rerun
+15120	Can not establish connection
+15121	Job function must be temporarily delayed
+15122	Parameter of function was invalid
+15123	Continue processing on job. (Not an error)
+15124	Current sub state does not allow trasaction.
+15125	Error moving file
+15126	Job is being recycled
+15127	Job is already in destination queue.
+15128	Mutex is NULL or otherwise invalid
+15129	The mutex is already locked by this object
+15130	The mutex has already been unlocked by this object
+15131	Command syntax invalid
+15132	A node is down. Check the MOM and host
+15133	Could not connect to batch server
+15134	Server busy. Currently noavailable threads

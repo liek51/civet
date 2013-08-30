@@ -32,6 +32,7 @@ _DEFAULT_DEPEND_TYPE = "afterok"
 
 _SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
+_error_strings = None
 
     
 def _connect_to_server(server):
@@ -49,20 +50,18 @@ def _connect_to_server(server):
     if connection <= 0:
         e, e_msg = pbs.error()
         # the batch system returned an error, throw exception 
-        raise Exception("Error connecting to pbs_server."
-            "  {0}: {1}".format(e, e_msg))
+        raise Exception("Error connecting to pbs_server.  "
+            "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
         
     return connection
-        
 
-def strerror(e):
-    """
-        Look up the string associated with a given pbs error code.
+def torque_strerror(errno):
+    global _error_strings
+    if not _error_strings:
+        _error_strings = dict(line.strip().split('\t') for line in open(os.path.join(common.CIVET_HOME, "lib/job_runner/torque_errors.txt")))
             
-        NOTE: Until the pbs_python developers update their source, most of 
-        these strings are out of sync with the integer error codes
-    """
-    return pbs.errors_txt[e]
+    return _error_strings[str(errno)]             
+
         
 class JobManager(object):
     """
@@ -321,7 +320,9 @@ class TorqueJobRunner(object):
         
     @property
     def log_dir(self):
-        return self._log_dir        
+        return self._log_dir   
+        
+        
             
     def queue_job(self, batch_job):
         """
@@ -430,7 +431,8 @@ class TorqueJobRunner(object):
                 e, e_msg = pbs.error()
                 pbs.pbs_disconnect(connection)
                 # the batch system returned an error, throw exception 
-                raise Exception("Error submitting job.  {0}: {1}".format(e, e_msg))
+                raise Exception("Error submitting job.  "
+                                "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
        
             pbs.pbs_disconnect(connection)
             
