@@ -4,6 +4,18 @@ from release to release.  It is cumulative, with the most recent changes
 listed first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.2.0
+-------------
+Bug fixes
+ - Fix incorrect Torque error code -> error string mappings
+   (had to implement our own lookup, since pbs_python had old (Torque 2.X) 
+   mappings)
+
+Features
+ - Enhanced exception handling for job submission errors (users no longer
+   see a stack trace when there is a Torque error, instead they simply 
+   see a helpful error message)) 
+
 Version 1.1.0
 -------------
 Bug fixes

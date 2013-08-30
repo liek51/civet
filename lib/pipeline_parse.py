@@ -34,6 +34,9 @@ class Pipeline(object):
     This is done at the end of the file, after the full definition
     of the class
     """
+    
+    BATCH_ERROR = 100
+    
     valid_tags = [
         'file',
         'dir',
@@ -161,7 +164,11 @@ class Pipeline(object):
             batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                  depends_on=depends,
                                  name='Remove_temp_files')
-            job_id = self.job_runner.queue_job(batch_job)
+            try:
+                job_id = self.job_runner.queue_job(batch_job)
+            except Exception as e:
+                sys.stderr.write(str(e) + '\n')
+                sys.exit(self.BATCH_ERROR)
             self.all_batch_jobs.append(job_id)
 
         # 2. Consolidate all the log files.
@@ -186,7 +193,11 @@ class Pipeline(object):
                              name='Consolidate_log_files',
                              modules=['python/2.7.3'],
                              mail_option='a')
-        self.job_runner.queue_job(batch_job)
+        try:
+            self.job_runner.queue_job(batch_job)
+        except Exception as e:
+                sys.stderr.write(str(e) + '\n')
+                sys.exit(self.BATCH_ERROR)
 
         # We're done submitting all the jobs.  Release them and get
         # on with it. This is the last action of the pipeline

@@ -282,7 +282,12 @@ class Tool():
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
             version_cmds=self.collect_version_commands())
     
-        job_id = PL.job_runner.queue_job(batch_job)
+        try:
+            job_id = PL.job_runner.queue_job(batch_job)
+        except Exception as e:
+            sys.stderr.write(str(e) + '\n')
+            sys.exit(PL.BATCH_ERROR)
+
 
         # Any files that we created and that will be passed to other jobs
         # need to be marked with our job id.  It is OK if we overwrite
