@@ -47,12 +47,15 @@ class Pipeline(object):
         pass
         
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
-                  submit_jobs=True, completion_mail=True):
+                  submit_jobs=True, completion_mail=True, search_path=""):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
         self.master_XML_dir = os.path.split(xmlfile)[0]
+        
+        # search path for tool XML files
+        self.search_path = search_path
 
         # Register the parameters that may be file paths
         PipelineFile.register_params(params)
@@ -104,6 +107,17 @@ class Pipeline(object):
             elif t == 'foreach':
                 self._steps.append(ForEach(child, self._files, skip_validation))
 
+    @property
+    def search_path(self):
+        return self._search_path
+        
+    @search_path.setter
+    def search_path(self, val):
+        if val is None:
+            self._search_path = ""
+        else:
+            self._search_path = val
+    
     @property
     def log_dir(self):
         if not self._log_dir:

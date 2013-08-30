@@ -11,6 +11,7 @@ from job_runner.batch_job import *
 import pipeline_parse as PL
 from pipeline_file import *
 
+
 class Tool():
     # This script parses all of a tool definition.  Tools may be invoked
     # by the pipeline.
@@ -68,15 +69,18 @@ class Tool():
             f = pipeline_files[outs[n]]
             self.tool_files['out_' + str(n+1)] = f
 
-        # First try to find the xml file in the current working directory,
-        # If not found, look in the same directory as the master pipeline
-        # directory.
-        # FIXME: We may not want to do this for the CLIA certified pipeline!!!
-        if not os.path.exists(xml_file):
-            xml_file = os.path.join(PL.master_XML_dir, xml_file)
-        if not os.path.exists(xml_file):
-            print >> sys.stderr, ('ERROR: Could not find tool XML file:'
-                                  , xml_file, '\nExiting...')
+        # check the search path for the XML file, otherwise fall back to 
+        # the same directory as the pipeline XML.  CLIA pipelines do not pass
+        # in a search path, so the tool XML needs to be in the same directory 
+        # as the pipeline XML
+        
+        # save the xml_file parameter in case search_for_xml() returns None
+        xml_file_param = xml_file
+        xml_file = self.search_for_xml(xml_file)
+
+        if not xml_file:
+            print >> sys.stderr, ('ERROR: Could not find tool XML file:',
+                                  xml_file_param, '\nExiting...')
             sys.exit(1)
 
         #print >> sys.stderr, '***Parsing tool file:', xml_file
@@ -166,6 +170,22 @@ class Tool():
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
 
+    def search_for_xml(self, xml_file):
+        # get current pipeline symbols
+        import pipeline_parse as PL
+    
+        # first search PL.search_path
+        for path in PL.search_path.split(':'):
+            if os.path.exists(os.path.join(path, xml_file)):
+                return os.path.join(path, xml_file)
+                
+        # didn't find it.  Check PL.master_XML_dir
+        if os.path.exists(os.path.join(PL.master_XML_dir, xml_file)):
+            return os.path.join(PL.master_XML_dir, xml_file)
+        
+        # not in search path or pipeline directory
+        return None
+    
     def file(self, e):
         atts = e.attrib
 
@@ -291,7 +311,7 @@ class Tool():
 
         # Any files that we created and that will be passed to other jobs
         # need to be marked with our job id.  It is OK if we overwrite
-        # a previous job.  I think. (FIXME?)
+        # a previous job.
         for fid in self.outs:
             f = self.pipeline_files[fid]
             f.set_creator_job(job_id)
