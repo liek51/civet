@@ -14,7 +14,10 @@ Bug fixes
 Features
  - Enhanced exception handling for job submission errors (users no longer
    see a stack trace when there is a Torque error, instead they simply 
-   see a helpful error message)) 
+   see a helpful error message) 
+ - Modify parse_XML to allow an optional colon separated list of directories
+   to search for XML tool definition files. The civet_run command now will 
+   pass the contents of the CIVET_PATH environment variable as this parameter.
 
 Version 1.1.0
 -------------
