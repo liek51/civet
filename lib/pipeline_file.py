@@ -23,6 +23,7 @@ class PipelineFile():
         'create',
         'datestamp_append',
         'datestamp_prepend',
+        'default_output',
         'id',
         'input',
         'in_dir',
@@ -43,7 +44,7 @@ class PipelineFile():
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, based_on, pattern, replace, append,
                  datestamp, datestamp_append, in_dir,
-                 is_parameter, is_list, create=True):
+                 is_parameter, is_list, create=True, default_output=False):
         self.id = id
         self.path = path
         self._is_file = is_file
@@ -64,6 +65,7 @@ class PipelineFile():
         self._is_fixed_up = False
         self.creator_job = None
         self.consumer_jobs = []
+        self.consumer_jobs = []
 
         if self.id in files:
             # We've already seen this file ID.
@@ -72,6 +74,10 @@ class PipelineFile():
         else:
             # Register this file in the files/options namespace
             files[self.id] = self
+
+        # Mark this as the default output directory if necessary.
+        if default_output:
+            self.set_output_dir()
 
     # Track creator jobs to support file-based dependency scheduling.
     def set_creator_job(self, j):
@@ -115,6 +121,7 @@ class PipelineFile():
         datestamp_append = False
         is_list = False
         is_parameter = False
+        default_output = False
 
         # What kind of file?
         is_temp = False
@@ -125,6 +132,10 @@ class PipelineFile():
         is_input = False
         if 'input' in att:
             is_input = att['input'].upper() == 'TRUE'
+
+        # Default output?
+        if 'default_output' in att:
+            default_output = att['default_output'].upper() == 'TRUE'
 
         # Create directory?
         if is_dir:
@@ -195,15 +206,7 @@ class PipelineFile():
             id, path, is_file, is_temp, is_input, is_dir, files, 
             path_is_path, based_on, pattern, replace, append, 
             datestamp, datestamp_append, in_dir,
-            is_parameter, is_list, create)
-
-        # This routine latches the first output directory we see.
-        # We call it arbitrarily for all files.
-        PipelineFile.set_output_dir(files[id])
-
-    @property
-    def is_output_dir(self):
-        return self._is_dir and not self.is_input
+            is_parameter, is_list, create, default_output)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -225,15 +228,12 @@ class PipelineFile():
             self.pattern, self.append, self.datestamp, self.datestamp_append,
             self.in_dir)
 
-    @staticmethod
-    def set_output_dir(f):
-        # Only register the first output dir that is not cwd
+    def set_output_dir(self):
+        # Register at most one output directory
         if PipelineFile.output_dir:
-            return
-        if not f._is_dir:
-            return
-        if f.is_output_dir:
-            PipelineFile.output_dir = f
+            sys.stderr.write('ERROR: only one directory can be marked as the default output directory\n')
+            sys.exit(1)
+        PipelineFile.output_dir = self
 
     @staticmethod
     def get_output_dir():
@@ -297,7 +297,7 @@ class PipelineFile():
         if (os.path.split(path)[0] == '' and
             (not self.is_input) and
             self != PipelineFile.output_dir and
-            PipelineFile.output_dir._is_fixed_up):
+            (PipelineFile.output_dir is None or PipelineFile.output_dir._is_fixed_up)):
             path = os.path.join(PipelineFile.get_output_dir(), path)
         self.path = os.path.abspath(path)
 
