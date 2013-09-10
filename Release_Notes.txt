@@ -29,7 +29,7 @@ Features
  - Enhanced civet_status:
     - default is now an abbreviated status listing
     - the --verbose option now outputs the original job-by-job status
-    - the --recurse (short form -r) option searches the specified tree for 
+    - the --recursive (short form -r) option searches the specified tree for 
       log directories and outputs status for each one found
  - Mail is now set to the submitting user at the end of each run.
  - In the event of a cancelled or aborted pipeline run, the user only receives
