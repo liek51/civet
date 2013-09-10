@@ -123,10 +123,19 @@ class Pipeline(object):
         if not self._log_dir:
             self._log_dir = os.path.join(PipelineFile.get_output_dir(), 
                 'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
     def submit(self):
         print 'Executing pipeline', self.name
+
+        # Capture the CWD and the command line that invoked us.
+        of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
+        of.write('Working directory at time of pipeline submission:\n')
+        of.write(os.getcwd() + '\n\n')
+        of.write('Command line used to invoke the pipeline:\n')
+        of.write(' '.join(sys.argv) + '\n')
+        of.close()
 
         # Most of the dependencies are file-based; a job can run
         # as soon as the files it needs are ready.  However, we

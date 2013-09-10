@@ -18,6 +18,15 @@ Features
  - Modify parse_XML to allow an optional colon separated list of directories
    to search for XML tool definition files. The civet_run command now will 
    pass the contents of the CIVET_PATH environment variable as this parameter.
+ - Add new syntax for explicitly declaring the default output directory,
+   <dir ... default_output="True" ... />  If not specified, the current
+   working directory is used.
+   Previously the default output directory was implicitly specified as the
+   first directory tag in the XML that wasn't marked as input="True". This
+   promised to be error prone and complicate future maintenance.
+ - Add a new file to the logs directory named command_line.txt, which
+   contains the current working directory when the civet pipeline was
+   invoked, and the entire invoking pipeline command line.
 
 Version 1.1.0
 -------------
