@@ -27,6 +27,10 @@ Features
  - Add a new file to the logs directory named command_line.txt, which
    contains the current working directory when the civet pipeline was
    invoked, and the entire invoking pipeline command line.
+ - The version string management was proving to be error prone when
+   cutting new versions.  Updated the version reporting to leverage
+   git capabilities.  Version is now obtained from git, rather than
+   being hardcoded.
 
 Version 1.1.0
 -------------
