@@ -6,12 +6,15 @@ import subprocess
 
 def version_from_git():
     try:
-        p = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE)
+        p = subprocess.Popen(['git', 'describe', '--tags'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
     except OSError:
         out = '(undetermined)'
+    # Mask any errors, for instance not running in a git working directory.
+    if err:
+	    out = '(undetermined)'
     return 'V' + out.strip()
-
 
 def parse_options():
     #
