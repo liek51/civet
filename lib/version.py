@@ -1,13 +1,17 @@
 #! /usr/bin/env python
 
-import argparse
 import os
 import sys
+import subprocess
 
-#
-# IMPORTANT: UPDATE THIS VERSION LINE WITH EVERY CIVET RELEASE, PER THE SOP
-#
-CIVET_VERSION='V1.2.0'
+def version_from_git():
+    p = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    if err:
+        print >> sys.stderr, 'Determining version failed'
+        return ''
+    return 'V' + out.strip()
+
 
 def parse_options():
     #
@@ -30,7 +34,7 @@ def parse_options():
 def print_version_string_and_exit():
     path = os.path.abspath(sys.argv[0])
     script = os.path.split(path)[1]
-    print script, CIVET_VERSION, path
+    print script, version_from_git(), path
     sys.exit(0)
 
 if __name__ == '__main__':
