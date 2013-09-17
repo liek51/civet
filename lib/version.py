@@ -5,11 +5,11 @@ import sys
 import subprocess
 
 def version_from_git():
-    p = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE)
-    out, err = p.communicate()
-    if err:
-        print >> sys.stderr, 'Determining version failed'
-        return ''
+    try:
+        p = subprocess.Popen(['git', 'describe', '--tags'], stdout=subprocess.PIPE)
+        out, err = p.communicate()
+    except OSError:
+        out = '(undetermined)'
     return 'V' + out.strip()
 
 
