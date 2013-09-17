@@ -57,9 +57,9 @@ class Tool():
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
-        self.modules = []
+        self.modules = ['python/civet']
 
-        self.verify_files = []
+        self.verify_files = ['python']
         self.tool_files = {}
         self.pipeline_files = pipeline_files
         for n in range(len(ins)):
