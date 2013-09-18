@@ -549,7 +549,7 @@ class TorqueJobRunner(object):
         else:
             tokens['CIVET_BIN'] = os.path.join(common.CIVET_HOME, "bin")
             
-        tokens['CIVET_VERSION'] = version.CIVET_VERSION
+        tokens['CIVET_VERSION'] = version.version_from_git()
         
         return string.Template(self.script_template).substitute(tokens)
 
