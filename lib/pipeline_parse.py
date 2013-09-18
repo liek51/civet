@@ -47,7 +47,8 @@ class Pipeline(object):
         pass
         
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
-                  submit_jobs=True, completion_mail=True, search_path=""):
+                  submit_jobs=True, completion_mail=True, search_path="",
+                  user_override_file=None):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -56,7 +57,18 @@ class Pipeline(object):
         
         # search path for tool XML files
         self.search_path = search_path
-
+        
+        # option overrides
+        self.option_overrides = {}
+        
+        override_file = os.path.splitext(xmlfile)[0] + '.options'
+        if os.path.exists(override_file):
+            self.parse_override_file(override_file, "pipeline")
+            
+        if user_override_file and os.path.exists(user_override_file):
+            self.parse_override_file(user_override_file, "user")
+            
+           
         # Register the parameters that may be file paths
         PipelineFile.register_params(params)
         
@@ -135,6 +147,13 @@ class Pipeline(object):
         of.write(os.getcwd() + '\n\n')
         of.write('Command line used to invoke the pipeline:\n')
         of.write(' '.join(sys.argv) + '\n')
+        of.close()
+        
+        #capture the overrides loaded into a log file:
+        of = open(os.path.join(self.log_dir, 'option_overrides.txt'), 'w')
+        for prefix, overrides in self.option_overrides.iteritems() :
+            for opt, (val,source) in overrides.iteritems():
+                of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt, val, source))
         of.close()
 
         # Most of the dependencies are file-based; a job can run
@@ -267,6 +286,19 @@ class Pipeline(object):
                 if fn not in missing:
                     missing.append(fn)
         return missing
+        
+    def parse_override_file(self, file, source=""):
+        with open(file) as f:
+            for line in f:
+                if line.lstrip()[0] == '#': 
+                    continue
+                line = line.split(' #')[0].strip()
+                prefix = line.split('.')[0]
+                opt,val = line.split('.')[1].split('=')
+                if prefix not in self.option_overrides:
+                    self.option_overrides[prefix] = {}
+                self.option_overrides[prefix][opt] = (val, source)
+
 
 
 sys.modules[__name__] = Pipeline()

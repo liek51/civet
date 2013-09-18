@@ -112,8 +112,11 @@ class Tool():
 
         if 'tool_config_prefix' in atts:
             self.config_prefix = atts['tool_config_prefix']
+            if self.config_prefix in PL.option_overrides:
+                self.option_overrides = PL.option_overrides[self.config_prefix]   
         else:
             self.config_prefix = None
+            self.option_overrides = {}
 
         if 'threads' in atts:
             self.threads = atts['threads']
@@ -124,6 +127,7 @@ class Tool():
             self.walltime = atts['walltime']
         else:
             self.walltime = '01:00:00'
+            
 
 
         # We can't process any non-file tags until all our files
@@ -155,7 +159,7 @@ class Tool():
                 # having a different class to process it.
                 self.description = child.text
             elif t == 'option':
-                Option(child, self.options, self.tool_files)
+                Option(child, self.options, self.tool_files, self.option_overrides)
             elif t == 'command':
                 Command(child, self.commands, self.options, self.tool_files, self.xml_file)
             elif t == 'module':
@@ -336,7 +340,7 @@ class Tool():
         return missing
 
 class Option():
-    def __init__(self, e, options, tool_files):
+    def __init__(self, e, options, tool_files, overrides):
         self.command_text = ''
         self.value = ''
         try:
@@ -344,7 +348,10 @@ class Option():
             self.name = name
             command_text = e.attrib['command_text'].strip()
             if 'value' in e.attrib:
-                value = e.attrib['value'].strip()
+                if e.attrib['value'] in overrides:
+                    value = overrides['value'][0]
+                else:
+                    value = e.attrib['value'].strip()
             elif 'from_file' in e.attrib:
                 fid = e.attrib['from_file']
                 fn = tool_files[fid].path
@@ -361,6 +368,9 @@ class Option():
         # We don't allow the same option name in a tool twice
         assert self.name not in options, 'Option ' + self.name + 'is a duplicate'
         assert self.name not in tool_files, 'Option ' + self.name + 'is a duplicate of a file ID'
+        
+        # value and from_file are mutually exclusive
+        assert not ('value' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': value and from_file attributes are mutually exclusive'
         options[name] = self
         
 
