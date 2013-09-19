@@ -348,8 +348,8 @@ class Option():
             self.name = name
             command_text = e.attrib['command_text'].strip()
             if 'value' in e.attrib:
-                if e.attrib['value'] in overrides:
-                    value = overrides['value'][0]
+                if name in overrides:
+                    value = overrides[name][0]
                 else:
                     value = e.attrib['value'].strip()
             elif 'from_file' in e.attrib:
