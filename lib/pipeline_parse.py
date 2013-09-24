@@ -293,8 +293,8 @@ class Pipeline(object):
                 if line.lstrip()[0] == '#': 
                     continue
                 line = line.split(' #')[0].strip()
-                prefix = line.split('.')[0]
-                opt,val = line.split('.')[1].split('=')
+                prefix = line.split('.', 1)[0]
+                opt,val = line.split('.', 1)[1].split('=')
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt] = (val, source)
