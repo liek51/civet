@@ -54,6 +54,7 @@ class Tool():
         self.ins = ins
         self.outs = outs
         self.skip_validation=skip_validation
+        self.option_overrides = {}
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -116,7 +117,6 @@ class Tool():
                 self.option_overrides = PL.option_overrides[self.config_prefix]   
         else:
             self.config_prefix = None
-            self.option_overrides = {}
 
         if 'threads' in atts:
             self.threads = atts['threads']
