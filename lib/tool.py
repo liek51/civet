@@ -466,7 +466,10 @@ class Command():
             tok = m.group(1)
             if tok in self.options:
                 o = self.options[tok]
-                return o.command_text + ' ' + o.value
+                if o.command_text[-1] == '=' or o.command_text[-1] == ':':
+                    return o.command_text + o.value
+                else:
+                    return o.command_text + ' ' + o.value
             if tok in self.tool_files:
                 f = self.tool_files[tok]
                 if f.is_list:
