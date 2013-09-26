@@ -161,7 +161,7 @@ class Tool():
             elif t == 'option':
                 Option(child, self.options, self.tool_files, self.option_overrides)
             elif t == 'command':
-                Command(child, self.commands, self.options, self.tool_files, self.xml_file)
+                Command(child, self.commands, self.options, self.tool_files)
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
@@ -387,12 +387,11 @@ class Command():
         'stderr_id',
         'stdout_id',
         ]
-    def __init__(self, e, commands, options, tool_files, xml_file):
+    def __init__(self, e, commands, options, tool_files):
         # Stash the options and tool_files dictionaries.  We'll need
         # them to fix up the command lines.
         self.options = options
         self.tool_files = tool_files
-        self.xml_file = xml_file
         self.version_command = None
         self.real_version_command = None
         atts = e.attrib
