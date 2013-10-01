@@ -13,6 +13,14 @@ Bug fixes
 Features
  - Implemented "option override"
 
+Version 1.2.1
+-------------
+Bug fixes
+ - Civet did not correctly detect command failures indicated by a non-
+   zero return status.
+
+This is a bug-fix-only release, and contains no new features.
+
 Version 1.2.0
 -------------
 Bug fixes
