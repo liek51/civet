@@ -23,7 +23,7 @@ class Tool():
     # 
     # Each tool definition will create a temporary script which will be
     # submitted to the cluster as a single job.  This is performed in the
-    # torque component.
+    # job manager component.
     #
     validTags = [
         'command',
