@@ -87,18 +87,18 @@ def main():
     
         # check to see if the log directory was created with civet_run --no-submit
         if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
-            print "This pipeline was run with --no-submit, so no status is applicable.\n\n"
+            print log_dir + ":\n\tThis pipeline was run with --no-submit, so no status is applicable."
             continue
     
         # check for the abort.log -- this will indicate something went wrong with
         # the run
         run_aborted = False
-        if os.path.exists(os.path.join(log_dir, "abort.log")):
+        if verbose and os.path.exists(os.path.join(log_dir, "abort.log")):
             run_aborted = True
             print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
         
-        if os.path.exists(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)):
-            cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.JOB_STATUS_SUFFIX)))
+        if verbose and os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
+            cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
             #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
             if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
                 print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
@@ -192,7 +192,7 @@ def main():
 
         if complete_jobs_failure:
             summary_status = "FAILED"
-        elif canceled_jobs:
+        elif canceled_jobs or unknown_state:
             summary_status = "CANCELED"
         elif complete_jobs_success == total_jobs:
             summary_status = "completed sucessfully"
@@ -205,16 +205,16 @@ def main():
             print "{0}: {1}".format(log_dir, summary_status)
             
         if verbose or complete_jobs_success != total_jobs:
-            print "Total Pipeline Jobs: {0}".format(total_jobs)
-            print "\tCompleted Jobs (success): {0}".format(complete_jobs_success)
-            print "\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
-            print "\tRunning Jobs: {0}".format(running_jobs)
-            print "\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
-            print "\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
+            print "\tTotal Pipeline Jobs: {0}".format(total_jobs)
+            print "\t\tCompleted Jobs (success): {0}".format(complete_jobs_success)
+            print "\t\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
+            print "\t\tRunning Jobs: {0}".format(running_jobs)
+            print "\t\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
+            print "\t\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
             if canceled_jobs:
-                print "\tCanceled Jobs: {0}".format(canceled_jobs)
+                print "\t\tCanceled Jobs: {0}".format(canceled_jobs)
             if unknown_state:
-                print "\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
+                print "\t\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
         if verbose:
             print "\n\n"
 
