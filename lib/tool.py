@@ -55,6 +55,7 @@ class Tool():
         self.outs = outs
         self.skip_validation=skip_validation
         self.option_overrides = {}
+        self.thread_option_max = 0
 
         # Any pipeline will rely on having these modules loaded.
         # Other modules must be specified in the tool descriptions.
@@ -119,9 +120,9 @@ class Tool():
             self.config_prefix = None
 
         if 'threads' in atts:
-            self.threads = atts['threads']
+            self.default_threads = int(atts['threads'])
         else:
-            self.threads = '1'
+            self.default_threads = 1
 
         if 'walltime' in atts:
             self.walltime = atts['walltime']
@@ -159,7 +160,7 @@ class Tool():
                 # having a different class to process it.
                 self.description = child.text
             elif t == 'option':
-                Option(child, self.options, self.tool_files, self.option_overrides)
+                Option(child, self)
             elif t == 'command':
                 Command(child, self.commands, self.options, self.tool_files)
             elif t == 'module':
@@ -296,6 +297,11 @@ class Tool():
                     depends_on.append(j)
 
         # Do the actual batch job sumbission
+        if self.thread_option_max:
+            submit_threads = self.thread_option_max
+        else:
+            submit_threads = self.default_threads
+        
         if self.skip_validation:
             verify_file_list = None
         else:
@@ -303,7 +309,7 @@ class Tool():
         batch_job = BatchJob(
             multi_command, workdir=PipelineFile.get_output_dir(), 
             files_to_check=verify_file_list, 
-            ppn=self.threads, walltime = self.walltime, modules=self.modules,
+            ppn=submit_threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
             version_cmds=self.collect_version_commands())
     
@@ -341,7 +347,7 @@ class Tool():
         return missing
 
 class Option():
-    def __init__(self, e, options, tool_files, overrides):
+    def __init__(self, e, tool):
         self.command_text = ''
         self.value = ''
         try:
@@ -349,14 +355,22 @@ class Option():
             self.name = name
             command_text = e.attrib['command_text'].strip()
             if 'value' in e.attrib:
-                if name in overrides:
-                    value = overrides[name][0]
+                if name in tool.option_overrides:
+                    value = tool.option_overrides[name][0]
                 else:
                     value = e.attrib['value'].strip()
             elif 'from_file' in e.attrib:
                 fid = e.attrib['from_file']
-                fn = tool_files[fid].path
+                fn = tool.tool_files[fid].path
                 value = '$(cat ' + fn + ') '
+            elif 'threads' in e.attrib and e.attrib['threads'].upper() == 'TRUE':
+                if name in tool.option_overrides:
+                    value = tool.option_overrides[name][0]
+                else:
+                    value = tool.default_threads
+                if int(value) > tool.thread_option_max:
+                    tool.thread_option_max = int(value)
+                
         except:
             print >> sys.stderr, 'unexpected problem with {0}'.format(self)
             print >> sys.stderr, sys.exc_info()[0]
@@ -367,12 +381,14 @@ class Option():
         self.value = value
 
         # We don't allow the same option name in a tool twice
-        assert self.name not in options, 'Option ' + self.name + 'is a duplicate'
-        assert self.name not in tool_files, 'Option ' + self.name + 'is a duplicate of a file ID'
+        assert self.name not in tool.options, 'Option ' + self.name + 'is a duplicate'
+        assert self.name not in tool.tool_files, 'Option ' + self.name + 'is a duplicate of a file ID'
         
-        # value and from_file are mutually exclusive
+        # some attributes are mutually exclusive
         assert not ('value' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': value and from_file attributes are mutually exclusive'
-        options[name] = self
+        assert not ('value' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': value and threads attributes are mutually exclusive'
+        assert not ('from_file' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': from_file and threads attributes are mutually exclusive'
+        tool.options[name] = self
         
 
     def __repr__(self):
