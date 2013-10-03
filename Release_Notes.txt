@@ -13,6 +13,8 @@ Bug fixes
 
 Features
  - Implemented "option override"
+ - Implemented threads="True" tool options (value is taken from Tool's
+   threads attribute)
 
 Version 1.2.1
 -------------
