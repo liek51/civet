@@ -353,7 +353,8 @@ class Option():
         try:
             name = e.attrib['name'].strip()
             self.name = name
-            command_text = e.attrib['command_text'].strip()
+            if 'command_text' in e.attrib:
+                self.command_text = e.attrib['command_text'].strip()
             if 'value' in e.attrib:
                 if name in tool.option_overrides:
                     value = tool.option_overrides[name][0]
@@ -367,7 +368,7 @@ class Option():
                 if name in tool.option_overrides:
                     value = tool.option_overrides[name][0]
                 else:
-                    value = tool.default_threads
+                    value = str(tool.default_threads)
                 if int(value) > tool.thread_option_max:
                     tool.thread_option_max = int(value)
                 
@@ -377,7 +378,6 @@ class Option():
             raise
 
         self.isFile = False
-        self.command_text = command_text
         self.value = value
 
         # We don't allow the same option name in a tool twice
@@ -482,7 +482,7 @@ class Command():
             tok = m.group(1)
             if tok in self.options:
                 o = self.options[tok]
-                if o.command_text[-1] == '=' or o.command_text[-1] == ':':
+                if len(o.command_text) > 0 and (o.command_text[-1] == '=' or o.command_text[-1] == ':'):
                     return o.command_text + o.value
                 else:
                     return o.command_text + ' ' + o.value
