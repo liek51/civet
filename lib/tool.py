@@ -92,8 +92,13 @@ class Tool():
 
         # Verify that the tool definition file has not changed.
         self.verify_files.append(os.path.abspath(xml_file))
-       
-        tool = ET.parse(xml_file).getroot()
+
+        try:
+            tool = ET.parse(xml_file).getroot()
+        except ET.ParseError as e:
+            print >> sys.stderr, 'Exception raised while parsing', xml_file
+            print >> sys.stderr, e.msg
+            sys.exit(1)
         atts = tool.attrib
         # Validate the attributes
         for a in atts:
