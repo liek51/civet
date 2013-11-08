@@ -345,7 +345,7 @@ class TorqueJobRunner(object):
         script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
         if not os.path.exists(script_dir):
             os.mkdir(script_dir)
-            os.chmod(script_dir, stat.S_IRWXU
+            os.chmod(script_dir, stat.S_IRWXU)
         
         filename = os.path.join(script_dir, "{0}.sh".format(batch_job.name))
         script_file = open(filename, "w")
