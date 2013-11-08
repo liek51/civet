@@ -4,6 +4,20 @@ from release to release.  It is cumulative, with the most recent changes
 listed first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.3.1
+-------------
+Features
+ - Added a new bin subdirectory: bin/maintenance_programs.
+ - Added a new program wall_time_ranges.py, which returns 
+   - Requested
+   - Max
+   - Average
+   - Min
+   times for each cluster job in a pipeline.  A single parameter is
+   a directory which is walked to find all the log directories contained
+   therein.
+
+
 Version 1.3.0
 -------------
 Bug fixes
