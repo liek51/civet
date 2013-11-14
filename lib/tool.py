@@ -217,7 +217,9 @@ class Tool():
     def collect_files_to_validate(self):
         v = self.verify_files
         for c in self.commands:
-            v.append(c.program)
+            p = c.program
+            if p:
+                v.append(p)
         return v
 
     def collect_version_commands(self):
@@ -268,7 +270,7 @@ class Tool():
             c.fixupOptionsFiles()
             # Add the command names to the verify_files list
             p = c.program
-            if p not in self.verify_files:
+            if p and (p not in self.verify_files):
                 self.verify_files.append(c.program)
 
         # actually run the tool; get the date/time at the start of every
