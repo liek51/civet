@@ -41,6 +41,8 @@ class Tool():
         'threads',
         'tool_config_prefix',
         'walltime',
+        'exit_if_exists',
+        'exit_test_logic'
         ]
 
     def __init__(self, xml_file, ins, outs, pipeline_files, skip_validation=False):
@@ -134,6 +136,20 @@ class Tool():
         else:
             self.walltime = '01:00:00'
             
+        if 'exit_if_exists' in atts:
+            # this is going to have to be fixed later, since it may contain
+            # files that need to be expanded to a real path
+            self.exit_if_exists = atts['exit_if_exists']
+        else:
+            self.exit_if_exists = None
+            
+        if 'exit_test_logic' in atts:
+            #if this is invalid, then BatchJob __init__() will throw a ValueError
+            #should be "and" or "or" (case insensitive)
+            self.exit_test_logic = atts['exit_test_logic']
+        else:
+            self.exit_test_logic = None  #will get BatchJob default
+            
 
 
         # We can't process any non-file tags until all our files
@@ -156,6 +172,18 @@ class Tool():
 
         # Now we can fix up our files.
         PipelineFile.fix_up_files(self.tool_files)
+        
+        # Now we can process self.exit_if_exists
+        if self.exit_if_exists:
+            files_to_test = []
+            for f in self.exit_if_exists.split(","):
+                f = f.strip()
+                if f in self.tool_files:
+                    files_to_test.append(self.tool_files[f].path)
+                else:
+                    files_to_test.append(f)
+            self.exit_if_exists = files_to_test  
+                    
 
         # Now, finally, we can process the rest of the tags.
         for child in pending:
@@ -318,7 +346,9 @@ class Tool():
             files_to_check=verify_file_list, 
             ppn=submit_threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
-            version_cmds=self.collect_version_commands())
+            version_cmds=self.collect_version_commands(),
+            files_to_test=self.exit_if_exists, 
+            file_test_logic=self.exit_test_logic)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)
