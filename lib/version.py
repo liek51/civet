@@ -10,7 +10,7 @@ def version_from_git():
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
     except OSError:
-        out = '(undetermined)'
+        err = True
     # Mask any errors, for instance not running in a git working directory.
     if err:
 	    out = '(undetermined)'
