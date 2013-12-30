@@ -178,10 +178,8 @@ class Tool():
             files_to_test = []
             for f in self.exit_if_exists.split(","):
                 f = f.strip()
-                if f in self.tool_files:
-                    files_to_test.append(self.tool_files[f].path)
-                else:
-                    files_to_test.append(f)
+                assert f in self.tool_files, 'unkown file ID in exit_if_exists attribute: ' + f
+                files_to_test.append(self.tool_files[f].path)
             self.exit_if_exists = files_to_test  
                     
 
