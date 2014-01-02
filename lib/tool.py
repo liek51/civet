@@ -438,6 +438,9 @@ class Command():
         'program',
         'stderr_id',
         'stdout_id',
+        'if_exists',
+        'if_not_exists',
+        'if_exists_logic'
         ]
     def __init__(self, e, commands, options, tool_files):
         # Stash the options and tool_files dictionaries.  We'll need
@@ -446,6 +449,9 @@ class Command():
         self.tool_files = tool_files
         self.version_command = None
         self.real_version_command = None
+        self.if_exists_files = []
+        self.if_not_exists_files = []
+
         atts = e.attrib
         for a in atts:
             assert a in Command.validAtts, 'Unknown attribute in command tag: ' + a
@@ -475,6 +481,24 @@ class Command():
             self.stderr_id = atts['stderr_id']
         else:
             self.stderr_id = None
+            
+        if 'if_exists' in atts:
+            for f in atts['if_exists'].split(','):
+                f = f.strip()
+                assert f in self.tool_files, "unkown file ID in command 'if_exists' attribute: " + f
+                self.if_exists_files.append(self.tool_files[f].path)
+                
+        if 'if_not_exists' in atts:
+            for f in atts['if_not_exists'].split(','):
+                f = f.strip()
+                assert f in self.tool_files, "unkown file ID in command 'if_not_exists' attribute: " + f
+                self.if_not_exists_files.append(self.tool_files[f].path)
+                
+        if 'if_exists_logic' in atts:
+            assert atts['if_exists_logic'].upper() in ['AND', 'OR']
+            self.if_exists_logic = atts['if_exists_logic'].upper()
+        else:
+            self.if_exists_logic = 'AND'
 
         # The command text can be either in the command element's text,
         # or as the "tail" of the child <version_command> tag. Sigh.
@@ -501,6 +525,8 @@ class Command():
             # child.
             if child.tail:
                 command_text += child.tail
+
+            
 
         # Strip out excess white space in the command
         if command_text:
@@ -539,6 +565,7 @@ class Command():
         self.real_command = (self.program + ' ' +
                              self.replacePattern.sub(tokenReplace,
                                                      self.command_template))
+                                                     
 
         # Similarly, fix up a version_command by replacing all the delimited 
         # option names and file ids with the real option text and file paths.
@@ -551,3 +578,21 @@ class Command():
             self.real_command += ' > ' + self.tool_files[self.stdout_id].path
         if self.stderr_id:
             self.real_command += ' 2> ' + self.tool_files[self.stderr_id].path
+            
+        #need to wrap the command in logic to process "if_exits" or 
+        #"if_not_exits" tests
+        tests = []
+        if self.if_exists_files:
+            for f in self.if_exists_files:
+                tests.append(' -e "{0}" '.format(f))
+        if self.if_not_exists_files:
+            for f in self.if_not_exists_files:
+                tests.append(' ! -e "{0}" '.format(f))
+        if tests:
+            if self.if_exists_logic == 'AND':
+                file_test_operator = ' && '
+            elif self.if_exists_logic == ' OR ':
+                file_test_operator = ' || '
+
+        
+            self.real_command = "if [[ {1} ]]; then {0}; fi".format(self.real_command, file_test_operator.join(tests))

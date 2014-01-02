@@ -634,7 +634,7 @@ class TorqueJobRunner(object):
             walltime = "unlimited"
     
         if batch_job.file_test_logic == 'AND':
-            test_type = '&& '
+            test_type = '&&'
         elif batch_job.file_test_logic == 'OR':
             test_type = '||'
         else:
