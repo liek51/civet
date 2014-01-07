@@ -41,6 +41,8 @@ class Tool():
         'threads',
         'tool_config_prefix',
         'walltime',
+        'exit_if_exists',
+        'exit_test_logic'
         ]
 
     def __init__(self, xml_file, ins, outs, pipeline_files, skip_validation=False):
@@ -134,6 +136,20 @@ class Tool():
         else:
             self.walltime = '01:00:00'
             
+        if 'exit_if_exists' in atts:
+            # this is going to have to be fixed later, since it may contain
+            # files that need to be expanded to a real path
+            self.exit_if_exists = atts['exit_if_exists']
+        else:
+            self.exit_if_exists = None
+            
+        if 'exit_test_logic' in atts:
+            #if this is invalid, then BatchJob __init__() will throw a ValueError
+            #should be "and" or "or" (case insensitive)
+            self.exit_test_logic = atts['exit_test_logic']
+        else:
+            self.exit_test_logic = None  #will get BatchJob default
+            
 
 
         # We can't process any non-file tags until all our files
@@ -156,6 +172,16 @@ class Tool():
 
         # Now we can fix up our files.
         PipelineFile.fix_up_files(self.tool_files)
+        
+        # Now we can process self.exit_if_exists
+        if self.exit_if_exists:
+            files_to_test = []
+            for f in self.exit_if_exists.split(","):
+                f = f.strip()
+                assert f in self.tool_files, 'unkown file ID in exit_if_exists attribute: ' + f
+                files_to_test.append(self.tool_files[f].path)
+            self.exit_if_exists = files_to_test  
+                    
 
         # Now, finally, we can process the rest of the tags.
         for child in pending:
@@ -217,7 +243,9 @@ class Tool():
     def collect_files_to_validate(self):
         v = self.verify_files
         for c in self.commands:
-            v.append(c.program)
+            p = c.program
+            if p:
+                v.append(p)
         return v
 
     def collect_version_commands(self):
@@ -268,7 +296,7 @@ class Tool():
             c.fixupOptionsFiles()
             # Add the command names to the verify_files list
             p = c.program
-            if p not in self.verify_files:
+            if p and (p not in self.verify_files):
                 self.verify_files.append(c.program)
 
         # actually run the tool; get the date/time at the start of every
@@ -316,7 +344,9 @@ class Tool():
             files_to_check=verify_file_list, 
             ppn=submit_threads, walltime = self.walltime, modules=self.modules,
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
-            version_cmds=self.collect_version_commands())
+            version_cmds=self.collect_version_commands(),
+            files_to_test=self.exit_if_exists, 
+            file_test_logic=self.exit_test_logic)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)
@@ -408,6 +438,9 @@ class Command():
         'program',
         'stderr_id',
         'stdout_id',
+        'if_exists',
+        'if_not_exists',
+        'if_exists_logic'
         ]
     def __init__(self, e, commands, options, tool_files):
         # Stash the options and tool_files dictionaries.  We'll need
@@ -416,6 +449,9 @@ class Command():
         self.tool_files = tool_files
         self.version_command = None
         self.real_version_command = None
+        self.if_exists_files = []
+        self.if_not_exists_files = []
+
         atts = e.attrib
         for a in atts:
             assert a in Command.validAtts, 'Unknown attribute in command tag: ' + a
@@ -445,6 +481,24 @@ class Command():
             self.stderr_id = atts['stderr_id']
         else:
             self.stderr_id = None
+            
+        if 'if_exists' in atts:
+            for f in atts['if_exists'].split(','):
+                f = f.strip()
+                assert f in self.tool_files, "unkown file ID in command 'if_exists' attribute: " + f
+                self.if_exists_files.append(self.tool_files[f].path)
+                
+        if 'if_not_exists' in atts:
+            for f in atts['if_not_exists'].split(','):
+                f = f.strip()
+                assert f in self.tool_files, "unkown file ID in command 'if_not_exists' attribute: " + f
+                self.if_not_exists_files.append(self.tool_files[f].path)
+                
+        if 'if_exists_logic' in atts:
+            assert atts['if_exists_logic'].upper() in ['AND', 'OR']
+            self.if_exists_logic = atts['if_exists_logic'].upper()
+        else:
+            self.if_exists_logic = 'AND'
 
         # The command text can be either in the command element's text,
         # or as the "tail" of the child <version_command> tag. Sigh.
@@ -471,6 +525,8 @@ class Command():
             # child.
             if child.tail:
                 command_text += child.tail
+
+            
 
         # Strip out excess white space in the command
         if command_text:
@@ -509,6 +565,7 @@ class Command():
         self.real_command = (self.program + ' ' +
                              self.replacePattern.sub(tokenReplace,
                                                      self.command_template))
+                                                     
 
         # Similarly, fix up a version_command by replacing all the delimited 
         # option names and file ids with the real option text and file paths.
@@ -521,3 +578,21 @@ class Command():
             self.real_command += ' > ' + self.tool_files[self.stdout_id].path
         if self.stderr_id:
             self.real_command += ' 2> ' + self.tool_files[self.stderr_id].path
+            
+        #need to wrap the command in logic to process "if_exits" or 
+        #"if_not_exits" tests
+        tests = []
+        if self.if_exists_files:
+            for f in self.if_exists_files:
+                tests.append(' -e "{0}" '.format(f))
+        if self.if_not_exists_files:
+            for f in self.if_not_exists_files:
+                tests.append(' ! -e "{0}" '.format(f))
+        if tests:
+            if self.if_exists_logic == 'AND':
+                file_test_operator = ' && '
+            elif self.if_exists_logic == ' OR ':
+                file_test_operator = ' || '
+
+        
+            self.real_command = "if [[ {1} ]]; then {0}; fi".format(self.real_command, file_test_operator.join(tests))

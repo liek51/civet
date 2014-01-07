@@ -26,7 +26,8 @@ class BatchJob(object):
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
                  walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
                  name=None, stdout_path=None, stderr_path="/dev/null", files_to_check=None, 
-                 epilogue=None, version_cmds=None, error_strings=None, mail_option="n", email=None):
+                 epilogue=None, version_cmds=None, error_strings=None, 
+                 mail_option="n", email=None, files_to_test=[], file_test_logic="AND"):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -43,6 +44,8 @@ class BatchJob(object):
         self.epilogue = epilogue
         self.version_cmds = version_cmds
         self.error_strings = error_strings
+        self.files_to_test = files_to_test
+        self._file_test_logic = file_test_logic
         
     
     # setter for workdir, sets to the current working directory if a directory is 
@@ -84,3 +87,13 @@ class BatchJob(object):
         if val and re.match(r'[^abe]', val) and val != 'n':
             raise ValueError("Invalid mail_option. Must be n|{abe}|None")
         self._mail_option = val
+        
+    @property
+    def file_test_logic(self):
+        return self._file_test_logic
+        
+    @file_test_logic.setter
+    def file_test_logic(self, val):
+        if not val or val.upper() not in ["AND", "OR"]:
+            raise ValueError('Invalid exit_test_bool option. Must be "AND" or "OR"')
+        self._file_test_logic = val.upper()

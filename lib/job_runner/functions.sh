@@ -53,3 +53,18 @@ function unload_all_modules {
     IFS=$saveIFS
 
 }
+
+
+function file_test_exit {
+    LOGDIR=$1
+    WALLTIME_REQ=$2
+
+    echo "Exiting because of pre-job file test (exit_if_exists)" > ${LOGDIR}/${PBS_JOBNAME}-run.log
+    
+    echo "exit_status=0" > ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    echo "walltime=00:00:00" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    echo "exit_if_exists=TRUE" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    
+    exit 0
+}

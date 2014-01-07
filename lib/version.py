@@ -14,7 +14,7 @@ def version_from_git():
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         out, err = p.communicate()
     except OSError:
-        out = '(undetermined)'
+        err = True
     # Mask any errors, for instance not running in a git working directory.
     if err:
 	    out = '(undetermined)'
