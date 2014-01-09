@@ -6,7 +6,11 @@ redmine:/var/git/civet.git
 
 Version 1.4.0
 
-Features
+Bug fixes
+ - Fixed a problem in determining the version of civet components.
+   Problem also fixed, separately, in similar cga code.
+
+   Features
  - Add "exit_if_exists" and "exit_test_logic" attributes to tools
  - Add "if_exists", "if_not_exists" attributes to commands
  - Only add python to the list of modules if it is required to run 

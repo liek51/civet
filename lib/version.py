@@ -3,11 +3,15 @@
 import os
 import sys
 import subprocess
+import inspect
 
 def version_from_git():
+    cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( 
+        inspect.getouterframes(inspect.currentframe())[2][0] ))[0]))
     try:
-        p = subprocess.Popen(['git', 'describe', '--tags'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        err = '' # Make sure err exists, if we hit the except clause
+        p = subprocess.Popen('cd {0}; git describe --tags'.format(cmd_folder),
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         out, err = p.communicate()
     except OSError:
         err = True
