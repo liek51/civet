@@ -58,12 +58,9 @@ class Tool():
         self.skip_validation=skip_validation
         self.option_overrides = {}
         self.thread_option_max = 0
+        self.modules = []
 
-        # Any pipeline will rely on having these modules loaded.
-        # Other modules must be specified in the tool descriptions.
-        self.modules = ['python/civet']
-
-        self.verify_files = ['python']
+        self.verify_files = []
         self.tool_files = {}
         self.pipeline_files = pipeline_files
         for n in range(len(ins)):
@@ -338,7 +335,16 @@ class Tool():
         if self.skip_validation:
             verify_file_list = None
         else:
-            verify_file_list = self.verify_files  
+            verify_file_list = self.verify_files
+            #do we need to load a Python modulefile?
+            need_python = True
+            for m in self.modules:
+                if m.startswith('python'):
+                    need_python = False
+            if need_python:
+                modules.append('python/civet')
+                verify_file_list.append('python')
+            
         batch_job = BatchJob(
             multi_command, workdir=PipelineFile.get_output_dir(), 
             files_to_check=verify_file_list, 
