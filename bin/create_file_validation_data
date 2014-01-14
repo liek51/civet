@@ -37,6 +37,12 @@ def main():
     for fn in fns:
         files.add_file(fn)
 
+    # In some cases, the civet infrastructure arbitrarily adds its own
+    # version of python. This isn't reflected in any of the XML files
+    # we just parsed, so we have to manually add it here.
+    
+    files.add_file('/opt/compsci/civet/python_do_not_update/bin/python2.7')
+
     # Figure out whether we're creating a new file or merging with an
     # an existing file.
     name = 'master_file_list'
