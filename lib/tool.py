@@ -342,7 +342,7 @@ class Tool():
                 if m.startswith('python'):
                     need_python = False
             if need_python:
-                modules.append('python/civet')
+                self.modules.append('python/civet')
                 verify_file_list.append('python')
             
         batch_job = BatchJob(
