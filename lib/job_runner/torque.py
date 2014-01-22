@@ -369,6 +369,9 @@ class TorqueJobRunner(object):
             job_resources['nodes'] = "{0}:ppn={1}".format(batch_job.nodes, 
                                                           batch_job.ppn)
             job_resources['walltime'] = batch_job.walltime
+            
+            if batch_job.mem:
+                job_resources['mem'] = batch_job.mem
         
             job_attributes[pbs.ATTR_v] = self._generate_env(batch_job)
         
@@ -625,9 +628,15 @@ class TorqueJobRunner(object):
         return shortened
         
     def _build_file_test(self, batch_job):
-        
+        """
+            Return a chunk of bash code that will perform the required file 
+            test(s) for this job. This code will exit using the file_test_exit 
+            function, which will do some logging in addition to exiting the job
+        """
         header = "#pre job file test\n"
         
+        # need the walltime because we will create a -status.txt file if we need
+        # to bail out because of the file test
         if batch_job.walltime:
             walltime = batch_job.walltime
         else:

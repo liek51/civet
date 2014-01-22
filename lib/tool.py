@@ -41,6 +41,7 @@ class Tool():
         'threads',
         'tool_config_prefix',
         'walltime',
+        'mem',
         'exit_if_exists',
         'exit_test_logic'
         ]
@@ -144,8 +145,15 @@ class Tool():
             #if this is invalid, then BatchJob __init__() will throw a ValueError
             #should be "and" or "or" (case insensitive)
             self.exit_test_logic = atts['exit_test_logic']
+            assert self.exit_test_logic.upper() in ['AND', 'OR'], 'exit_test_logic must be "AND" or "OR" (case insensitive)' + self.exit_test_logic
         else:
-            self.exit_test_logic = None  #will get BatchJob default
+            self.exit_test_logic = "AND"  #default to AND
+            
+        if 'mem' in atts:
+            self.mem = atts['mem']
+            assert self.mem.isdigit() and self.mem > 0, 'mem attribute must be positive integer: ' + self.mem
+        else:
+            self.mem = None
             
 
 
@@ -352,7 +360,7 @@ class Tool():
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
             version_cmds=self.collect_version_commands(),
             files_to_test=self.exit_if_exists, 
-            file_test_logic=self.exit_test_logic)
+            file_test_logic=self.exit_test_logic, mem=self.mem)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)

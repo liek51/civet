@@ -4,13 +4,24 @@ from release to release.  It is cumulative, with the most recent changes
 listed first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
-Version 1.4.0
+Version 1.4.1
+-------------
+Bug fixes:
+ - Fixed problem where tool exit_test_logic was not geting validated 
+   properly
 
+Features
+ - Added optional tool mem attribute, specifies amount of memory in
+   gigabyes that will be requested by the generated batch job 
+
+
+Version 1.4.0
+-------------
 Bug fixes
  - Fixed a problem in determining the version of civet components.
    Problem also fixed, separately, in similar cga code.
 
-   Features
+Features
  - Add "exit_if_exists" and "exit_test_logic" attributes to tools
  - Add "if_exists", "if_not_exists" attributes to commands
  - Only add python to the list of modules if it is required to run 
