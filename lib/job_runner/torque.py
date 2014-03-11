@@ -608,7 +608,7 @@ class TorqueJobRunner(object):
         directives = []
         
         directives.append("#PBS -l walltime={0}".format(batch_job.walltime))
-        directives.append("#PBS -l nodes={0}:{1}".format(batch_job.nodes, batch_job.ppn))
+        directives.append("#PBS -l nodes={0}:ppn={1}".format(batch_job.nodes, batch_job.ppn))
         
         if batch_job.mem:
             directives.append("#PBS -l mem={0}".format(batch_job.mem))
