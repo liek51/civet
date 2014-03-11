@@ -13,7 +13,8 @@ Bug fixes:
 Features
  - Added optional tool mem attribute, specifies amount of memory in
    gigabyes that will be requested by the generated batch job 
-
+ - Add some #PBS directives to generated batch script for documentation
+   and to facilitate running steps manually during testing/debugging
 
 Version 1.4.0
 -------------
