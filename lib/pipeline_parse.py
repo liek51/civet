@@ -48,7 +48,7 @@ class Pipeline(object):
         
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
-                  user_override_file=None):
+                  user_override_file=None, keep_temp=False):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -90,6 +90,7 @@ class Pipeline(object):
         self.queue = queue
         self.submit_jobs = submit_jobs
         self.completion_mail = completion_mail
+        self.keep_temp = keep_temp
         
         # And track the major components of the pipeline
         self._steps = []
@@ -182,36 +183,37 @@ class Pipeline(object):
         # Submit two last bookkeepingjobs
 
         # 1. deletes all the temp files.
-        tmps = []
-        # This job is about deleting files...
-        # For each temp file, depend on the job(s) that use it in any
-        # way, either creating it or consuming it.
-        # We can't just wait for the last job to complete, because it is 
-        # possible to construct pipelines where the last submitted job
-        # completes before an earlier submitted job.
-        depends = []
-        for fid in self._files:
-            f = self._files[fid]
-            if f.is_temp:
-                tmps.append(f.path)
-                if f.consumer_jobs:
-                    for j in f.consumer_jobs:
-                        if j not in depends:
-                            depends.append(j)
-                if f.creator_job:
-                    if f.creator_job not in depends:
-                        depends.append(f.creator_job)
-        cmd = 'rm ' + ' '.join(tmps)
-        if len(tmps):
-            batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
-                                 depends_on=depends,
-                                 name='Remove_temp_files')
-            try:
-                job_id = self.job_runner.queue_job(batch_job)
-            except Exception as e:
-                sys.stderr.write(str(e) + '\n')
-                sys.exit(self.BATCH_ERROR)
-            self.all_batch_jobs.append(job_id)
+        if not self.keep_temp:
+            tmps = []
+            # This job is about deleting files...
+            # For each temp file, depend on the job(s) that use it in any
+            # way, either creating it or consuming it.
+            # We can't just wait for the last job to complete, because it is 
+            # possible to construct pipelines where the last submitted job
+            # completes before an earlier submitted job.
+            depends = []
+            for fid in self._files:
+                f = self._files[fid]
+                if f.is_temp:
+                    tmps.append(f.path)
+                    if f.consumer_jobs:
+                        for j in f.consumer_jobs:
+                            if j not in depends:
+                                depends.append(j)
+                    if f.creator_job:
+                        if f.creator_job not in depends:
+                            depends.append(f.creator_job)
+            cmd = 'rm ' + ' '.join(tmps)
+            if len(tmps):
+                batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                                     depends_on=depends,
+                                     name='Remove_temp_files')
+                try:
+                    job_id = self.job_runner.queue_job(batch_job)
+                except Exception as e:
+                    sys.stderr.write(str(e) + '\n')
+                    sys.exit(self.BATCH_ERROR)
+                self.all_batch_jobs.append(job_id)
 
         # 2. Consolidate all the log files.
         cmd = []
