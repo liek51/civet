@@ -15,6 +15,8 @@ Features
    gigabyes that will be requested by the generated batch job 
  - Add some #PBS directives to generated batch script for documentation
    and to facilitate running steps manually during testing/debugging
+ - Add --keep-temp option to civet_run. If passed, the delete temp
+   files job will not be submitted to clean up temporary pipeline files.
 
 Version 1.4.0
 -------------
