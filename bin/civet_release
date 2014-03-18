@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+    echo "Usage: civet_release <log directory>" >&2
+fi
+
+LOGDIR=$1
+    
+echo "releasing user hold on pipeline jobs"
+    
+# just iterate over all of the job ids in this pipeline and try to 
+# qdel them.  We don't care what the state is, or even if they still exit
+while read ID NAME DEP; do
+    qrls $ID
+done < ${LOGDIR}/pipeline_batch_id_list.txt
