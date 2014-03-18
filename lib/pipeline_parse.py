@@ -48,7 +48,7 @@ class Pipeline(object):
         
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
-                  user_override_file=None, keep_temp=False):
+                  user_override_file=None, keep_temp=False, release_jobs=True):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -91,6 +91,7 @@ class Pipeline(object):
         self.submit_jobs = submit_jobs
         self.completion_mail = completion_mail
         self.keep_temp = keep_temp
+        self.release_jobs = release_jobs
         
         # And track the major components of the pipeline
         self._steps = []
@@ -243,10 +244,11 @@ class Pipeline(object):
                 sys.stderr.write(str(e) + '\n')
                 sys.exit(self.BATCH_ERROR)
 
-        # We're done submitting all the jobs.  Release them and get
-        # on with it. This is the last action of the pipeline
+        # We're done submitting all the jobs.  Release them (if necessary) and 
+        # get on with it. This is the last action of the pipeline
         # submission process. WE'RE DONE!
-        self.job_runner.release_all()
+        if not self.release_jobs:
+            self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
         print 'Log directory: ', self.log_dir
