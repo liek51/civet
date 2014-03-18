@@ -247,7 +247,7 @@ class Pipeline(object):
         # We're done submitting all the jobs.  Release them (if necessary) and 
         # get on with it. This is the last action of the pipeline
         # submission process. WE'RE DONE!
-        if not self.release_jobs:
+        if self.release_jobs:
             self.job_runner.release_all()
 
         # Let the people know where they can see their logs.

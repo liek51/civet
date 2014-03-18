@@ -38,7 +38,7 @@ def main():
                  queue=args.queue, submit_jobs=args.submit, 
                  search_path=os.environ.get('CIVET_PATH'), 
                  user_override_file=args.option_file, keep_temp=args.keep_temp,
-                 release_jobs = args.release_jobs)
+                 release_jobs=args.release_jobs)
     PL.submit()
 
 if __name__ == "__main__":
