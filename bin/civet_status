@@ -121,9 +121,9 @@ def main():
             
             if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
                 status = job_runner.common.get_status_from_file(log_dir, job[1])
-                if 'cancelled' in status:
+                if 'canceled' in status:
                     if verbose:
-                        print "\tJob cancelled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
+                        print "\tJob canceled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
                     canceled_jobs += 1
                 
                 if 'exit_status' in status:
@@ -153,7 +153,7 @@ def main():
                         else:
                             # if we got here the job is in state "C" but no 
                             # job_name-status.txt file was created.  Job must have 
-                            # crashed or was cancelled...
+                            # crashed or was canceled...
                             if status.exit_status == "0":
                                 #This shouldn't happen... if there isn't
                                 #a job_name-status.txt the exit status should be non-zero
