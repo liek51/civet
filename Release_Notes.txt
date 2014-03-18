@@ -22,7 +22,9 @@ Features
    files job will not be submitted to clean up temporary pipeline files.
  - Add --hold option to civet_run. If passed, the holds on pipeline jobs
    will not be released by civet. The jobs will stay held until the user
-   releases them. 
+   releases them.
+ - Add civet_release script which will release all user holds on the jobs
+   in a Civet pipeline (specified by pipeline log directory) 
 
 Version 1.4.0
 -------------

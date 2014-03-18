@@ -135,21 +135,21 @@ def main():
         for id in running_jobs:
             if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
                 summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("cancelled=TRUE\n")
+                summary_file.write("canceled=TRUE\n")
                 summary_file.write("state_at_cancel=R")
                 summary_file.close()
                 
         for id in held_jobs:
             if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
                 summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("cancelled=TRUE\n")
+                summary_file.write("canceled=TRUE\n")
                 summary_file.write("state_at_cancel=H")
                 summary_file.close()
                 
         for id in queued_jobs:
             if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
                 summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("cancelled=TRUE\n")
+                summary_file.write("canceled=TRUE\n")
                 summary_file.write("state_at_cancel=Q")
                 summary_file.close()
         
