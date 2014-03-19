@@ -1,9 +1,19 @@
 #!/bin/bash
 
+# This script can be used to release any user holds on a Civet pipeline
+
+#make sure we were only called with one argument
 if [ $# -ne 1 ]; then
     echo "Usage: civet_release <log directory>" >&2
     exit 1
 fi
+
+#check to see if that one argument was -h or --help
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    echo "Usage: civet_release <log directory>" >&2
+    exit 0
+fi
+
 
 LOGDIR=$1
 
@@ -11,6 +21,8 @@ if [[ ! -e $LOGDIR ]]; then
     echo "Error:  \"${LOGDIR}\" does not appear to be a valid Civet log directory"  >&2
     exit 2
 fi
+
+#the request appears valid,  do it
     
 echo "releasing user hold on pipeline jobs"
     
