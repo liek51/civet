@@ -52,7 +52,7 @@ def main():
     print "\n\nCancelling pipeline with log directory:"
     print "\t{0}\n".format(log_dir)
     
-    # we will build a list of unfinsihed and complete jobs
+    # we will build a list of unfinished and complete jobs
     unfinished_jobs = []
     complete_jobs = []
     
