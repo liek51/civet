@@ -75,7 +75,6 @@ def main():
     # check the queues and send batch delete requests for them
     cancel_log = open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME), 'w')
     cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
-    cancel_log.write("CANCELED_BY=" + pwd.getpwuid(os.getuid()).pw_name + '\n')
     
     unknown_jobs = []
     running_jobs = []

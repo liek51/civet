@@ -99,9 +99,8 @@ def main():
         
         if verbose and os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
             cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
-            #first implementation of pipeline cancel did not include CANCELED_BY, don't assume it exists
-            if 'CANCELED_BY' in cancel_info and 'DATESTAMP' in cancel_info:
-                print "PIPELINE WAS CANCELED by {0} at {1}\n".format(cancel_info['CANCELED_BY'], cancel_info['DATESTAMP'])
+            if 'DATESTAMP' in cancel_info:
+                print "PIPELINE WAS CANCELED by user at {1}\n".format(cancel_info['DATESTAMP'])
             else:
                 print "PIPELINE WAS CANCELED by user.\n"
     
