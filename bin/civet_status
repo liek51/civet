@@ -39,8 +39,10 @@ def main():
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="Run in recursive mode")
     parser.add_argument('--verbose', dest='verbose', action='store_true', help="More verbose output")
-    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', default="False", help="Only produce output for failed runs")
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', help="Only produce output for failed runs")
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
+    parser.set_defaults(quiet=False)
+    parser.set_defaults(verbose=False)
     args = parser.parse_args()
 
     verbose = args.verbose
@@ -208,7 +210,7 @@ def main():
         if verbose:
             print "\nSummary:"
         elif not quiet or summary_status == "FAILED":
-            print "{0}: {1}".format(log_dir, summary_status)
+            print "{0}: {1}".format(os.path.abspath(log_dir), summary_status)
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
             print "\tTotal Pipeline Jobs: {0}".format(total_jobs)
