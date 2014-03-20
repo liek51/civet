@@ -131,7 +131,7 @@ def main():
             
             if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
                 status = job_runner.common.get_status_from_file(log_dir, job[1])
-                if 'canceled' in status:
+                if 'canceled' in status or 'cancelled' in status:
                     if verbose:
                         print "\tJob canceled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
                     canceled_jobs += 1
