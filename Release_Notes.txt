@@ -25,6 +25,9 @@ Features
    releases them.
  - Add civet_release script which will release all user holds on the jobs
    in a Civet pipeline (specified by pipeline log directory) 
+ - Add --quiet (-q) option to civet_status. This option only produces
+   a single line of output if the status of the pipeline is FAILED, 
+   otherwise civet_cancel will be silent
 
 Version 1.4.0
 -------------
