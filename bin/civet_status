@@ -76,6 +76,8 @@ def main():
 
     for log_dir in dirs:
     
+        log_dir = os.path.abspath(log_dir)
+    
         if verbose:
             print "\n\nGetting status for pipeline with log directory at:"
             print "\t{0}\n".format(log_dir)
@@ -210,7 +212,7 @@ def main():
         if verbose:
             print "\nSummary:"
         elif not quiet or summary_status == "FAILED":
-            print "{0}: {1}".format(os.path.abspath(log_dir), summary_status)
+            print "{0}: {1}".format(log_dir, summary_status)
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
             print "\tTotal Pipeline Jobs: {0}".format(total_jobs)
