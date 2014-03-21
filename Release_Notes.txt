@@ -11,7 +11,7 @@ Bug fixes:
    properly
  - Fix problem where civet_cancel was not removing queued jobs
    (only running and held jobs were canceled)
- - Use "American" spelling of "canceled"
+ - Use U.S. spelling of "canceled" (vs cancelled)
 
 Features
  - Added optional tool mem attribute, specifies amount of memory in
