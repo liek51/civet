@@ -211,7 +211,7 @@ def main():
          
         if verbose:
             print "\nSummary:"
-        elif not quiet or summary_status == "FAILED":
+        elif not quiet or summary_status == "FAILED" or summary_status == "CANCELED":
             print "{0}: {1}".format(log_dir, summary_status)
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
