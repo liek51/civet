@@ -399,6 +399,7 @@ class Option():
     def __init__(self, e, tool):
         self.command_text = ''
         self.value = ''
+        self.binary = False
         try:
             name = e.attrib['name'].strip()
             self.name = name
@@ -420,6 +421,16 @@ class Option():
                     value = str(tool.default_threads)
                 if int(value) > tool.thread_option_max:
                     tool.thread_option_max = int(value)
+            
+            if 'binary' in e.attrib:
+                self.binary = True
+                                       
+                if value.upper() == 'TRUE' or value == '1':
+                    value = True
+                elif value.upper() == 'FALSE' or value == '0':
+                    value = False
+                else:
+                    raise ValueError("invalid value for binary option,  must be True or False")
                 
         except:
             print >> sys.stderr, 'unexpected problem with {0}'.format(self)
@@ -434,6 +445,8 @@ class Option():
         assert self.name not in tool.tool_files, 'Option ' + self.name + 'is a duplicate of a file ID'
         
         # some attributes are mutually exclusive
+        assert not ('binary' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': binary and from_file attributes are mutually exclusive'
+        assert not ('binary' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': binary and threads attributes are mutually exclusive'
         assert not ('value' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': value and from_file attributes are mutually exclusive'
         assert not ('value' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': value and threads attributes are mutually exclusive'
         assert not ('from_file' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': from_file and threads attributes are mutually exclusive'
@@ -557,7 +570,12 @@ class Command():
             tok = m.group(1)
             if tok in self.options:
                 o = self.options[tok]
-                if len(o.command_text) > 0 and (o.command_text[-1] == '=' or o.command_text[-1] == ':'):
+                if o.binary:
+                    if o.value:
+                        return o.command_text
+                    else:
+                        return ''
+                elif len(o.command_text) > 0 and (o.command_text[-1] == '=' or o.command_text[-1] == ':'):
                     return o.command_text + o.value
                 else:
                     return o.command_text + ' ' + o.value
