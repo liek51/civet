@@ -48,7 +48,8 @@ class Pipeline(object):
         
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
-                  user_override_file=None, keep_temp=False, release_jobs=True):
+                  user_override_file=None, keep_temp=False, release_jobs=True,
+                  force_conditional_steps=False):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -92,6 +93,7 @@ class Pipeline(object):
         self.completion_mail = completion_mail
         self.keep_temp = keep_temp
         self.release_jobs = release_jobs
+        self.force_conditional_steps = force_conditional_steps
         
         # And track the major components of the pipeline
         self._steps = []

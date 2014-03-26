@@ -134,7 +134,7 @@ class Tool():
         else:
             self.walltime = '01:00:00'
             
-        if 'exit_if_exists' in atts:
+        if 'exit_if_exists' in atts and not PL.force_conditional_steps:
             # this is going to have to be fixed later, since it may contain
             # files that need to be expanded to a real path
             self.exit_if_exists = atts['exit_if_exists']
@@ -478,6 +478,9 @@ class Command():
         self.real_version_command = None
         self.if_exists_files = []
         self.if_not_exists_files = []
+        
+        # get current pipeline symbols
+        import pipeline_parse as PL
 
         atts = e.attrib
         for a in atts:
@@ -509,13 +512,13 @@ class Command():
         else:
             self.stderr_id = None
             
-        if 'if_exists' in atts:
+        if 'if_exists' in atts and not PL.force_conditional_steps:
             for f in atts['if_exists'].split(','):
                 f = f.strip()
                 assert f in self.tool_files, "unkown file ID in command 'if_exists' attribute: " + f
                 self.if_exists_files.append(self.tool_files[f].path)
                 
-        if 'if_not_exists' in atts:
+        if 'if_not_exists' in atts and not PL.force_conditional_steps:
             for f in atts['if_not_exists'].split(','):
                 f = f.strip()
                 assert f in self.tool_files, "unkown file ID in command 'if_not_exists' attribute: " + f

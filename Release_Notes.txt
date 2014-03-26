@@ -1,39 +1,41 @@
 CIVET Release Notes
-This document describes the high-level changes made to the civet software
-from release to release.  It is cumulative, with the most recent changes
-listed first.  The most up-to-date version is in the civet git repository
+This document describes the high-level changes made to the civet software from
+release to release.  It is cumulative, with the most recent changes listed
+first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
 Version 1.4.1
 -------------
 Bug fixes:
- - Fixed problem where tool exit_test_logic was not geting validated 
-   properly
- - Fix problem where civet_cancel was not removing queued jobs
-   (only running and held jobs were canceled)
+ - Fixed problem where tool exit_test_logic was not geting validated properly
+ - Fix problem where civet_cancel was not removing queued jobs (only running and
+   held jobs were canceled)
  - Use U.S. spelling of "canceled" (vs cancelled)
 
 Features
- - Added optional tool mem attribute, specifies amount of memory in
-   gigabyes that will be requested by the generated batch job 
- - Add some #PBS directives to generated batch script for documentation
-   and to facilitate running steps manually during testing/debugging
- - Add --keep-temp (-t) option to civet_run. If passed, the delete temp
-   files job will not be submitted to clean up temporary pipeline files.
- - Add --hold option to civet_run. If passed, the holds on pipeline jobs
-   will not be released by civet. The jobs will stay held until the user
-   releases them.
- - Add civet_release script which will release all user holds on the jobs
-   in a Civet pipeline (specified by pipeline log directory) 
- - Add --quiet (-q) option to civet_status. This option only produces
-   a single line of output if the status of the pipeline is FAILED, 
-   otherwise civet_cancel will be silent
- - Add binary attribute for Tool option. The binary attribute is combined
-   with the value attribute and indicates that the value can be true or
-   false. If the value is true, the command_text will be used to
-   substitute for the option in the command line.  If the value is false
-   then an empty string will be substituted for the option in the command
-   line.
+ - Added optional tool mem attribute, specifies amount of memory in gigabyes
+   that will be requested by the generated batch job 
+ - Add some #PBS directives to generated batch script for documentation and to
+   facilitate running steps manually during testing/debugging
+ - Add --keep-temp (-t) option to civet_run. If passed, the delete temp files 
+   job will not be submitted to clean up temporary pipeline files.
+ - Add --hold option to civet_run. If passed, the holds on pipeline jobs will
+   not be released by civet. The jobs will stay held until the user releases
+   them.
+ - Add civet_release script which will release all user holds on the jobs in a
+   Civet pipeline (specified by pipeline log directory) 
+ - Add --quiet (-q) option to civet_status. This option only produces a single
+   line of output if the status of the pipeline is FAILED, otherwise
+   civet_cancel will be silent
+ - Add binary attribute for Tool option. The binary attribute is combined with
+   the value attribute and indicates that the value can be true or false. If
+   the value is true, the command_text will be used to substitute for the option
+   in the command line.  If the value is false then an empty string will be
+   substituted for the option in the command line.
+ - Add --force-conditional (-f) option to civet_run to force any tool to run
+   that is conditional based on its exit_if_exists or exit_if_not_exists 
+   attribute, for force any command to run that is conditional based on its
+   if_exists or if_not_exists attribute
 
 Version 1.4.0
 -------------
@@ -44,17 +46,16 @@ Bug fixes
 Features
  - Add "exit_if_exists" and "exit_test_logic" attributes to tools
  - Add "if_exists", "if_not_exists" attributes to commands
- - Only add python to the list of modules if it is required to run 
-   the validate script, and the tool does not already specify a 
-   python modulefile
+ - Only add python to the list of modules if it is required to run the validate
+   script, and the tool does not already specify a python modulefile
  - Civet version now recorded in generated scripts
 
 
 Version 1.3.1
 -------------
 Bug fixes
- - Create submitted_scripts directory with access only by the
-   user running the pipeline (mode 600).
+ - Create submitted_scripts directory with access only by the user running the
+    pipeline (mode 600).
 
 Features
  - Added a new bin subdirectory: bin/maintenance_programs.
@@ -63,9 +64,8 @@ Features
    - Max
    - Average
    - Min
-   times for each cluster job in a pipeline.  A single parameter is
-   a directory which is walked to find all the log directories contained
-   therein.
+   times for each cluster job in a pipeline.  A single parameter is a directory
+   which is walked to find all the log directories contained therein.
 
 
 Version 1.3.0
@@ -107,13 +107,12 @@ Features
    Previously the default output directory was implicitly specified as the
    first directory tag in the XML that wasn't marked as input="True". This
    promised to be error prone and complicate future maintenance.
- - Add a new file to the logs directory named command_line.txt, which
-   contains the current working directory when the civet pipeline was
-   invoked, and the entire invoking pipeline command line.
- - The version string management was proving to be error prone when
-   cutting new versions.  Updated the version reporting to leverage
-   git capabilities.  Version is now obtained from git, rather than
-   being hardcoded.
+ - Add a new file to the logs directory named command_line.txt, which contains
+   the current working directory when the civet pipeline was invoked, and the
+   entire invoking pipeline command line.
+ - The version string management was proving to be error prone when cutting new
+   versions.  Updated the version reporting to leverage git capabilities.  
+   Version is now obtained from git, rather than being hardcoded.
 
 Version 1.1.0
 -------------
