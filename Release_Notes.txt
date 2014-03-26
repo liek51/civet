@@ -33,9 +33,9 @@ Features
    in the command line.  If the value is false then an empty string will be
    substituted for the option in the command line.
  - Add --force-conditional (-f) option to civet_run to force any tool to run
-   that is conditional based on its exit_if_exists or exit_if_not_exists 
-   attribute, for force any command to run that is conditional based on its
-   if_exists or if_not_exists attribute
+   that is conditional based on its exit_if_exists attribute, for force any 
+   command to run that is conditional based on its if_exists or if_not_exists
+   attribute
 
 Version 1.4.0
 -------------
