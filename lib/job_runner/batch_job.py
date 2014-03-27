@@ -21,7 +21,14 @@ class BatchJob(object):
     files_to_check : files to validate before running command
     epilogue : optional post-job checks
     version_cmds : list of command lines to report version of the executables being used
-    mem: batch job mem attribute (in GB)
+    error_strings: A list of strings Civet will search for in the job's stderr.
+                   If the string is found, the job is considered to have failed.
+    mail_option  : parameter to pass to resource manager's mail options for the job
+    emai         :  email address to send resource manager notification emails
+    files_to_test: list of file paths to check for before running command. if 
+                   the file test returns true, the job will exit with success 
+    file_test_logic : logic used to join file tests geneerated.  Can be "AND" or "OR"
+    mem     : batch job mem attribute (in GB)
     """
     
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
