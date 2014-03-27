@@ -132,4 +132,4 @@
 15131	Command syntax invalid
 15132	A node is down. Check the MOM and host
 15133	Could not connect to batch server
-15134	Server busy. Currently noavailable threads
+15134	Server busy. Currently no available threads
