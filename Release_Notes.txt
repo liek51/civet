@@ -26,7 +26,7 @@ Features
    Civet pipeline (specified by pipeline log directory) 
  - Add --quiet (-q) option to civet_status. This option only produces a single
    line of output if the status of the pipeline is FAILED, otherwise
-   civet_cancel will be silent
+   civet_status will be silent
  - Add binary attribute for Tool option. The binary attribute is combined with
    the value attribute and indicates that the value can be true or false. If
    the value is true, the command_text will be used to substitute for the option
