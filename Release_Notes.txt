@@ -4,6 +4,12 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.4.2
+-------------
+Bug fixes
+ - Fix crash in civet_status
+ - Fix typo in civet_status output
+
 Version 1.4.1
 -------------
 Bug fixes:
