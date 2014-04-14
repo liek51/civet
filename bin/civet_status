@@ -169,7 +169,7 @@ def main():
                                 #a job_name-status.txt the exit status should be non-zero
                                 #maybe we should print a warning here about the
                                 #unexpected state
-                                complete_jobs_sucess += 1
+                                complete_jobs_success += 1
                                 if verbose:
                                     print "\tFinished=Success"
                             else:
@@ -205,7 +205,7 @@ def main():
         elif canceled_jobs or unknown_state:
             summary_status = "CANCELED"
         elif complete_jobs_success == total_jobs:
-            summary_status = "completed sucessfully"
+            summary_status = "completed successfully"
         else:
             summary_status = "running"
          

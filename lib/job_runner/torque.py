@@ -298,7 +298,7 @@ class TorqueJobRunner(object):
             echo "Post job sanity check failed. Aborting pipeline!" >&2
             abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
         else
-            # no errors (prologue, command, and epilogue returned 0).  Write sucess status to file.
+            # no errors (prologue, command, and epilogue returned 0).  Write success status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$ELAPSED_TIME_FORMATTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "requested_walltime=$WALLTIME_REQUESTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
@@ -444,7 +444,7 @@ class TorqueJobRunner(object):
             id = pbs.pbs_submit(connection, pbs_attrs, filename, 
                                 self.queue, None)
        
-            #check to see if the job was submitted sucessfully. 
+            #check to see if the job was submitted successfully. 
             if not id:
                 e, e_msg = pbs.error()
                 pbs.pbs_disconnect(connection)
