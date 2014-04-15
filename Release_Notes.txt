@@ -9,6 +9,7 @@ Version 1.4.2
 Bug fixes
  - Fix crash in civet_status
  - Fix typo in civet_status output
+ - Move NFS sync to end of job
 
 Version 1.4.1
 -------------

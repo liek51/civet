@@ -224,8 +224,6 @@ class TorqueJobRunner(object):
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         
-        # sleep to overcome any issues with NFS file attribute cacheing
-        sleep 60
         
         #first unload any loaded modulefiles, these may be loaded automatically
         #in a user's startup scripts, but they could conflict with modulefiles
@@ -302,6 +300,10 @@ class TorqueJobRunner(object):
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "walltime=$$ELAPSED_TIME_FORMATTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             echo "requested_walltime=$WALLTIME_REQUESTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+            
+            # sleep to overcome any lag with NFS file attribute cacheing
+            # This ensures that downstream jobs will see all output files written by this job
+            sleep 60
     
         fi
     
