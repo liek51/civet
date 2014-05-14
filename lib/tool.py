@@ -309,9 +309,12 @@ class Tool():
         name = '{0}_{1}'.format(name_prefix, self.name)
         multi_command_list = []
         for c in self.commands:
-            multi_command_list.append('date')
+            # We're calling date too many times.
+            # If we decide we need to time each command in the future, just
+            # uncomment these two date lines.
+            # multi_command_list.append('date')
             multi_command_list.append(c.real_command)
-        multi_command_list.append('date')
+        # multi_command_list.append('date')
 
         # Tack on a final command to delete our temp files.
         if self.tempfile_ids:
