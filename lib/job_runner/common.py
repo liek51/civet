@@ -9,6 +9,7 @@ NO_SUB_FLAG = "NO_SUBMIT"
 
 CIVET_HOME = os.path.normpath(os.path.join(os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0])), "../../"))
 
+
 def get_status_from_file(logdir, job_name):
     return dict(line.strip().split('=') for line in open(os.path.join(logdir, job_name + "-status.txt")))
     

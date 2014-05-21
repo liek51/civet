@@ -178,8 +178,8 @@ class Pipeline(object):
         invocation = 0
         for step in self._steps:
             invocation += 1
-            name = '{0}_S{1}'.format(self.name, invocation)
-            job_id = step.submit(name)
+            name_prefix = '{0}_S{1}'.format(self.name, invocation)
+            job_id = step.submit(name_prefix, None)
             for j in job_id:
                 self.all_batch_jobs.append(j)
 

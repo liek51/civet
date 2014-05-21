@@ -4,6 +4,7 @@ import re
 
 _DEFAULT_WALLTIME = "01:00:00"
 
+
 class BatchJob(object):
     """
     a container for a batch job
@@ -30,12 +31,14 @@ class BatchJob(object):
     file_test_logic : logic used to join file tests geneerated.  Can be "AND" or "OR"
     mem     : batch job mem attribute (in GB)
     """
-    
-    def __init__(self, cmd, workdir=None, nodes=1, ppn=1, 
-                 walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[], 
-                 name=None, stdout_path=None, stderr_path="/dev/null", files_to_check=None, 
-                 epilogue=None, version_cmds=None, error_strings=None, 
-                 mail_option="n", email=None, files_to_test=[], file_test_logic="AND", mem=None):
+
+    def __init__(self, cmd, workdir=None, nodes=1, ppn=1,
+                 walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[],
+                 name=None, stdout_path=None, stderr_path="/dev/null",
+                 files_to_check=None,
+                 epilogue=None, version_cmds=None, error_strings=None,
+                 mail_option="n", email=None, files_to_test=[],
+                 file_test_logic="AND", mem=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -55,21 +58,20 @@ class BatchJob(object):
         self.files_to_test = files_to_test
         self.file_test_logic = file_test_logic
         self.mem = mem
-        
-    
-    # setter for workdir, sets to the current working directory if a directory is 
-    # not passed   
+
+    # setter for workdir, sets to the current working directory if a directory
+    # is not passed
     def set_workdir(self, dir):
         if dir:
             self._workdir = os.path.abspath(dir)
         else:
             self._workdir = os.getcwd()
-    
+
     def get_workdir(self):
         return self._workdir
-    
+
     workdir = property(get_workdir, set_workdir)
-    
+
     # setter for the job name, throw an exception if the name passed has invalid
     # characters
     def set_name(self, name):
@@ -79,9 +81,10 @@ class BatchJob(object):
                 chars.append(c)
                 if c not in string.digits + string.letters + "_-.":
                     raise ValueError("Invalid job name: '{0}'. "
-                                     "Illegal character {1} {2}".format(name, c, chars))
+                                     "Illegal character {1} {2}".format(name, c,
+                                                                        chars))
         self._name = name
-    
+
     def get_name(self):
         return self._name
 
@@ -96,27 +99,30 @@ class BatchJob(object):
         if val and re.match(r'[^abe]', val) and val != 'n':
             raise ValueError("Invalid mail_option. Must be n|{abe}|None")
         self._mail_option = val
-        
+
     @property
     def file_test_logic(self):
         return self._file_test_logic
-        
+
     @file_test_logic.setter
     def file_test_logic(self, val):
         if not val or val.upper() not in ["AND", "OR"]:
-            raise ValueError('Invalid exit_test_bool option ({0}). Must be "AND" or "OR"'.format(val))
+            raise ValueError(
+                'Invalid exit_test_bool option ({0}). Must be "AND" or "OR"'.format(
+                    val))
         self._file_test_logic = val.upper()
-        
+
     @property
     def mem(self):
         return self._mem
-        
+
     @mem.setter
     def mem(self, m):
         if m is not None:
             if not m.isdigit():
-                raise ValueError('Invalid mem request.  Must be a positive integer.')
-                
+                raise ValueError(
+                    'Invalid mem request.  Must be a positive integer.')
+
             # Civet requires tools request memory in gigabytes.  We add the 
             # correct Torque size suffix
             self._mem = m + 'gb'

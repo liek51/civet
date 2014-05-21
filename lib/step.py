@@ -1,8 +1,10 @@
 from pipeline_tool import *
 
+
 class Step():
     validTags = [
-        'tool' ]
+        'tool']
+
     def __init__(self, e, files, skip_validation=False):
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
@@ -14,17 +16,21 @@ class Step():
             assert t in Step.validTags, 'Illegal tag in step: ' + t
             self.tools.append(PipelineTool(child, files, skip_validation))
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, foreach_iteration=None):
         invocation = 0
         job_ids = []
         for tool in self.tools:
             invocation += 1
-            name = '{0}_{1}_T{2}'.format(name_prefix, self.name,
-                                             invocation)
+            if foreach_iteration is not None:
+                name = '{0}_{1}_FE{2}_T{3}'.format(name_prefix, self.name,
+                                                   foreach_iteration,
+                                                   invocation)
+            else:
+                name = '{0}_{1}_T{2}'.format(name_prefix, self.name, invocation)
             job_id = tool.submit(name)
             job_ids.append(job_id)
         return job_ids
-            
+
     def collect_files_to_validate(self):
         fns = []
         for tool in self.tools:
