@@ -33,6 +33,7 @@ class PipelineFile():
         'based_on',
         'pattern',
         'replace',
+        'foreach_id'
         ]
 
     # Track the master output directory.
@@ -44,7 +45,8 @@ class PipelineFile():
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, based_on, pattern, replace, append,
                  datestamp, datestamp_append, in_dir,
-                 is_parameter, is_list, create=True, default_output=False):
+                 is_parameter, is_list, create=True, default_output=False,
+                 foreach_dep=None):
         self.id = id
         self.path = path
         self._is_file = is_file
@@ -65,6 +67,7 @@ class PipelineFile():
         self._is_fixed_up = False
         self.creator_job = None
         self.consumer_jobs = []
+        self.foreach_dep = foreach_dep
 
         if self.id in files:
             # We've already seen this file ID.
@@ -120,6 +123,8 @@ class PipelineFile():
         datestamp_append = False
         is_parameter = False
         default_output = False
+        foreach_dep = None
+
 
         # What kind of file?
         is_temp = False
@@ -161,6 +166,12 @@ class PipelineFile():
 
         if is_list and 'pattern' in att:
             pattern = att['pattern']
+            if 'foreach_id' in att:
+                foreach_dep = att['foreach_id']
+
+        if 'foreach_id' in att:
+            assert is_list, ('foreach_id attribute can only be used with '
+                             'a filelist tag.')
 
         if 'based_on' in att:
             assert (not path), (
@@ -195,6 +206,7 @@ class PipelineFile():
                     sys.exit(1)
                 append = att['append']
 
+
         if is_list and not (pattern and in_dir):
             print >> sys.stderr, 'filelist requires in_dir and pattern.'
             print >> sys.stderr, att
@@ -207,7 +219,7 @@ class PipelineFile():
             id, path, is_file, is_temp, is_input, is_dir, files, 
             path_is_path, based_on, pattern, replace, append, 
             datestamp, datestamp_append, in_dir,
-            is_parameter, is_list, create, default_output)
+            is_parameter, is_list, create, default_output, foreach_dep)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -341,7 +353,7 @@ class PipelineFile():
         if not bo in files:
             print >> sys.stderr, 'ERROR: based on unknown file:', bo
             sys.exit(1)
-        bof =files[bo]
+        bof = files[bo]
         bof.fix_up_file(files, circularity)
 
         # strip out any path before using the re, in case the replacement
@@ -360,6 +372,8 @@ class PipelineFile():
             self.path = re.sub(self.pattern, self.replace, original_path)
 
     def apply_in_dir_and_create_temp(self, files, circularity):
+        if self.is_list:
+            return
         ind = self.in_dir
         if (not ind) and (not self.is_temp):
             return
@@ -384,7 +398,7 @@ class PipelineFile():
             t.close()
             self.path = name
             self.is_path = True
-        elif ind and not self.is_list:
+        elif ind:
             # Apply the containing directory to the path...
             fn = os.path.split(self.path)[1]
             self.path = os.path.join(dir, fn)

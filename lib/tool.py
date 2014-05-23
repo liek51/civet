@@ -336,6 +336,9 @@ class Tool():
                 j = f.creator_job
                 if j not in depends_on:
                     depends_on.append(j)
+            if f.is_list:
+                if f.foreach_dep:
+                    depends_on.append(PL.foreach_barriers[f.foreach_dep])
 
         # Do the actual batch job sumbission
         if self.thread_option_max:
