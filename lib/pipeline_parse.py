@@ -41,7 +41,8 @@ class Pipeline(object):
         'file',
         'dir',
         'foreach',
-        'step' ]
+        'step',
+        'filelist' ]
 
     def __init__(self):
         pass
@@ -94,10 +95,12 @@ class Pipeline(object):
         self.keep_temp = keep_temp
         self.release_jobs = release_jobs
         self.force_conditional_steps = force_conditional_steps
+        self.skip_validation = skip_validation
         
         # And track the major components of the pipeline
         self._steps = []
         self._files = {}
+        self.foreach_barriers = {}
 
         # Walk the child tags.
         for child in pipe:
@@ -119,9 +122,9 @@ class Pipeline(object):
         for child in pending:
             t = child.tag
             if t == 'step':
-                self._steps.append(Step(child, self._files, skip_validation))
+                self._steps.append(Step(child, self._files))
             elif t == 'foreach':
-                self._steps.append(ForEach(child, self._files, skip_validation))
+                self._steps.append(ForEach(child, self._files))
 
     @property
     def search_path(self):
@@ -178,8 +181,8 @@ class Pipeline(object):
         invocation = 0
         for step in self._steps:
             invocation += 1
-            name_prefix = '{0}_S{1}'.format(self.name, invocation)
-            job_id = step.submit(name_prefix, None)
+            name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
+            job_id = step.submit(name_prefix)
             for j in job_id:
                 self.all_batch_jobs.append(j)
 

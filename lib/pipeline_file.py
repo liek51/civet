@@ -8,14 +8,14 @@ import utilities
 
 class PipelineFile():
     """
-    Initialize ourselves from an XML tag that represents some king
+    Initialize ourselves from an XML tag that represents some kind
     of file.  Arguments: XML element representing the file, and a
     hash of processed files
     """
     validFileTags = [
         'file',
         'filelist',
-        'dir',
+        'dir'
         ]
 
     valid_file_attributes = [
@@ -64,7 +64,6 @@ class PipelineFile():
         self.create = create
         self._is_fixed_up = False
         self.creator_job = None
-        self.consumer_jobs = []
         self.consumer_jobs = []
 
         if self.id in files:
@@ -119,7 +118,6 @@ class PipelineFile():
         append = None
         datestamp = None
         datestamp_append = False
-        is_list = False
         is_parameter = False
         default_output = False
 
@@ -160,6 +158,9 @@ class PipelineFile():
                               'and parameter attributes.')
             path = int(att['parameter'])
             is_parameter = True
+
+        if is_list and 'pattern' in att:
+            pattern = att['pattern']
 
         if 'based_on' in att:
             assert (not path), (
@@ -293,13 +294,16 @@ class PipelineFile():
         # foul us up. First check if the file doesn't have a path at all
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
-        path = self.path
-        if (os.path.split(path)[0] == '' and
-            (not self.is_input) and
-            self != PipelineFile.output_dir and
-            (PipelineFile.output_dir is None or PipelineFile.output_dir._is_fixed_up)):
-            path = os.path.join(PipelineFile.get_output_dir(), path)
-        self.path = os.path.abspath(path)
+        if self.is_list:
+            self.in_dir = os.path.abspath(self.in_dir)
+        else:
+            path = self.path
+            if (os.path.split(path)[0] == '' and
+                (not self.is_input) and
+                self != PipelineFile.output_dir and
+                (PipelineFile.output_dir is None or PipelineFile.output_dir._is_fixed_up)):
+                path = os.path.join(PipelineFile.get_output_dir(), path)
+            self.path = os.path.abspath(path)
 
         self._is_fixed_up = True
 
@@ -380,7 +384,7 @@ class PipelineFile():
             t.close()
             self.path = name
             self.is_path = True
-        elif ind:
+        elif ind and not self.is_list:
             # Apply the containing directory to the path...
             fn = os.path.split(self.path)[1]
             self.path = os.path.join(dir, fn)

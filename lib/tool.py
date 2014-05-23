@@ -46,7 +46,7 @@ class Tool():
         'exit_test_logic'
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files, skip_validation=False):
+    def __init__(self, xml_file, ins, outs, pipeline_files):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -56,7 +56,7 @@ class Tool():
         self.tempfile_ids = []
         self.ins = ins
         self.outs = outs
-        self.skip_validation=skip_validation
+        self.skip_validation = PL.skip_validation
         self.option_overrides = {}
         self.thread_option_max = 0
         self.modules = []
@@ -589,7 +589,7 @@ class Command():
                 f = self.tool_files[tok]
                 if f.is_list:
                     # Emit the code to invoke a file filter.
-                    return "$(process_filelist.py f.in_dir.path, f.pattern)"
+                    return "$(process_filelist.py {0} '{1}')".format(f.in_dir, f.pattern)
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.

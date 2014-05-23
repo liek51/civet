@@ -5,28 +5,24 @@ class Step():
     validTags = [
         'tool']
 
-    def __init__(self, e, files, skip_validation=False):
+    def __init__(self, e, files):
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
         self.name = e.attrib['name']
         self.tools = []
+        self.code = "S"
         for child in e:
             t = child.tag
             # print 'Step child:', t, child.attrib
             assert t in Step.validTags, 'Illegal tag in step: ' + t
-            self.tools.append(PipelineTool(child, files, skip_validation))
+            self.tools.append(PipelineTool(child, files))
 
-    def submit(self, name_prefix, foreach_iteration=None):
+    def submit(self, name_prefix):
         invocation = 0
         job_ids = []
         for tool in self.tools:
             invocation += 1
-            if foreach_iteration is not None:
-                name = '{0}_{1}_FE{2}_T{3}'.format(name_prefix, self.name,
-                                                   foreach_iteration,
-                                                   invocation)
-            else:
-                name = '{0}_{1}_T{2}'.format(name_prefix, self.name, invocation)
+            name = '{0}_{1}_T{2}'.format(name_prefix, self.name, invocation)
             job_id = tool.submit(name)
             job_ids.append(job_id)
         return job_ids

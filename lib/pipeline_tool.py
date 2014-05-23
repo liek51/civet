@@ -1,7 +1,7 @@
 from tool import *
 
 class PipelineTool():
-    def __init__(self, e, files, skip_validation=False):
+    def __init__(self, e, files):
         att = e.attrib
         input = []
         output = []
@@ -18,7 +18,7 @@ class PipelineTool():
             for n in range(len(output)):
                 output[n] = output[n].strip()
 
-        self.tool = Tool(self.description, input, output, files, skip_validation)
+        self.tool = Tool(self.description, input, output, files)
         
     def submit(self, name_prefix):
         return self.tool.submit(name_prefix)
