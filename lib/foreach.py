@@ -12,6 +12,13 @@ class ForEach():
         'step',
         'id' ]
 
+    # to prevent a user from flooding the system we impose a limit on the
+    # maximum number of jobs that can be created by one foreach instance
+    # perhaps someday we will have a more sophisticated Civet run time and
+    # possibly have the ability to throttle job submission or bundle jobs
+    # together
+    MAX_JOBS = 256
+
     def __init__(self, e, pipeline_files):
         self.file = None
         self.relatedFiles = {}
@@ -47,51 +54,68 @@ class ForEach():
             # register file and related in pipeline files list
             # submit step(s)
             # clean up files from pipeline files list
+        matched_files = []
         job_ids = []
         iteration = 0
         all_files = os.listdir(self.pipelineFiles[self.dir].path)
         for fn in all_files:
             if self.file.pattern.match(fn):
-                iteration += 1
-                cleanups = []
-                PipelineFile(self.file.id, fn, True, False, True, False,
-                             self.pipelineFiles, True, None, None, None, None,
-                             None, None, self.dir, False, False)
-                cleanups.append(self.file.id)
+                matched_files.append(fn)
 
-                for relid in self.relatedFiles:
-                    rel = self.relatedFiles[relid]
-                    rfn = rel.pattern.sub(rel.replace, fn)
-                    if rel.is_input:
-                        #we assume related input files are in the same dir
-                        #as the foreach file it is related to
-                        directory = self.dir
-                    elif rel.indir:
-                        directory = rel.indir
-                    else:
-                        #related file is an output file and indir not specified
-                        #write it to the default output directory
-                        directory = None
-                    PipelineFile(rel.id, rfn, True, False, rel.is_input, False,
-                                 self.pipelineFiles, True, None, None, None,
-                                 None, None, None, directory, False, False)
-                    cleanups.append(rel.id)
-                PipelineFile.fix_up_files(self.pipelineFiles)
+        # figure out if this foreach loop will exceed the limit
+        total_jobs = 0
+        for s in self.steps:
+            for child in s:
+                if child.tag == 'tool':
+                    total_jobs += 1
+        total_jobs *= len(matched_files)
 
-                step_iteration = 0
-                for s in self.steps:
-                    step_iteration += 1
-                    step = Step(s, self.pipelineFiles)
-                    prefix = "{0}-{1}_S{2}".format(name_prefix, iteration, step_iteration)
-                    for jid in step.submit(prefix):
-                        job_ids.append(jid)
-                for jid in cleanups:
-                    del self.pipelineFiles[jid]
+        assert total_jobs <= ForEach.MAX_JOBS, 'foreach {0} jobs exceed limit (max = {1})'.format(total_jobs, ForEach.MAX_JOBS)
+
+        for fn in matched_files:
+            iteration += 1
+            cleanups = []
+            PipelineFile(self.file.id, fn, True, False, True, False,
+                         self.pipelineFiles, True, None, None, None, None,
+                         None, None, self.dir, False, False)
+            cleanups.append(self.file.id)
+
+            for relid in self.relatedFiles:
+                rel = self.relatedFiles[relid]
+                rfn = rel.pattern.sub(rel.replace, fn)
+                if rel.is_input:
+                    #we assume related input files are in the same dir
+                    #as the foreach file it is related to
+                    directory = self.dir
+                elif rel.indir:
+                    directory = rel.indir
+                else:
+                    #related file is an output file and indir not specified
+                    #write it to the default output directory
+                    directory = None
+                PipelineFile(rel.id, rfn, True, False, rel.is_input, False,
+                             self.pipelineFiles, True, None, None, None,
+                             None, None, None, directory, False, False)
+                cleanups.append(rel.id)
+            PipelineFile.fix_up_files(self.pipelineFiles)
+
+            step_iteration = 0
+            for s in self.steps:
+                step_iteration += 1
+                step = Step(s, self.pipelineFiles)
+                prefix = "{0}-{1}_S{2}".format(name_prefix, iteration, step_iteration)
+                for jid in step.submit(prefix):
+                    job_ids.append(jid)
+
+            for jid in cleanups:
+                del self.pipelineFiles[jid]
+
         #enqueue "barrier" job here
         barrier_job = BatchJob('echo "placeholder job used for synchronizing foreach jobs"',
                                workdir=PipelineFile.get_output_dir(),
                                depends_on=job_ids,
-                               name="{0}_barrier".format(name_prefix))
+                               name="{0}_barrier".format(name_prefix),
+                               walltime="00:02:00")
         try:
             job_id = PL.job_runner.queue_job(barrier_job)
         except Exception as e:
