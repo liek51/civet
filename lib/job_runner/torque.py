@@ -83,8 +83,9 @@ class JobManager(object):
     E_STATE = 15018
 
     def __init__(self, pbs_server=None):
-       self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
-       self.connection = _connect_to_server(pbs_server)
+        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
+        self.pbs_server = pbs_server
+
         
         
     def query_job(self, id):
@@ -112,14 +113,20 @@ class JobManager(object):
            
            returns pbs_deljob return value (0 on success)
         """
-        return pbs.pbs_deljob(self.connection, id, '')
+        connection = _connect_to_server(self.pbs_server)
+        rval =  pbs.pbs_deljob(connection, id, '')
+        pbs.pbs_disconnect(connection)
+        return rval
       
         
     def release_job(self, id):
         """
         Release a user hold on a job
         """
-        return pbs.pbs_rlsjob(self.connection, id, 'u', '')
+        connection = _connect_to_server(self.pbs_server)
+        rval = pbs.pbs_rlsjob(self.connection, id, 'u', '')
+        pbs.pbs_disconnect(connection)
+        return rval
 
     
 
