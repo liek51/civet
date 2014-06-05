@@ -10,7 +10,6 @@ import argparse
 import datetime
 import sys
 import os
-import pwd
 import inspect
 
 
@@ -62,7 +61,8 @@ def main():
     for job in batch_jobs:
         job_name_lookup[job[0]] = job[1]
         if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
-            # for now if the job does not have a status file we assume it is still running or held
+            # for now if the job does not have a status file we assume it is
+            # still running or held
             unfinished_jobs.append(job[0])
         else:
             complete_jobs.append(job[0])
@@ -112,7 +112,7 @@ def main():
     # delete jobs, starting with held jobs first
     for id in held_jobs + queued_jobs + running_jobs:
         rval = jm.delete_job(id)
-        if rval and (rval != batch_system.JobManager.E_UNKNOWN or ravl != batch_system.JobManager.E_STATE):
+        if rval and (rval != batch_system.JobManager.E_UNKNOWN or rval != batch_system.JobManager.E_STATE):
             # rval is not zero and it is no an unknown job id or invalid state 
             # error (job may have completed between when we last checked and 
             # now, those return values may be expected)
