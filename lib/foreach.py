@@ -3,6 +3,8 @@
 # Pipeline components
 from step import *
 from pipeline_file import *
+from job_runner.torque import *
+
 
 
 class ForEach():
@@ -70,7 +72,10 @@ class ForEach():
                     total_jobs += 1
         total_jobs *= len(matched_files)
 
-        assert total_jobs <= ForEach.MAX_JOBS, 'foreach {0} jobs exceed limit (max = {1})'.format(total_jobs, ForEach.MAX_JOBS)
+        if total_jobs > ForEach.MAX_JOBS:
+            jm = JobManager()
+            jm.delete_all_jobs(PL.all_batch_jobs)
+            raise Exception, "error submitting foreach: {0} jobs exceed limit (max = {1})\n".format(total_jobs, ForEach.MAX_JOBS)
 
         for fn in matched_files:
             iteration += 1

@@ -95,7 +95,7 @@ class JobManager(object):
             query_job will return None if the job does not exist on the server, 
             otherwise it will return a JobStatus object.
         """ 
-        job_status =  self.pbsq.getjob(id)
+        job_status = self.pbsq.getjob(id)
         # check to see if the job existed.  this is kind of lame, but we can't
         # just do "if job_status:" because PBSQuery.getjob returns an empty 
         # dictionary if the job is not found, but it returns some other object
@@ -117,7 +117,22 @@ class JobManager(object):
         rval =  pbs.pbs_deljob(connection, id, '')
         pbs.pbs_disconnect(connection)
         return rval
-      
+
+    def delete_all_jobs(self, ids):
+        """
+
+        delete all jobs in a list of jobs
+
+        :param ids: list of all jobs
+        :return: zero on success, otherwise return value of failed pbs_deljob
+        """
+        for id in ids:
+            connection = _connect_to_server(self.pbs_server)
+            rval = pbs.pbs_deljob(connection, id, '')
+            pbs.pbs_disconnect(connection)
+            if rval and (rval != self.E_UNKNOWN or rval != self.E_STATE):
+                return rval
+        return 0
         
     def release_job(self, id):
         """
