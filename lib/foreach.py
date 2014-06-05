@@ -80,12 +80,12 @@ class ForEach():
                          None, None, self.dir, False, False)
             cleanups.append(self.file.id)
 
-            for relid in self.relatedFiles:
-                rel = self.relatedFiles[relid]
+            for id in self.relatedFiles:
+                rel = self.relatedFiles[id]
                 rfn = rel.pattern.sub(rel.replace, fn)
-                if rel.is_input:
-                    #we assume related input files are in the same dir
-                    #as the foreach file it is related to
+                if rel.is_input and not rel.indir:
+                    #if no dir we assume related input files are in the same
+                    #directory as the foreach file it is related to
                     directory = self.dir
                 elif rel.indir:
                     directory = rel.indir
