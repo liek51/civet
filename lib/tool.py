@@ -531,7 +531,8 @@ class Command():
                 self.if_not_exists_files.append(self.tool_files[f].path)
                 
         if 'if_exists_logic' in atts:
-            assert atts['if_exists_logic'].upper() in ['AND', 'OR']
+            assert atts['if_exists_logic'].upper() in ['AND', 'OR'], \
+                "value of 'if_exists_logic' must be 'AND' or 'OR'"
             self.if_exists_logic = atts['if_exists_logic'].upper()
         else:
             self.if_exists_logic = 'AND'
@@ -630,9 +631,11 @@ class Command():
             for f in self.if_not_exists_files:
                 tests.append(' ! -e "{0}" '.format(f))
         if tests:
+            # the value of the if_exists_logic was validated above to
+            # be either AND or OR (case insensitive, converted to upper)
             if self.if_exists_logic == 'AND':
                 file_test_operator = ' && '
-            elif self.if_exists_logic == ' OR ':
+            else:
                 file_test_operator = ' || '
 
         
