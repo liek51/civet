@@ -323,7 +323,11 @@ class Tool():
                 self.tempfile_ids[n] = (
                     self.tool_files[self.tempfile_ids[n]].path)
 
-            rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
+            # Use rm -f because if a command is executed conditionally
+            # due to if_exists and if_not_exists, a temp file may not
+            # exist.  Without -f the rm command would fail, causing
+            # the entire pipeline to fail.
+            rm_cmd = 'rm -f ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
 
         multi_command = '  && \\\n'.join(multi_command_list)
@@ -531,9 +535,10 @@ class Command():
                 self.if_not_exists_files.append(self.tool_files[f].path)
                 
         if 'if_exists_logic' in atts:
-            assert atts['if_exists_logic'].upper() in ['AND', 'OR'], \
+            logic_type = atts['if_exists_logic'].strip().upper()
+            assert logic_type in ['AND', 'OR'], \
                 "value of 'if_exists_logic' must be 'AND' or 'OR'"
-            self.if_exists_logic = atts['if_exists_logic'].upper()
+            self.if_exists_logic = logic_type
         else:
             self.if_exists_logic = 'AND'
 

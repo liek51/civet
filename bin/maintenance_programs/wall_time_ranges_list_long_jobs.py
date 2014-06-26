@@ -36,6 +36,10 @@ class JobTimes(object):
             self.max = secs
         self.total += secs
         self.count += 1
+        
+        # Was it longer than a day?
+        day_secs = 24 * 60 * 60
+        return (secs > day_secs, secs)
 
 
     def __str__(self):
@@ -82,8 +86,7 @@ class JobTimes(object):
             return '{0:02d}:{1:02d}:{2:02d}'.format(hours, minutes,
                                                  seconds)
 
-
-def process_file(dir, fn, jobs):
+def process_file(dir, fn, jobs, longjobs):
     path = os.path.join(dir, fn)
     for line in open(path):
         if 'requested_walltime' in line:
@@ -94,23 +97,32 @@ def process_file(dir, fn, jobs):
     job = re.sub('(.*)-status.txt', r'\1', fn)
     if job not in jobs:
         jobs[job] = JobTimes(job)
-    jobs[job].register_time(used, req)
+    lj = jobs[job].register_time(used, req)
+    if lj[0]:
+        longjobs.append('{0}\t{1}\t{2}'.
+                        format(dir, job, JobTimes.from_seconds(lj[1])))
 
-def get_files(start_dir, jobs):
+
+def get_files(start_dir, jobs, longjobs):
     for (dirpath, dirnames, filenames) in os.walk(start_dir):
         if 'log' not in dirpath:
             continue
         for fn in filenames:
             if fn.endswith('-status.txt'):
-                process_file(dirpath, fn, jobs)
+                process_file(dirpath, fn, jobs, longjobs)
 
 def main():
     usage()
     jobs = {}
+    longjobs = []
     for dir in sys.argv[1:]:
-        get_files(dir, jobs)
+        get_files(dir, jobs, longjobs)
     print JobTimes.header()
     for job in sorted(jobs.iterkeys()):
         print jobs[job]
+    if longjobs:
+        print '\nLong running jobs (> 1 day)'
+        for lj in longjobs:
+            print lj
 
 main()
