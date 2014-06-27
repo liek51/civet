@@ -198,13 +198,21 @@ class Tool():
             elif t == 'option':
                 Option(child, self)
             elif t == 'command':
-                Command(child, self.commands, self.options, self.tool_files)
+                Command(child, self)
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
                 a = child.attrib
                 if 'id' in a:
-                    name = self.tool_files[a['id']].path
+                    try:
+                        name = self.tool_files[a['id']].path
+                    except KeyError:
+                        print >> sys.stderr, \
+                            'When parsing {0}: The file ID "{1}" ' \
+                            'appears to not be valid'.format(
+                                xml_file, a['id'] )
+                        sys.exit(1)
+                    # If not key error; let the exception escape.
                 else:
                     name = child.text
                 self.verify_files.append(name)
@@ -479,11 +487,14 @@ class Command():
         'if_not_exists',
         'if_exists_logic'
         ]
-    def __init__(self, e, commands, options, tool_files):
+    def __init__(self, e, tool):
         # Stash the options and tool_files dictionaries.  We'll need
         # them to fix up the command lines.
-        self.options = options
-        self.tool_files = tool_files
+        # tool is a reference to the tool object that will contain
+        # this command.
+        self.tool = tool
+        self.options = tool.options
+        self.tool_files = tool.tool_files
         self.version_command = None
         self.real_version_command = None
         self.if_exists_files = []
@@ -576,7 +587,7 @@ class Command():
         else:
             self.command_template = ''
 
-        commands.append(self)
+        tool.commands.append(self)
 
     def fixupOptionsFiles(self):
         # The token replacement function is an inner function, so that
@@ -602,7 +613,8 @@ class Command():
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
-            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", tok, 'in file', self.xml_file
+            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", \
+                tok, 'in file', tool.xml_file
             print >> sys.stderr, 'Tool files:', self.tool_files
             print >> sys.stderr, 'Options:', self.options, '\n\n'
             return 'UNKNOWN OPTION OR FILE ID: ' + tok 
