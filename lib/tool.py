@@ -198,13 +198,21 @@ class Tool():
             elif t == 'option':
                 Option(child, self)
             elif t == 'command':
-                Command(child, self.commands, self.options, self.tool_files)
+                Command(child, self)
             elif t == 'module':
                 self.modules.append(child.text)
             elif t == 'validate':
                 a = child.attrib
                 if 'id' in a:
-                    name = self.tool_files[a['id']].path
+                    try:
+                        name = self.tool_files[a['id']].path
+                    except KeyError:
+                        print >> sys.stderr, \
+                            'When parsing {0}: The file ID "{1}" ' \
+                            'appears to not be valid'.format(
+                                xml_file, a['id'] )
+                        sys.exit(1)
+                    # If not key error; let the exception escape.
                 else:
                     name = child.text
                 self.verify_files.append(name)
@@ -323,7 +331,11 @@ class Tool():
                 self.tempfile_ids[n] = (
                     self.tool_files[self.tempfile_ids[n]].path)
 
-            rm_cmd = 'rm ' + ' '.join(self.tempfile_ids)
+            # Use rm -f because if a command is executed conditionally
+            # due to if_exists and if_not_exists, a temp file may not
+            # exist.  Without -f the rm command would fail, causing
+            # the entire pipeline to fail.
+            rm_cmd = 'rm -f ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
 
         multi_command = '  && \\\n'.join(multi_command_list)
@@ -475,11 +487,14 @@ class Command():
         'if_not_exists',
         'if_exists_logic'
         ]
-    def __init__(self, e, commands, options, tool_files):
+    def __init__(self, e, tool):
         # Stash the options and tool_files dictionaries.  We'll need
         # them to fix up the command lines.
-        self.options = options
-        self.tool_files = tool_files
+        # tool is a reference to the tool object that will contain
+        # this command.
+        self.tool = tool
+        self.options = tool.options
+        self.tool_files = tool.tool_files
         self.version_command = None
         self.real_version_command = None
         self.if_exists_files = []
@@ -531,8 +546,10 @@ class Command():
                 self.if_not_exists_files.append(self.tool_files[f].path)
                 
         if 'if_exists_logic' in atts:
-            assert atts['if_exists_logic'].upper() in ['AND', 'OR']
-            self.if_exists_logic = atts['if_exists_logic'].upper()
+            logic_type = atts['if_exists_logic'].strip().upper()
+            assert logic_type in ['AND', 'OR'], \
+                "value of 'if_exists_logic' must be 'AND' or 'OR'"
+            self.if_exists_logic = logic_type
         else:
             self.if_exists_logic = 'AND'
 
@@ -570,7 +587,7 @@ class Command():
         else:
             self.command_template = ''
 
-        commands.append(self)
+        tool.commands.append(self)
 
     def fixupOptionsFiles(self):
         # The token replacement function is an inner function, so that
@@ -596,7 +613,8 @@ class Command():
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
-            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", tok, 'in file', self.xml_file
+            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", \
+                tok, 'in file', tool.xml_file
             print >> sys.stderr, 'Tool files:', self.tool_files
             print >> sys.stderr, 'Options:', self.options, '\n\n'
             return 'UNKNOWN OPTION OR FILE ID: ' + tok 
@@ -630,9 +648,11 @@ class Command():
             for f in self.if_not_exists_files:
                 tests.append(' ! -e "{0}" '.format(f))
         if tests:
+            # the value of the if_exists_logic was validated above to
+            # be either AND or OR (case insensitive, converted to upper)
             if self.if_exists_logic == 'AND':
                 file_test_operator = ' && '
-            elif self.if_exists_logic == ' OR ':
+            else:
                 file_test_operator = ' || '
 
         
