@@ -80,6 +80,8 @@ class ForEach():
         for fn in matched_files:
             iteration += 1
             cleanups = []
+            files_to_delete = []
+            iteration_ids = []
             PipelineFile(self.file.id, fn, True, False, True, False,
                          self.pipelineFiles, True, None, None, None, None,
                          None, None, self.dir, False, False)
@@ -102,6 +104,8 @@ class ForEach():
                              self.pipelineFiles, True, None, None, None,
                              None, None, None, directory, False, False)
                 cleanups.append(rel.id)
+                if rel.is_temp:
+                    files_to_delete.append(rel.id)
             PipelineFile.fix_up_files(self.pipelineFiles)
 
             step_iteration = 0
@@ -111,9 +115,30 @@ class ForEach():
                 prefix = "{0}-{1}_S{2}".format(name_prefix, iteration, step_iteration)
                 for jid in step.submit(prefix):
                     job_ids.append(jid)
+                    iteration_ids.append(jid)
+
+            #submit a job that deletes all of the temporary files
+            tmps = []
+            for id in files_to_delete:
+                tmps.append(self.pipelineFiles[rel.id].path)
+
+            if len(tmps):
+                cmd = 'rm -f ' + ' '.join(tmps)
+                cleanup_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                               depends_on=iteration_ids,
+                               name="{0}-{1}_temp_file_cleanup".format(name_prefix, iteration),
+                               walltime="00:30:00")
+                try:
+                    cleanup_job_id = PL.job_runner.queue_job(cleanup_job)
+                except Exception as e:
+                    sys.stderr.write(str(e) + '\n')
+                    sys.exit(PL.BATCH_ERROR)
+                PL.all_batch_jobs.append(cleanup_job_id)
 
             for jid in cleanups:
                 del self.pipelineFiles[jid]
+
+
 
         #enqueue "barrier" job here
         barrier_job = BatchJob('echo "placeholder job used for synchronizing foreach jobs"',
@@ -160,7 +185,9 @@ class ForEachRelated():
         'pattern',
         'replace']
     optionalAtts = [
-        'indir' ]
+        'in_dir',
+        'temp'
+        ]
 
     def __init__(self, e, related_files, pipeline_files):
         atts = e.attrib
@@ -175,9 +202,11 @@ class ForEachRelated():
         self.pattern = re.compile(atts['pattern'])
         self.replace = atts['replace']
 
-        if 'indir' in atts:
-            self.indir = atts['indir']
+        if 'in_dir' in atts:
+            self.indir = atts['in_dir']
         else:
             self.indir = None
-        assert not (self.is_input and self.indir), 'foreach related input file must be in same directory as foreach file: ' + self.id
+        self.is_temp = False
+        if 'temp' in atts:
+            self.is_temp = atts['temp'].upper() == 'TRUE'
         related_files[self.id] = self
