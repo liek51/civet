@@ -38,7 +38,7 @@ class BatchJob(object):
                  files_to_check=None,
                  epilogue=None, version_cmds=None, error_strings=None,
                  mail_option="n", email=None, files_to_test=[],
-                 file_test_logic="AND", mem=None):
+                 file_test_logic="AND", mem=None, date_time=None):
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -46,7 +46,7 @@ class BatchJob(object):
         self.depends_on = depends_on
         self.stdout_path = stdout_path
         self.stderr_path = stderr_path
-        self._mail_option = mail_option
+        self.mail_option = mail_option
         self.email = email
         self.workdir = workdir
         self.walltime = walltime
@@ -58,6 +58,7 @@ class BatchJob(object):
         self.files_to_test = files_to_test
         self.file_test_logic = file_test_logic
         self.mem = mem
+        self.date_time = date_time
 
     # setter for workdir, sets to the current working directory if a directory
     # is not passed
@@ -128,3 +129,4 @@ class BatchJob(object):
             self._mem = m + 'gb'
         else:
             self._mem = None
+

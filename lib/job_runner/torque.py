@@ -441,6 +441,9 @@ class TorqueJobRunner(object):
                 
             if batch_job.email:
                 job_attributes[pbs.ATTR_M] = batch_job.email
+
+            if batch_job.date_time:
+                job_attributes[pbs.ATTR_a] = batch_job.date_time.strftime("%Y%m%d%H")
        
             pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
         
