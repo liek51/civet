@@ -120,6 +120,7 @@ def main():
         canceled_jobs = 0
         running_jobs = 0
         held_jobs = 0
+        delayed_jobs = 0
         queued_jobs = 0
         unknown_state = 0
         total_jobs = len(batch_jobs)
@@ -190,6 +191,11 @@ def main():
                         queued_jobs += 1
                         if verbose:
                             print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                    elif status.state == 'W':
+                        delayed_jobs += 1
+                        if verbose:
+                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+
                         
                 else:
                     if verbose:
@@ -215,18 +221,20 @@ def main():
             print "{0}: {1}".format(log_dir, summary_status)
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
-            print "\tTotal Pipeline Jobs: {0}".format(total_jobs)
-            print "\t\tCompleted Jobs (success): {0}".format(complete_jobs_success)
-            print "\t\tCompleted Jobs (with error): {0}".format(complete_jobs_failure)
-            print "\t\tRunning Jobs: {0}".format(running_jobs)
-            print "\t\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs)
-            print "\t\tPending Jobs (waiting on dependency): {0}".format(held_jobs)
+            print("\tTotal Pipeline Jobs: {0}".format(total_jobs))
+            print("\t\tCompleted Jobs (success): {0}".format(complete_jobs_success))
+            print("\t\tCompleted Jobs (with error): {0}".format(complete_jobs_failure))
+            print("\t\tRunning Jobs: {0}".format(running_jobs))
+            print("\t\tPending Jobs (waiting for compute resources): {0}".format(queued_jobs))
+            print("\t\tPending Jobs (waiting on dependency): {0}".format(held_jobs))
+            if delayed_jobs:
+                print("\t\tPending Jobs (delayed start): {0}".format(delayed_jobs))
             if canceled_jobs:
-                print "\t\tCanceled Jobs: {0}".format(canceled_jobs)
+                print("\t\tCanceled Jobs: {0}".format(canceled_jobs))
             if unknown_state:
-                print "\t\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state)
+                print("\t\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state))
         if verbose:
-            print "\n\n"
+            print("\n\n")
 
 if __name__ == '__main__':
     main()

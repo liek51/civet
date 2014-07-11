@@ -8,11 +8,10 @@ provide functionality for queueing and querying jobs on a TORQUE cluster
 """
 import sys
 import textwrap
-import os
 import socket
-import string
-import errno
 import stat
+import time
+
 
 import pbs
 import PBSQuery
@@ -443,8 +442,14 @@ class TorqueJobRunner(object):
                 job_attributes[pbs.ATTR_M] = batch_job.email
 
             if batch_job.date_time:
-                job_attributes[pbs.ATTR_a] = batch_job.date_time.strftime("%Y%m%d%H")
-       
+                #strftime("%s") seems to work because it passes the format string
+                #directly to glibc's strftime. %s is undocumented in the
+                #datetime.strftime documentation
+                #job_attributes[pbs.ATTR_a] = batch_job.date_time.strftime("%s")
+
+                #do it a documented way instead
+                job_attributes[pbs.ATTR_a] = str(int(time.mktime(batch_job.date_time.timetuple())))
+
             pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
         
             # populate pbs_attrs

@@ -6,7 +6,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
-
+import utilities
 from job_runner.batch_job import *
 import pipeline_parse as PL
 from pipeline_file import *
@@ -352,7 +352,7 @@ class Tool():
                 if f.foreach_dep:
                     depends_on.append(PL.foreach_barriers[f.foreach_dep])
 
-        # Do the actual batch job sumbission
+        # Do the actual batch job submission
         if self.thread_option_max:
             submit_threads = self.thread_option_max
         else:
@@ -370,7 +370,14 @@ class Tool():
             if need_python:
                 self.modules.append('python/civet')
                 verify_file_list.append('python')
-            
+
+        if PL.delay:
+            hours,minutes = utilities.parse_delay_string(PL.delay)
+            date_time = datetime.datetime.now() + datetime.timedelta(hours=hours, minutes=minutes)
+        else:
+            date_time = None
+
+
         batch_job = BatchJob(
             multi_command, workdir=PipelineFile.get_output_dir(), 
             files_to_check=verify_file_list, 
@@ -378,7 +385,7 @@ class Tool():
             depends_on=depends_on, name=name, error_strings=self.error_strings, 
             version_cmds=self.collect_version_commands(),
             files_to_test=self.exit_if_exists, 
-            file_test_logic=self.exit_test_logic, mem=self.mem)
+            file_test_logic=self.exit_test_logic, mem=self.mem, date_time=date_time)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)
