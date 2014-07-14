@@ -304,9 +304,10 @@ class Pipeline(object):
     def parse_override_file(self, file, source=""):
         with open(file) as f:
             for line in f:
-                if line.lstrip()[0] == '#': 
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
                     continue
-                line = line.split(' #')[0].strip()
+                line = line.split(' #')[0]
                 prefix = line.split('.', 1)[0]
                 opt,val = line.split('.', 1)[1].split('=')
                 if prefix not in self.option_overrides:
