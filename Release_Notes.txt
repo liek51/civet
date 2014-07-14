@@ -8,6 +8,7 @@ Version 1.5.0
 -------------
 Bug fixes
  - Fix crash for non-zero pbs_deljob return value in civet_cancel 
+ - Fix crash when options file contains blank lines
 
 Features
  - Initial <foreach> implementation
