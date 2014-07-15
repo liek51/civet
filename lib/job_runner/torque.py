@@ -215,7 +215,9 @@ class TorqueJobRunner(object):
         queue  : optional Torque queue, if None Torque default will be used
         submit  :  If False job scripts will be generated but jobs will not be
                    submitted.  Useful for debugging pipelines.
-    """ 
+    """
+
+    __MAX_RETRY = 3
     
     # the template script, which will be customized for each job
     # $VAR will be subsituted before job submission $$VAR will become $VAR after
@@ -442,25 +444,19 @@ class TorqueJobRunner(object):
                 job_attributes[pbs.ATTR_M] = batch_job.email
 
             if batch_job.date_time:
-                #strftime("%s") seems to work because it passes the format string
-                #directly to glibc's strftime. %s is undocumented in the
-                #datetime.strftime documentation
-                #job_attributes[pbs.ATTR_a] = batch_job.date_time.strftime("%s")
-
-                #do it a documented way instead
                 job_attributes[pbs.ATTR_a] = str(int(time.mktime(batch_job.date_time.timetuple())))
 
             pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
         
             # populate pbs_attrs
             attr_idx = 0
-            for resource,val in job_resources.iteritems():
+            for resource, val in job_resources.iteritems():
                 pbs_attrs[attr_idx].name = pbs.ATTR_l
                 pbs_attrs[attr_idx].resource = resource
                 pbs_attrs[attr_idx].value = val
                 attr_idx += 1
             
-            for attribute,val in job_attributes.iteritems():
+            for attribute, val in job_attributes.iteritems():
                 pbs_attrs[attr_idx].name = attribute
                 pbs_attrs[attr_idx].value = val
                 attr_idx += 1
@@ -473,11 +469,20 @@ class TorqueJobRunner(object):
         
             
             #submit job
-            id = pbs.pbs_submit(connection, pbs_attrs, filename, 
-                                self.queue, None)
-       
+            retry = 0
+            job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
+                                    self.queue, None)
+
+            print job_id
+
+            # if pbs.pbs_submit failed, try again
+            while not job_id and retry < self.__MAX_RETRY:
+                time.sleep(retry * 2)
+                job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
+                                        self.queue, None)
+
             #check to see if the job was submitted successfully. 
-            if not id:
+            if not job_id:
                 e, e_msg = pbs.error()
                 pbs.pbs_disconnect(connection)
                 # the batch system returned an error, throw exception 
@@ -487,18 +492,18 @@ class TorqueJobRunner(object):
             pbs.pbs_disconnect(connection)
             
             if self.submit_with_hold and not batch_job.depends_on:
-                self.held_jobs.append(id)
+                self.held_jobs.append(job_id)
         
         else:
             #self.submit is False, fake a job ID
-            id = "{0}.civet".format(self._id_seq)
+            job_id = "{0}.civet".format(self._id_seq)
             self._id_seq += 1
             
         self._job_names.append(batch_job.name)
         
-        self._id_log.write(id + '\t' + batch_job.name + '\t' + str(self._printable_dependencies(batch_job.depends_on)) + '\n')
+        self._id_log.write(job_id + '\t' + batch_job.name + '\t' + str(self._printable_dependencies(batch_job.depends_on)) + '\n')
         self._id_log.flush()
-        return id
+        return job_id
 
     
     def release_job(self, id, connection=None):
