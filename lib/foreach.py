@@ -73,9 +73,7 @@ class ForEach():
         total_jobs *= len(matched_files)
 
         if total_jobs > ForEach.MAX_JOBS:
-            jm = JobManager()
-            jm.delete_all_jobs(PL.all_batch_jobs)
-            raise Exception, "error submitting foreach: {0} jobs exceed limit (max = {1})\n".format(total_jobs, ForEach.MAX_JOBS)
+            PL.abort_submit("error submitting foreach: {0} jobs exceed limit (max = {1})\n".format(total_jobs, ForEach.MAX_JOBS))
 
         for fn in matched_files:
             iteration += 1
@@ -131,8 +129,8 @@ class ForEach():
                 try:
                     cleanup_job_id = PL.job_runner.queue_job(cleanup_job)
                 except Exception as e:
-                    sys.stderr.write(str(e) + '\n')
-                    sys.exit(PL.BATCH_ERROR)
+                    PL.abort_submit(e, PL.BATCH_ERROR)
+
                 PL.all_batch_jobs.append(cleanup_job_id)
 
             for jid in cleanups:

@@ -147,6 +147,10 @@ class Pipeline(object):
         return self._log_dir
 
     def submit(self):
+        """
+        Submit a constructed pipeline to the batch system for execution
+        :return:
+        """
         print 'Executing pipeline', self.name
 
         # Capture the CWD and the command line that invoked us.
@@ -262,6 +266,25 @@ class Pipeline(object):
 
         # Let the people know where they can see their logs.
         print 'Log directory: ', self.log_dir
+
+    def abort_submit(self, message, status=1):
+        """
+        Abort pipeline submission.  Deletes any jobs already queued, prints error
+        message, and exits.
+
+        :param message: error string to be presented to user
+        :param status: return value to use for program exit
+        :return:
+        """
+        if self.all_batch_jobs:
+            job_manager = JobManager()
+            job_manager.delete_all_jobs(self.all_batch_jobs)
+
+        sys.stderr.write("Aborting pipeline submission\n"
+                         "\t{0}\n".format(message.strip()))
+        sys.exit(status)
+
+
 
     @property
     def job_runner(self):
