@@ -466,18 +466,16 @@ class TorqueJobRunner(object):
             connection = _connect_to_server(self._server)
 
             #connected to pbs_server
-        
-            
+
             #submit job
             retry = 0
             job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                     self.queue, None)
 
-            print job_id
-
             # if pbs.pbs_submit failed, try again
             while not job_id and retry < self.__MAX_RETRY:
                 time.sleep(retry * 2)
+                retry += 1
                 job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                         self.queue, None)
 
