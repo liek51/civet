@@ -274,16 +274,14 @@ class Tool():
         """
         Submit the commands that comprise the tool as a single cluster job.
 
-        Args:
-            depends_on: a list of previously submitted job ids which must
-                complete before this job can run.
-            name_prefix: a string, which when combined with this tool's
+
+        :param name_prefix: a string, which when combined with this tool's
                 name attribute, will result in a unique (to the pipeline)
                 job name for the cluster.
-        Returns:
-            job_id: a value which can be passed in as a depends_on list 
-                element in a subsequent tool sumbission.
+        :return: job_id: a value which can be passed in as a depends_on list
+                element in a subsequent tool submission.
         """
+
         # Get the current symbols in the pipeline...
         import pipeline_parse as PL
 
@@ -372,26 +370,26 @@ class Tool():
                 verify_file_list.append('python')
 
         if PL.delay:
-            hours,minutes = utilities.parse_delay_string(PL.delay)
+            hours, minutes = utilities.parse_delay_string(PL.delay)
             date_time = datetime.datetime.now() + datetime.timedelta(hours=hours, minutes=minutes)
         else:
             date_time = None
 
-
-        batch_job = BatchJob(
-            multi_command, workdir=PipelineFile.get_output_dir(), 
-            files_to_check=verify_file_list, 
-            ppn=submit_threads, walltime = self.walltime, modules=self.modules,
-            depends_on=depends_on, name=name, error_strings=self.error_strings, 
-            version_cmds=self.collect_version_commands(),
-            files_to_test=self.exit_if_exists, 
-            file_test_logic=self.exit_test_logic, mem=self.mem, date_time=date_time)
+        batch_job = BatchJob(multi_command,
+                             workdir=PipelineFile.get_output_dir(),
+                             files_to_check=verify_file_list,
+                             ppn=submit_threads, walltime=self.walltime,
+                             modules=self.modules, depends_on=depends_on,
+                             name=name, error_strings=self.error_strings,
+                             version_cmds=self.collect_version_commands(),
+                             files_to_test=self.exit_if_exists,
+                             file_test_logic=self.exit_test_logic, mem=self.mem,
+                             date_time=date_time)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)
         except Exception as e:
-            sys.stderr.write(str(e) + '\n')
-            sys.exit(PL.BATCH_ERROR)
+            PL.abort_submit(e, PL.BATCH_ERROR)
 
 
         # Any files that we created and that will be passed to other jobs
