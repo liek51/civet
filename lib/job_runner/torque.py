@@ -89,10 +89,12 @@ class JobManager(object):
         
     def query_job(self, id):
         """
-            Query server for status of job specified by id.
+            Query server for status of job
         
             query_job will return None if the job does not exist on the server, 
             otherwise it will return a JobStatus object.
+
+            :param id: job id of job to query
         """ 
         job_status = self.pbsq.getjob(id)
         # check to see if the job existed.  this is kind of lame, but we can't
@@ -108,9 +110,10 @@ class JobManager(object):
     
     def delete_job(self, id):
         """
-           Sends job delete request to pbs_server for job referenced by id
-           
-           returns pbs_deljob return value (0 on success)
+           Sends job delete request to pbs_server for job
+
+           :param id: job id to delete
+           :return:  pbs_deljob return value (0 on success)
         """
         connection = _connect_to_server(self.pbs_server)
         rval =  pbs.pbs_deljob(connection, id, '')
@@ -136,6 +139,7 @@ class JobManager(object):
     def release_job(self, id):
         """
         Release a user hold on a job
+        :param id: job to release
         """
         connection = _connect_to_server(self.pbs_server)
         rval = pbs.pbs_rlsjob(self.connection, id, 'u', '')
@@ -367,7 +371,7 @@ class TorqueJobRunner(object):
         """
           queue a BatchJob.
           
-          batch_job : description of the job to queue
+          :param batch_job: description of the job to queue
         """
         
         # batch job names should be unique for civet pipelines because the 
@@ -508,10 +512,10 @@ class TorqueJobRunner(object):
         """
             Release a user hold from a held batch job.
             
-            id : job id to release (short form not allowed)
-            server : optional hostname for pbs_server
-            conn   : optinal connection to a pbs_server, if not passed
-                     release_job will establish a new connection 
+            :param id: job id to release (short form not allowed)
+            :param server: optional hostname for pbs_server
+            :param conn: optional connection to a pbs_server, if not passed
+                  release_job will establish a new connection
         """
         if connection:
             c = connection
@@ -545,11 +549,15 @@ class TorqueJobRunner(object):
       
     def generate_script(self, batch_job):
         """
-            Generate a batch script based on our template and return as a string.
+            Generate a Torque batch script based on our template and return as
+            a string.
             
             mainly intended to be used internally in PBSJobRunner, but it could 
             be useful externally for debugging/logging the contents of a job 
             script generated for a batch_job
+
+            :param batch_job: BatchJob for which to generate script
+            :return: batch script as string
         """  
         tokens = {}
         
@@ -617,6 +625,8 @@ class TorqueJobRunner(object):
             This can define any environment variables we want defined in the 
             job's environment when it executes. We define some of the typical 
             PBS_O_* variables
+
+            :param batch_job: BatchJob for which to generate environment
         """
     
         # our script start with "cd $PBS_O_WORKDIR", make sure we set it
@@ -642,6 +652,8 @@ class TorqueJobRunner(object):
             rerunning individual scripts by hand (during development)
             as well as documenting the resources requested when the job was
             submitted
+
+            :param batch_job: BatchJob for which to generate #PBS directives
         """
         directives = []
         
@@ -655,13 +667,16 @@ class TorqueJobRunner(object):
             directives.append("#PBS -N {0}".format(batch_job.name))
         
         return '\n'.join(directives)
-   
+
     def _dependency_string(self, batch_job):
         """
             Generate a TORQUE style dependency string for a batch job to be 
             passed to the ATTR_depend job attribute.
             
             This will return empty string if batch_job.depends_on is empty.
+
+            :param batch_job: BatchJob for which to generate dependency string
+            :return: dependency string for job
         """
     
         # we want this to work if batch_job.depends_on is a string containing 
@@ -678,7 +693,11 @@ class TorqueJobRunner(object):
                                     
     def _printable_dependencies(self, dependency_list):
         """
-            Return a list containing shortened (hostname removed) job depenedencies
+            Return a list containing shortened (hostname removed) job
+            dependencies
+
+            :param dependency_list: Torque dependency string to reformat
+            :return: formatted dependency string
         """
         shortened = []
         for id in dependency_list:
@@ -691,6 +710,10 @@ class TorqueJobRunner(object):
             Return a chunk of bash code that will perform the required file 
             test(s) for this job. This code will exit using the file_test_exit 
             function, which will do some logging in addition to exiting the job
+
+            :param batch_job: BatchJob to generate file tests for insertion into
+                              job script
+            :return: bash code to perform file tests, to be inserted into script
         """
         header = "#pre job file test\n"
         
