@@ -39,6 +39,14 @@ class BatchJob(object):
                  epilogue=None, version_cmds=None, error_strings=None,
                  mail_option="n", email=None, files_to_test=[],
                  file_test_logic="AND", mem=None, date_time=None):
+
+        #initialize some of the hidden properties
+        self._name = None
+        self._workdir = None
+        self._mail_option = None
+        self._mem = None
+        self._file_test_logic = None
+
         self.cmd = cmd
         self.ppn = ppn
         self.nodes = nodes
@@ -60,22 +68,27 @@ class BatchJob(object):
         self.mem = mem
         self.date_time = date_time
 
+    @property
+    def workdir(self):
+        return self._workdir
+
     # setter for workdir, sets to the current working directory if a directory
     # is not passed
-    def set_workdir(self, dir):
-        if dir:
-            self._workdir = os.path.abspath(dir)
+    @workdir.setter
+    def workdir(self, d):
+        if d:
+            self._workdir = os.path.abspath(d)
         else:
             self._workdir = os.getcwd()
 
-    def get_workdir(self):
-        return self._workdir
-
-    workdir = property(get_workdir, set_workdir)
+    @property
+    def name(self):
+        return self._name
 
     # setter for the job name, throw an exception if the name passed has invalid
     # characters
-    def set_name(self, name):
+    @name.setter
+    def name(self, name):
         if name:
             chars = []
             for c in name:
@@ -85,11 +98,6 @@ class BatchJob(object):
                                      "Illegal character {1} {2}".format(name, c,
                                                                         chars))
         self._name = name
-
-    def get_name(self):
-        return self._name
-
-    name = property(get_name, set_name)
 
     @property
     def mail_option(self):
@@ -129,4 +137,3 @@ class BatchJob(object):
             self._mem = m + 'gb'
         else:
             self._mem = None
-
