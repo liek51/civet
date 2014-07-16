@@ -42,7 +42,7 @@ def _connect_to_server(server):
         
         This function is shared between JobManager and TorqueJobRunner
     """
-    if server:    
+    if server:
         connection = pbs.pbs_connect(server)
     else:
         connection = pbs.pbs_connect(pbs.pbs_default())
@@ -114,7 +114,7 @@ class JobManager(object):
            :return:  pbs_deljob return value (0 on success)
         """
         connection = _connect_to_server(self.pbs_server)
-        rval =  pbs.pbs_deljob(connection, id, '')
+        rval = pbs.pbs_deljob(connection, id, '')
         pbs.pbs_disconnect(connection)
         return rval
 
@@ -345,7 +345,7 @@ class TorqueJobRunner(object):
         self.execution_log_dir = execution_log_dir
         self.queue = queue
         self.submit = submit
-        self._id_seq = 0  #used to fake Torque job IDs when self.submit is False
+        self._id_seq = 0  # used to fake Torque job IDs when self.submit is False
         
         utilities.make_sure_path_exists(self._log_dir)
           
@@ -568,7 +568,7 @@ class TorqueJobRunner(object):
         if batch_job.files_to_check:
             tokens['PRE_RUN_VALIDATION'] = "{0} {1}".format(self.validation_cmd, ' '.join(batch_job.files_to_check))
         else:
-            #force "empty" prologue to return 0
+            #force "empty" validation command to return 0
             tokens['PRE_RUN_VALIDATION'] = "true"
             
         if batch_job.version_cmds:

@@ -118,7 +118,7 @@ class BatchJob(object):
         if not val or val.upper() not in ["AND", "OR"]:
             raise ValueError(
                 'Invalid exit_test_bool option ({0}). Must be "AND" or "OR"'.format(
-                    val))
+                val))
         self._file_test_logic = val.upper()
 
     @property

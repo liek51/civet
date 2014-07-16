@@ -36,7 +36,6 @@ class ForEach():
             t = child.tag
             assert t in ForEach.validTags, 'invalid tag in ForEach:' + t
             if t == 'step':
-                #self.steps.append(Step(child, pipelineFiles))
                 self.steps.append(child)
             elif t == 'file':
                 assert not self.file, 'the foreach tag must contain exactly one file tag.'
