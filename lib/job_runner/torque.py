@@ -55,6 +55,7 @@ def _connect_to_server(server):
         
     return connection
 
+
 def torque_strerror(errno):
     global _error_strings
     if not _error_strings:
@@ -85,8 +86,6 @@ class JobManager(object):
         self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
         self.pbs_server = pbs_server
 
-        
-        
     def query_job(self, id):
         """
             Query server for status of job
@@ -106,8 +105,7 @@ class JobManager(object):
             return JobStatus(job_status)
         else:
             return None
-    
-    
+
     def delete_job(self, id):
         """
            Sends job delete request to pbs_server for job
@@ -146,7 +144,6 @@ class JobManager(object):
         pbs.pbs_disconnect(connection)
         return rval
 
-    
 
 class JobStatus(object):
     """
@@ -197,7 +194,6 @@ class JobStatus(object):
             return "unlimited"
 
 
-       
 class TorqueJobRunner(object):
     """
         TorqueJobRunner is a class that encapsulates the functionality of 
@@ -224,8 +220,8 @@ class TorqueJobRunner(object):
     __MAX_RETRY = 3
     
     # the template script, which will be customized for each job
-    # $VAR will be subsituted before job submission $$VAR will become $VAR after
-    # subsitution
+    # $VAR will be substituted before job submission $$VAR will become $VAR after
+    # substitution
     script_template = textwrap.dedent("""\
         #!/bin/bash
         
@@ -335,8 +331,7 @@ class TorqueJobRunner(object):
         fi
     
     """)
-  
-    
+
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validation_cmd="ls -l", 
                  execution_log_dir=None, queue=None, submit=True):
@@ -364,9 +359,7 @@ class TorqueJobRunner(object):
     @property
     def log_dir(self):
         return self._log_dir   
-        
-        
-            
+
     def queue_job(self, batch_job):
         """
           queue a BatchJob.
@@ -507,7 +500,6 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return job_id
 
-    
     def release_job(self, id, connection=None):
         """
             Release a user hold from a held batch job.
@@ -530,9 +522,7 @@ class TorqueJobRunner(object):
         if rval == 0:
             self.held_jobs.remove(id)
         return rval
-    
-    
-    
+
     def release_all(self):
         """
             Release all jobs in self.held_jobs list reusing connections.  
@@ -544,9 +534,7 @@ class TorqueJobRunner(object):
         for id in jobs:
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
-        
-    
-      
+
     def generate_script(self, batch_job):
         """
             Generate a Torque batch script based on our template and return as
@@ -617,8 +605,8 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-    
-    def _generate_env(self, batch_job):
+    @staticmethod
+    def _generate_env(batch_job):
         """
             Generate a basic environment string to send along with the job. 
             
@@ -646,7 +634,8 @@ class TorqueJobRunner(object):
         
         return env
 
-    def _generate_directives(self, batch_job):
+    @staticmethod
+    def _generate_directives(batch_job):
         """
             Generate #PBS directives to insert into batch script to facilitate
             rerunning individual scripts by hand (during development)
@@ -668,7 +657,8 @@ class TorqueJobRunner(object):
         
         return '\n'.join(directives)
 
-    def _dependency_string(self, batch_job):
+    @staticmethod
+    def _dependency_string(batch_job):
         """
             Generate a TORQUE style dependency string for a batch job to be 
             passed to the ATTR_depend job attribute.
@@ -748,12 +738,12 @@ class TorqueJobRunner(object):
         return bash_code
             
 
- 
-"""
-   simple main function that tests some functionality if we run this script
-   directly rather than import it
-"""
 def main():
+    """
+    simple main function that tests some functionality if we run this script
+    directly rather than import it
+    """
+
     job_runner = TorqueJobRunner()
     jm = JobManager()
     
