@@ -8,7 +8,7 @@ class Step():
     def __init__(self, e, files):
         # Every step requires a name.
         assert len(e.attrib) == 1, "Step must have (only) a name attribute"
-        self.name = e.attrib['name']
+        self.name = e.attrib['name'].replace(' ', '_')
         self.tools = []
         self.code = "S"
         for child in e:

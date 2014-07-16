@@ -7,7 +7,7 @@ class PipelineTool():
         output = []
         # Every tool requires a name and a description, which is 
         # the path to the tool's XML file.
-        self.name = att['name']
+        self.name = att['name'].replace(' ', '_')
         self.description = att['description']
         if 'input' in att:
             input = att['input'].split(',')

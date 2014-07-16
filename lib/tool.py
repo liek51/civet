@@ -105,7 +105,7 @@ class Tool():
             assert a in Tool.validAtts, 'unknown attribute in tool tag: ' + a
 
         # The name attribute is required.  All others are optional.
-        self.name = atts['name']
+        self.name = atts['name'].replace(' ', '_')
 
         if 'error_strings' in atts:
             self.error_strings = []
