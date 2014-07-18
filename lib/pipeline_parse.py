@@ -50,7 +50,7 @@ class Pipeline(object):
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
-                  force_conditional_steps=False, delay=None):
+                  force_conditional_steps=False, delay=None, email_address=None):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -97,6 +97,7 @@ class Pipeline(object):
         self.force_conditional_steps = force_conditional_steps
         self.skip_validation = skip_validation
         self.delay = delay
+        self.email_address = email_address
         
         # And track the major components of the pipeline
         self._steps = []
@@ -222,7 +223,8 @@ class Pipeline(object):
             if len(tmps):
                 batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                      depends_on=depends,
-                                     name='Remove_temp_files')
+                                     name='Remove_temp_files',
+                                     email_address=self.email_address)
                 try:
                     job_id = self.job_runner.queue_job(batch_job)
                 except Exception as e:
@@ -251,7 +253,8 @@ class Pipeline(object):
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
                              modules=['python/2.7.3'],
-                             mail_option='a')
+                             mail_option='a',
+                             email_address=self.email_address)
         try:
             self.job_runner.queue_job(batch_job)
         except Exception as e:

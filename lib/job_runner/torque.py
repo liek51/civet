@@ -437,8 +437,8 @@ class TorqueJobRunner(object):
             if batch_job.mail_option:
                 job_attributes[pbs.ATTR_m] = batch_job.mail_option
                 
-            if batch_job.email:
-                job_attributes[pbs.ATTR_M] = batch_job.email
+            if batch_job.email_address:
+                job_attributes[pbs.ATTR_M] = batch_job.email_address
 
             if batch_job.date_time:
                 job_attributes[pbs.ATTR_a] = str(int(time.mktime(batch_job.date_time.timetuple())))
