@@ -13,6 +13,10 @@ Bug fixes
 Features
  - Initial <foreach> implementation
  - Delayed job execution (civet_run -d, --delay)
+ - Can specify email list for batch notification (civet_run -e, --email-address
+ - Use pipeline tool names instead of name from tool definition file (allows
+   multiple instances of same tool in pipeline to have unique names for job and
+   file naming)
 
 Version 1.4.2
 -------------
