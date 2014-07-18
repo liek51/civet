@@ -18,7 +18,7 @@ class PipelineTool():
             for n in range(len(output)):
                 output[n] = output[n].strip()
 
-        self.tool = Tool(self.description, input, output, files)
+        self.tool = Tool(self.description, input, output, files, self.name)
         
     def submit(self, name_prefix):
         return self.tool.submit(name_prefix)
