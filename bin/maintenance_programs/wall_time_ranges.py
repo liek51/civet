@@ -85,12 +85,17 @@ class JobTimes(object):
 
 def process_file(dir, fn, jobs):
     path = os.path.join(dir, fn)
+    used = None
     for line in open(path):
         if 'requested_walltime' in line:
             req = line.strip()
         elif 'walltime' in line:
             used = line.strip()
     
+    # Handle the case where there is no completed job yet.
+    if used is None:
+        return
+
     job = re.sub('(.*)-status.txt', r'\1', fn)
     if job not in jobs:
         jobs[job] = JobTimes(job)
