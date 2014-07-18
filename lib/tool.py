@@ -407,7 +407,7 @@ class Tool():
             f = self.pipeline_files[fid]
             f.add_consumer_job(job_id)
 
-        print("{0}: {2}".format(job_id, self.name_from_pipeline))
+        print("{0}: {1}".format(job_id, self.name_from_pipeline))
         return job_id
 
     def check_files_exist(self):
