@@ -46,7 +46,7 @@ class Tool():
         'exit_test_logic'
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files):
+    def __init__(self, xml_file, ins, outs, pipeline_files, name=None):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -60,6 +60,7 @@ class Tool():
         self.option_overrides = {}
         self.thread_option_max = 0
         self.modules = []
+        self.name_from_pipeline = name
 
         self.verify_files = []
         self.tool_files = {}
@@ -312,7 +313,7 @@ class Tool():
 
         # actually run the tool; get the date/time at the start of every
         # command, and at the end of the run.
-        name = '{0}_{1}'.format(name_prefix, self.name)
+        name = '{0}_{1}'.format(name_prefix, self.name_from_pipeline)
         multi_command_list = []
         for c in self.commands:
             # We're calling date too many times.
@@ -406,7 +407,7 @@ class Tool():
             f = self.pipeline_files[fid]
             f.add_consumer_job(job_id)
 
-        print job_id + ':', self.name
+        print("{0}: {2}".format(job_id, self.name_from_pipeline))
         return job_id
 
     def check_files_exist(self):
