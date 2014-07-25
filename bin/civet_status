@@ -61,22 +61,26 @@ def main():
         dir_list_arg.append('.')
 
     if args.recursive:
-        dirs = []
+        all_log_dirs = []
         for d in dir_list_arg:
+            dirs = []
             for root, children, files in os.walk(d):
                 if job_runner.common.BATCH_ID_LOG in files:
                     dirs.append(root)
+            dirs.sort()
+            all_log_dirs += dirs
+
         
         if len(dirs) == 0:
             sys.stderr.write("ERROR: no valid log directory found!\n")
             return 1
         dirs.sort()
     else:
-        dirs = dir_list_arg
+        all_log_dirs = dir_list_arg
 
     jm = batch_system.JobManager()
 
-    for log_dir in dirs:
+    for log_dir in all_log_dirs:
     
         log_dir = os.path.abspath(log_dir)
     
