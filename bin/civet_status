@@ -43,6 +43,7 @@ def main():
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
     parser.set_defaults(quiet=False)
     parser.set_defaults(verbose=False)
+    parser.set_defaults(recursive=True)  # change default behavior to recursive, keep option to preserve backwards compatibility
     args = parser.parse_args()
 
     verbose = args.verbose
@@ -69,6 +70,7 @@ def main():
         if len(dirs) == 0:
             sys.stderr.write("ERROR: no valid log directory found!\n")
             return 1
+        dirs.sort()
     else:
         dirs = dir_list_arg
 
