@@ -71,10 +71,9 @@ def main():
             all_log_dirs += dirs
 
         
-        if len(dirs) == 0:
+        if len(all_log_dirs) == 0:
             sys.stderr.write("ERROR: no valid log directory found!\n")
             return 1
-        dirs.sort()
     else:
         all_log_dirs = dir_list_arg
 
