@@ -284,7 +284,7 @@ class Pipeline(object):
             job_manager.delete_all_jobs(self.all_batch_jobs)
 
         sys.stderr.write("Aborting pipeline submission\n"
-                         "\t{0}\n".format(message.strip()))
+                         "\t{0}\n".format(message)
         sys.exit(status)
 
 
