@@ -82,6 +82,7 @@ def main():
     for log_dir in all_log_dirs:
     
         log_dir = os.path.abspath(log_dir)
+        run_canceled = False
     
         if verbose:
             print "\n\nGetting status for pipeline with log directory at:"
@@ -113,12 +114,14 @@ def main():
             run_aborted = True
             print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
         
-        if verbose and os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
-            cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
-            if 'DATESTAMP' in cancel_info:
-                print "PIPELINE WAS CANCELED by user at {1}\n".format(cancel_info['DATESTAMP'])
-            else:
-                print "PIPELINE WAS CANCELED by user.\n"
+        if os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
+            run_canceled = true
+            if verbose:
+                cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
+                if 'DATESTAMP' in cancel_info:
+                    print "PIPELINE WAS CANCELED by user at {1}\n".format(cancel_info['DATESTAMP'])
+                else:
+                    print "PIPELINE WAS CANCELED by user.\n"
     
         complete_jobs_success = 0
         complete_jobs_failure = 0
@@ -206,6 +209,8 @@ def main():
                     if verbose:
                         if run_aborted:
                             print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
+                        elif run_canceled:
+                            print "\tpbs_server returned no information for job {0} (pipeline canceled by user)".format(job[0])
                         else:
                             print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
                     unknown_state += 1
@@ -213,10 +218,12 @@ def main():
 
         if complete_jobs_failure:
             summary_status = "FAILED"
-        elif canceled_jobs or unknown_state:
+        elif run_canceled:
             summary_status = "CANCELED"
         elif complete_jobs_success == total_jobs:
             summary_status = "completed successfully"
+        elif unknown_state:
+            summary_status = "TERMINATED (reason unknown, possibly walltime limit exceeded)"
         else:
             summary_status = "running"
          
