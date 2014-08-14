@@ -246,7 +246,7 @@ def main():
             if canceled_jobs:
                 print("\t\tCanceled Jobs: {0}".format(canceled_jobs))
             if unknown_state:
-                print("\t\t{0} deleted or crashed jobs (status file not found and no record for job on pbs_server)".format(unknown_state))
+                print("\t\t{0} unknown status (status file not found and no record for job on pbs_server)".format(unknown_state))
         if verbose:
             print("\n\n")
 
