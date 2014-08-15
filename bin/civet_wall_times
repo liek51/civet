@@ -7,11 +7,32 @@
 import sys
 import os
 import re
+import argparse
+import inspect
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
+                 inspect.getfile(inspect.currentframe()))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+    sys.path.insert(0, lib_folder)
+
+import version
 
 def usage():
     if len(sys.argv) < 2:
         print >> sys.stderr, 'usage:', sys.argv[0], 'top-of-directory-tree ...'
         sys.exit(1)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
+    parser.add_argument('-n', '--nodes-list', dest='collect_nodes',
+                        action='store_true', help="Show all nodes")
+    parser.add_argument('dirs', help="Log directory(ies)",
+                        nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    return args
+
 
 class JobTimes(object):
     def __init__(self, job):
@@ -59,8 +80,11 @@ class JobTimes(object):
 
 
     @staticmethod
-    def header():
-        return 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
+    def header(collect_nodes):
+        head = 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
+        if collect_nodes:
+            head += '\tNodes list'
+        return head
 
 
     @staticmethod
@@ -95,7 +119,7 @@ class JobTimes(object):
                                                  seconds)
 
 
-def process_file(dir, fn, jobs, nodes):
+def process_file(dir, fn, jobs, nodes, all_nodes):
     path = os.path.join(dir, fn)
     used = None
     for line in open(path):
@@ -114,6 +138,9 @@ def process_file(dir, fn, jobs, nodes):
     if jobs[job].register_time(used, req):
         # This is a new longest time.
         nodes[job] = get_node(dir, job)
+
+    if all_nodes is not None:
+        collect_node(dir, job, all_nodes)
 
 
 def get_node_from_individual_file(dir, job):
@@ -154,23 +181,42 @@ def get_node(dir, job):
     return node
 
 
-def get_files(start_dir, jobs, nodes):
+def get_files(start_dir, jobs, nodes, all_nodes):
     for (dirpath, dirnames, filenames) in os.walk(start_dir):
         if 'log' not in dirpath:
             continue
         for fn in filenames:
             if fn.endswith('-status.txt'):
-                process_file(dirpath, fn, jobs, nodes)
+                process_file(dirpath, fn, jobs, nodes, all_nodes)
+
+
+def collect_node(dir, job, all_nodes):
+    if job not in all_nodes:
+        all_nodes[job] = []
+    node = get_node(dir,job)
+    if node not in all_nodes[job]:
+        all_nodes[job].append(node)
+
 
 def main():
-    usage()
-    jobs = {}
-    nodes = {}
-    for dir in sys.argv[1:]:
-        get_files(dir, jobs, nodes)
-    print JobTimes.header()
-    for job in sorted(jobs.iterkeys()):
-        jobs[job].long_node = nodes[job]
-        print jobs[job]
+    version.parse_options()
 
+    args = parse_args()
+
+    jobs = {}
+    long_nodes = {}
+    if args.collect_nodes:
+        all_nodes = {}
+    else:
+        all_nodes = None
+
+    for dir in args.dirs:
+        get_files(dir, jobs, long_nodes, all_nodes)
+    print JobTimes.header(args.collect_nodes)
+    for job in sorted(jobs.iterkeys()):
+        jobs[job].long_node = long_nodes[job]
+        sys.stdout.write(str(jobs[job]))
+        if all_nodes is not None:
+            sys.stdout.write('\t' + str(sorted(all_nodes[job])))
+        sys.stdout.write('\n')
 main()
