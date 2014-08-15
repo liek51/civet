@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 # Given a directory containing civet pipeline runs, report
-# the max, min and average walltime for each cluster job
+# the max, min and average wall time for each cluster job
 # in the pipeline.
 
 import sys
@@ -22,6 +22,7 @@ class JobTimes(object):
         self.count = 0
         self.requested = 0
         self.max_requested = 0
+        self._long_node = 'Unknown'
 
 
     def register_time(self, used_timestr, requested_timestr):
@@ -32,23 +33,34 @@ class JobTimes(object):
             self.req = requested_timestr.split('=')[1]
         if secs < self.min:
             self.min = secs
+        new_longest = False
         if secs > self.max:
+            new_longest = True
             self.max = secs
         self.total += secs
         self.count += 1
+        return new_longest
 
+    @property
+    def long_node(self):
+        return self._long_node
+
+    @long_node.setter
+    def long_node(self, node):
+        self._long_node = node
 
     def __str__(self):
         max = JobTimes.from_seconds(self.max)
         min = JobTimes.from_seconds(self.min)
         avg = JobTimes.from_seconds(int(float(self.total)/float(self.count)))
-        return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}'.format(
-             self.job, self.req, max, avg, min, self.count)
+        return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}'.format(
+             self.job, self.req, max, self.long_node,
+             avg, min, self.count)
 
 
     @staticmethod
     def header():
-        return 'Name\tRequested\tMax\tAverage\tMin\tCount'
+        return 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
 
 
     @staticmethod
@@ -83,7 +95,7 @@ class JobTimes(object):
                                                  seconds)
 
 
-def process_file(dir, fn, jobs):
+def process_file(dir, fn, jobs, nodes):
     path = os.path.join(dir, fn)
     used = None
     for line in open(path):
@@ -99,23 +111,66 @@ def process_file(dir, fn, jobs):
     job = re.sub('(.*)-status.txt', r'\1', fn)
     if job not in jobs:
         jobs[job] = JobTimes(job)
-    jobs[job].register_time(used, req)
+    if jobs[job].register_time(used, req):
+        # This is a new longest time.
+        nodes[job] = get_node(dir, job)
 
-def get_files(start_dir, jobs):
+
+def get_node_from_individual_file(dir, job):
+    # Here, the pipeline didn't (or isn't) complete. The run
+    # logs aren't yet concatenated. Try to get it from the un-cat
+    # file.  If it doesn't exist, return "Unknown".
+    run_log = os.path.join(dir, job + '-run.log')
+    if not os.path.exists(run_log):
+        print ('could not find', run_log)
+        return 'Unknown'
+    for line in open(run_log):
+        if line.startswith('Linux'):
+            return line.split()[1]
+    print 'Could not find line with node in', run_log
+    return 'Unknown'
+
+
+def get_node(dir, job):
+    this_one = False
+    next_line = False
+    node = None
+    run_logs = os.path.join(dir, 'concatenated_run_logs.txt')
+    if not os.path.exists(run_logs):
+        return get_node_from_individual_file(dir, job)
+    for line in open(run_logs):
+        if 'Log info from:' in line:
+            next_line = True
+            continue
+        if next_line and job in line:
+            this_one = True
+            continue
+        if this_one and line.startswith('Linux'):
+            node = line.split()[1]
+            break
+    if node is None:
+        print "Couldn't find node in {0} for {1}".format(run_logs, job)
+        node = 'Unknown'
+    return node
+
+
+def get_files(start_dir, jobs, nodes):
     for (dirpath, dirnames, filenames) in os.walk(start_dir):
         if 'log' not in dirpath:
             continue
         for fn in filenames:
             if fn.endswith('-status.txt'):
-                process_file(dirpath, fn, jobs)
+                process_file(dirpath, fn, jobs, nodes)
 
 def main():
     usage()
     jobs = {}
+    nodes = {}
     for dir in sys.argv[1:]:
-        get_files(dir, jobs)
+        get_files(dir, jobs, nodes)
     print JobTimes.header()
     for job in sorted(jobs.iterkeys()):
+        jobs[job].long_node = nodes[job]
         print jobs[job]
 
 main()
