@@ -9,6 +9,7 @@ Version 1.5.1
 Bug fixes
  - Fix exception in abort_submit()
  - Fix civet_status so it doesn't show terminated jobs as canceled
+ - Fix bug in filelist in_dir processing
 
 Version 1.5.0
 -------------
