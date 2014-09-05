@@ -307,7 +307,7 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         if self.is_list:
-            self.in_dir = os.path.abspath(self.in_dir)
+            self.in_dir = os.path.abspath(files[self.in_dir].path)
         else:
             path = self.path
             if (os.path.split(path)[0] == '' and
@@ -372,8 +372,7 @@ class PipelineFile():
             self.path = re.sub(self.pattern, self.replace, original_path)
 
     def apply_in_dir_and_create_temp(self, files, circularity):
-        if self.is_list:
-            return
+
         ind = self.in_dir
         if (not ind) and (not self.is_temp):
             return
@@ -390,7 +389,9 @@ class PipelineFile():
             indf.fix_up_file(files, circularity)
             dir = indf.path
 
-        if self.is_temp and not self.path:
+        if self.is_list:
+            return
+        elif self.is_temp and not self.path:
             # If it is an anonymous temp, we'll create it in
             # the proper directory
             t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
