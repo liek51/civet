@@ -1,0 +1,222 @@
+#! /usr/bin/env python
+
+# Given a directory containing civet pipeline runs, report
+# the max, min and average wall time for each cluster job
+# in the pipeline.
+
+import sys
+import os
+import re
+import argparse
+import inspect
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
+                 inspect.getfile(inspect.currentframe()))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+    sys.path.insert(0, lib_folder)
+
+import version
+
+def usage():
+    if len(sys.argv) < 2:
+        print >> sys.stderr, 'usage:', sys.argv[0], 'top-of-directory-tree ...'
+        sys.exit(1)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
+    parser.add_argument('-n', '--nodes-list', dest='collect_nodes',
+                        action='store_true', help="Show all nodes")
+    parser.add_argument('dirs', help="Log directory(ies)",
+                        nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    return args
+
+
+class JobTimes(object):
+    def __init__(self, job):
+        self.job = job
+        self.max = -1
+        self.min = 999999999
+        self.total = 0
+        self.count = 0
+        self.requested = 0
+        self.max_requested = 0
+        self._long_node = 'Unknown'
+
+
+    def register_time(self, used_timestr, requested_timestr):
+        secs = JobTimes.to_seconds(used_timestr)
+        req_secs = JobTimes.to_seconds(requested_timestr)
+        if req_secs > self.max_requested:
+            self.max_requested = req_secs
+            self.req = requested_timestr.split('=')[1]
+        if secs < self.min:
+            self.min = secs
+        new_longest = False
+        if secs > self.max:
+            new_longest = True
+            self.max = secs
+        self.total += secs
+        self.count += 1
+        return new_longest
+
+    @property
+    def long_node(self):
+        return self._long_node
+
+    @long_node.setter
+    def long_node(self, node):
+        self._long_node = node
+
+    def __str__(self):
+        max = JobTimes.from_seconds(self.max)
+        min = JobTimes.from_seconds(self.min)
+        avg = JobTimes.from_seconds(int(float(self.total)/float(self.count)))
+        return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}'.format(
+             self.job, self.req, max, self.long_node,
+             avg, min, self.count)
+
+
+    @staticmethod
+    def header(collect_nodes):
+        head = 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
+        if collect_nodes:
+            head += '\tNodes list'
+        return head
+
+
+    @staticmethod
+    def to_seconds(timestr):
+        secs = 0
+        timestr = timestr.split('=')[1]
+        parts = timestr.split(':')
+        if len(parts) == 4:
+            days = int(parts[0])
+            secs += days * (24 * 3600)
+            parts = parts[1:]
+        hours = int(parts[0])
+        minutes = int(parts[1])
+        seconds = int(parts[2])
+        secs += hours*3600 + minutes*60 + seconds
+        return secs
+
+
+    @staticmethod
+    def from_seconds(insecs):
+        days = insecs/(24*3600)
+        rem = insecs - days*(24*3600)
+        hours = rem/(3600)
+        rem = rem - hours*3600
+        minutes = rem/60
+        seconds = rem - minutes*60
+        if days:
+            return '{0}:{1:02d}:{2:02d}:{3:02d}'.format(days, hours,
+                                                   minutes, seconds)
+        else:
+            return '{0:02d}:{1:02d}:{2:02d}'.format(hours, minutes,
+                                                 seconds)
+
+
+def process_file(dir, fn, jobs, nodes, all_nodes):
+    path = os.path.join(dir, fn)
+    used = None
+    for line in open(path):
+        if 'requested_walltime' in line:
+            req = line.strip()
+        elif 'walltime' in line:
+            used = line.strip()
+    
+    # Handle the case where there is no completed job yet.
+    if used is None:
+        return
+
+    job = re.sub('(.*)-status.txt', r'\1', fn)
+    if job not in jobs:
+        jobs[job] = JobTimes(job)
+    if jobs[job].register_time(used, req):
+        # This is a new longest time.
+        nodes[job] = get_node(dir, job)
+
+    if all_nodes is not None:
+        collect_node(dir, job, all_nodes)
+
+
+def get_node_from_individual_file(dir, job):
+    # Here, the pipeline didn't (or isn't) complete. The run
+    # logs aren't yet concatenated. Try to get it from the un-cat
+    # file.  If it doesn't exist, return "Unknown".
+    run_log = os.path.join(dir, job + '-run.log')
+    if not os.path.exists(run_log):
+        print ('could not find', run_log)
+        return 'Unknown'
+    for line in open(run_log):
+        if line.startswith('Linux'):
+            return line.split()[1]
+    print 'Could not find line with node in', run_log
+    return 'Unknown'
+
+
+def get_node(dir, job):
+    this_one = False
+    next_line = False
+    node = None
+    run_logs = os.path.join(dir, 'concatenated_run_logs.txt')
+    if not os.path.exists(run_logs):
+        return get_node_from_individual_file(dir, job)
+    for line in open(run_logs):
+        if 'Log info from:' in line:
+            next_line = True
+            continue
+        if next_line and job in line:
+            this_one = True
+            continue
+        if this_one and line.startswith('Linux'):
+            node = line.split()[1]
+            break
+    if node is None:
+        print "Couldn't find node in {0} for {1}".format(run_logs, job)
+        node = 'Unknown'
+    return node
+
+
+def get_files(start_dir, jobs, nodes, all_nodes):
+    for (dirpath, dirnames, filenames) in os.walk(start_dir):
+        if 'log' not in dirpath:
+            continue
+        for fn in filenames:
+            if fn.endswith('-status.txt'):
+                process_file(dirpath, fn, jobs, nodes, all_nodes)
+
+
+def collect_node(dir, job, all_nodes):
+    if job not in all_nodes:
+        all_nodes[job] = []
+    node = get_node(dir,job)
+    if node not in all_nodes[job]:
+        all_nodes[job].append(node)
+
+
+def main():
+    version.parse_options()
+
+    args = parse_args()
+
+    jobs = {}
+    long_nodes = {}
+    if args.collect_nodes:
+        all_nodes = {}
+    else:
+        all_nodes = None
+
+    for dir in args.dirs:
+        get_files(dir, jobs, long_nodes, all_nodes)
+    print JobTimes.header(args.collect_nodes)
+    for job in sorted(jobs.iterkeys()):
+        jobs[job].long_node = long_nodes[job]
+        sys.stdout.write(str(jobs[job]))
+        if all_nodes is not None:
+            sys.stdout.write('\t' + str(sorted(all_nodes[job])))
+        sys.stdout.write('\n')
+main()
