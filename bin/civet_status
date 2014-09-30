@@ -117,7 +117,7 @@ def main():
             print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
         
         if os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
-            run_canceled = true
+            run_canceled = True
             if verbose:
                 cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
                 if 'DATESTAMP' in cancel_info:
