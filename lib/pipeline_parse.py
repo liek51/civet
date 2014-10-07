@@ -42,7 +42,15 @@ class Pipeline(object):
         'dir',
         'foreach',
         'step',
-        'filelist' ]
+        'filelist',
+        'version'
+    ]
+
+    valid_version_attributes = [
+        'directory'
+    ]
+
+    valid_directory_versions = [1, 2]
 
     def __init__(self):
         pass
@@ -98,6 +106,7 @@ class Pipeline(object):
         self.skip_validation = skip_validation
         self.delay = delay
         self.email_address = email_address
+        self.directory_version = 1
         
         # And track the major components of the pipeline
         self._steps = []
@@ -110,6 +119,8 @@ class Pipeline(object):
             assert t in Pipeline.valid_tags, ' illegal tag:' + t
             if t == 'step' or t == 'foreach':
                 pending.append(child)
+            elif t == 'version':
+                self.parse_version_tag(child)
             else:
                 PipelineFile.parse_XML(child, self._files)
         
@@ -142,8 +153,11 @@ class Pipeline(object):
     @property
     def log_dir(self):
         if not self._log_dir:
-            self._log_dir = os.path.join(PipelineFile.get_output_dir(), 
-                'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            if self.directory_version == 1:
+                self._log_dir = os.path.join(PipelineFile.get_output_dir(),
+                      'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
+            elif self.directory_version == 2:
+                self._log_dir = os.path.join(PipelineFile.get_output_dir(), 'logs')
             utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
@@ -340,6 +354,15 @@ class Pipeline(object):
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt] = (val, source)
 
+
+    def parse_version_tag(self, tag):
+        for attr in tag.attrib:
+            assert attr in self.valid_version_attributes, (
+                'Illegal version attribute: "' + a + '"')
+            if attr == 'directory':
+                version = int(tag.attrib[attr])
+                assert version in self.valid_directory_versions
+                self.directory_version = version
 
 
 sys.modules[__name__] = Pipeline()

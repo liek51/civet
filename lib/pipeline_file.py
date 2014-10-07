@@ -6,6 +6,8 @@ import datetime
 
 import utilities
 
+import pipeline_parse as PL
+
 class PipelineFile():
     """
     Initialize ourselves from an XML tag that represents some kind
@@ -139,6 +141,10 @@ class PipelineFile():
         # Default output?
         if 'default_output' in att:
             default_output = att['default_output'].upper() == 'TRUE'
+            assert 'in_dir' not in att, ('Must not combine default_output and '
+                                         'in_dir attributes.')
+            assert 'filespec' in att, ('default_output directory must include a relative or '
+                          'absolute path')
 
         # Create directory?
         if is_dir:
@@ -250,8 +256,6 @@ class PipelineFile():
 
     @staticmethod
     def get_output_dir():
-        if not PipelineFile.output_dir:
-            return '.'
         if not PipelineFile.output_dir._is_fixed_up:
             raise Exception( "Using output_dir before fixed up...")
             sys.exit(1)
@@ -264,11 +268,23 @@ class PipelineFile():
     @staticmethod
     def fix_up_files(files):
         #print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
+
+        circularity = []
+
         # First off, fix up the output dir if we have one; others
         # may depend on it.
-        circularity = []
-        if PipelineFile.output_dir:
-            PipelineFile.output_dir.fix_up_file(files, circularity)
+        if not PipelineFile.output_dir:
+            # there is no output_dir
+            # create a default one in our current working directory
+            PipelineFile.output_dir = PipelineFile('default_output', ".", False,
+                                                   True, False, True, files,
+                                                   True, None, None, None, None,
+                                                   None, None, None, False,
+                                                   False, create=True,
+                                                   default_output=True,
+                                                   foreach_dep=None)
+
+        PipelineFile.output_dir.fix_up_file(files, circularity)
 
         for fid in files:
             files[fid].fix_up_file(files, circularity)
@@ -279,6 +295,7 @@ class PipelineFile():
         in_dir and based_on, as well as files passed in as
         parameters.
         """
+        import pipeline_parse as PL
         if self._is_fixed_up:
             return
         # detect dependency cycles
@@ -293,8 +310,15 @@ class PipelineFile():
         circularity.append(self)
 
         self.parameter_to_path()
-        self.apply_based_on(files, circularity)
-        self.apply_in_dir_and_create_temp(files, circularity)
+
+        if self is PipelineFile.output_dir:
+            if PL.directory_version == 2:
+                stamp_dir = "{0}-{1}".format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S'), os.getpid())
+                self.path = os.path.join(self.path, stamp_dir)
+            utilities.make_sure_path_exists(self.path)
+        else:
+            self.apply_based_on(files, circularity)
+            self.apply_in_dir_and_create_temp(files, circularity)
 
         # Make sure a directory exists, unless explicitly requested
         # to not do so.
