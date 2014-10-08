@@ -599,6 +599,8 @@ class Command():
         # The token replacement function is an inner function, so that
         # it has access to the self attributes.
         def tokenReplace(m):
+            # get current pipeline symbols
+            import pipeline_parse as PL
             tok = m.group(1)
             if tok in self.options:
                 o = self.options[tok]
@@ -620,11 +622,11 @@ class Command():
 
             # We didn't match a known option, or a file id. Put out an error.
             print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", \
-                tok, 'in file', tool.xml_file
+                tok, 'in file', self.tool.xml_file
             print >> sys.stderr, 'Tool files:', self.tool_files
             print >> sys.stderr, 'Options:', self.options, '\n\n'
-            return 'UNKNOWN OPTION OR FILE ID: ' + tok 
-            
+            PL.abort_submit('UNKNOWN OPTION OR FILE ID: ' + tok)
+
         # Fix up a command by replacing all the delimited option names and
         # file ids with the real option text and file paths.
         self.real_command = (self.program + ' ' +

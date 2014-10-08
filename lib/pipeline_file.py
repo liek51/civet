@@ -296,6 +296,7 @@ class PipelineFile():
         parameters.
         """
         import pipeline_parse as PL
+
         if self._is_fixed_up:
             return
         # detect dependency cycles
