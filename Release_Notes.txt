@@ -10,6 +10,13 @@ Bug fixes
  - Fix exception in abort_submit()
  - Fix civet_status so it doesn't show terminated jobs as canceled
  - Fix bug in filelist in_dir processing
+ - Fix exception when referencing inputs and outputs that don't exist in tool
+   xml
+
+Features
+ - Add new <version directory=""/> pipeline tag that lets pipeline developer
+   specify new output directory naming scheme (to guarantee unique output 
+   directory for each run)
 
 Version 1.5.0
 -------------
