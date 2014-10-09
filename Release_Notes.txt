@@ -12,6 +12,7 @@ Bug fixes
  - Fix bug in filelist in_dir processing
  - Fix exception when referencing inputs and outputs that don't exist in tool
    xml
+ - Fix anonymous temp dir creation
 
 Features
  - Add new <version directory=""/> pipeline tag that lets pipeline developer

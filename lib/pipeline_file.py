@@ -397,7 +397,6 @@ class PipelineFile():
             self.path = re.sub(self.pattern, self.replace, original_path)
 
     def apply_in_dir_and_create_temp(self, files, circularity):
-
         ind = self.in_dir
         if (not ind) and (not self.is_temp):
             return
@@ -417,13 +416,20 @@ class PipelineFile():
         if self.is_list:
             return
         elif self.is_temp and not self.path:
+            print  "create temp file in " + dir
             # If it is an anonymous temp, we'll create it in
             # the proper directory
-            t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
-            name = t.name
-            t.close()
-            self.path = name
-            self.is_path = True
+            print self._is_dir
+            if self._is_dir:
+                self.path = tempfile.mkdtemp(dir=dir)
+            else:
+                t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
+                name = t.name
+                t.close()
+                self.path = name
+                self.is_path = True
+            if ind:
+                self.in_dir = None
         elif ind:
             # Apply the containing directory to the path...
             fn = os.path.split(self.path)[1]
