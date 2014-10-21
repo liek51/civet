@@ -416,10 +416,8 @@ class PipelineFile():
         if self.is_list:
             return
         elif self.is_temp and not self.path:
-            print  "create temp file in " + dir
             # If it is an anonymous temp, we'll create it in
             # the proper directory
-            print self._is_dir
             if self._is_dir:
                 self.path = tempfile.mkdtemp(dir=dir)
             else:

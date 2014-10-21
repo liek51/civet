@@ -18,6 +18,10 @@ Features
  - Add new <version directory=""/> pipeline tag that lets pipeline developer
    specify new output directory naming scheme (to guarantee unique output 
    directory for each run)
+ - Add new error_email_address parameter to parse_XML, used by abort_pipeline
+   Bash function to email the user when a pipeline is aborted. Also used for 
+   batch system abort emails. Can be passe to civet_run with
+   --error-email-address option
 
 Version 1.5.0
 -------------

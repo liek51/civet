@@ -125,7 +125,7 @@ class ForEach():
                                depends_on=iteration_ids,
                                name="{0}-{1}_temp_file_cleanup".format(name_prefix, iteration),
                                walltime="00:30:00",
-                               email_address=PL.email_address)
+                               email_list=PL.email_address)
                 try:
                     cleanup_job_id = PL.job_runner.queue_job(cleanup_job)
                 except Exception as e:
@@ -144,7 +144,7 @@ class ForEach():
                                depends_on=job_ids,
                                name="{0}_barrier".format(name_prefix),
                                walltime="00:02:00",
-                               email_address=PL.email_address)
+                               email_list=PL.email_address)
         try:
             job_id = PL.job_runner.queue_job(barrier_job)
         except Exception as e:

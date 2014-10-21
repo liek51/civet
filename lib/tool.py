@@ -385,7 +385,7 @@ class Tool():
                              version_cmds=self.collect_version_commands(),
                              files_to_test=self.exit_if_exists,
                              file_test_logic=self.exit_test_logic, mem=self.mem,
-                             date_time=date_time, email_address=PL.email_address)
+                             date_time=date_time, email_list=PL.email_address)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)

@@ -10,6 +10,9 @@ function abort_pipeline {
     EXIT_VAL=$2
     WALLTIME=$3
     WALLTIME_REQ=$4
+    EMAIL_LIST=$5
+    MESSAGE=$6
+
 
     echo "Aborting pipeline" > ${LOGDIR}/abort.log
     echo "calling qdel on all jobs (ignoring previous job state)" >> ${LOGDIR}/abort.log
@@ -19,7 +22,7 @@ function abort_pipeline {
     while read ID NAME DEP; do
         if [ "$ID" != "$PBS_JOBID" ]; then
             echo "calling qdel on $PBS_JOBID (${NAME})" >> ${LOGDIR}/abort.log
-            qdel $ID >> ${LOGDIR}/abort.log 2>&1
+            qdel ${ID} >> ${LOGDIR}/abort.log 2>&1
         fi
     done < ${LOGDIR}/pipeline_batch_id_list.txt
     
@@ -27,7 +30,10 @@ function abort_pipeline {
     echo "exit_status=${EXIT_VAL}" > ${LOGDIR}/${PBS_JOBNAME}-status.txt
     echo "walltime=${WALLTIME}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
     echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
-    
+
+    # send an email notification regarding the pipeline failure
+    echo "Civet Pipeline Failure:  Tool ${PBS_JOBNAME} (Batch job ${PBS_JOBID}) ${MESSAGE}" |  mailx -s "Civet Pipeline Failure" ${EMAIL_LIST}
+
     # exit value was passed into abort function; may be non-zero return value
     # from the command, or some other value if we had a pre or post command
     # validation error

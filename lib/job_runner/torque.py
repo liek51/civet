@@ -220,8 +220,8 @@ class TorqueJobRunner(object):
     __MAX_RETRY = 3
     
     # the template script, which will be customized for each job
-    # $VAR will be substituted before job submission $$VAR will become $VAR after
-    # substitution
+    # $VAR will be substituted before job submission $$VAR will become $VAR
+    # after substitution
     script_template = textwrap.dedent("""\
         #!/bin/bash
         
@@ -267,8 +267,9 @@ class TorqueJobRunner(object):
         VALIDATION_STATUS=$$?
         
         if [ $$VALIDATION_STATUS -ne 0 ]; then
-            echo "Command not run, pre-run validation returned non-zero value. Aborting pipeline!"  >&2
-            abort_pipeline $LOG_DIR $$VALIDATION_STATUS "00:00:00" $WALLTIME_REQUESTED
+            MESSAGE="Command not run, pre-run validation returned non-zero value."
+            echo "$${MESSAGE}  Aborting pipeline!" >&2
+            abort_pipeline $LOG_DIR $$VALIDATION_STATUS "00:00:00" $WALLTIME_REQUESTED $EMAIL_LIST $$MESSAGE
         fi
         
         $FILE_TEST
@@ -295,15 +296,17 @@ class TorqueJobRunner(object):
         
         echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-            echo "Command returned non-zero value.  abort pipeline" >&2
-            abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
+            MESSAGE="Command returned non-zero value ($${CMD_EXIT_STATIS}).".
+            echo "$${MESSAGE}  Aborting pipeline!" >&2
+            abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED $EMAIL_LIST $$MESSAGE
         fi
         
         #check error log for list of keywords
         for str in $ERROR_STRINGS; do
             if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
-                echo "found error string in stderr log. abort pipeline" >&2
-                abort_pipeline $LOG_DIR 1 $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
+                MESSAGE="Found error string in stderr log."
+                echo "$${MESSAGE}  Aborting pipeline!" >&2
+                abort_pipeline $LOG_DIR 1 $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED $EMAIL_LIST $$MESSAGE
             fi
         done
             
@@ -316,8 +319,9 @@ class TorqueJobRunner(object):
         EPILOGUE_RETURN=$$?
         
         if [ $$EPILOGUE_RETURN -ne 0 ]; then
-            echo "Post job sanity check failed. Aborting pipeline!" >&2
-            abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED
+            MESSAGE="Post job sanity check failed."
+            echo "$${MESSAGE}  Aborting pipeline!" >&2
+            abort_pipeline $LOG_DIR $$EPILOGUE_RETURN $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED $EMAIL_LIST $$MESSAGE
         else
             # no errors (prologue, command, and epilogue returned 0).  Write success status to file.
             echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
@@ -437,8 +441,8 @@ class TorqueJobRunner(object):
             if batch_job.mail_option:
                 job_attributes[pbs.ATTR_m] = batch_job.mail_option
                 
-            if batch_job.email_address:
-                job_attributes[pbs.ATTR_M] = batch_job.email_address
+            if batch_job.email_list:
+                job_attributes[pbs.ATTR_M] = batch_job.email_list
 
             if batch_job.date_time:
                 job_attributes[pbs.ATTR_a] = str(int(time.mktime(batch_job.date_time.timetuple())))
@@ -602,6 +606,11 @@ class TorqueJobRunner(object):
         tokens['CIVET_VERSION'] = version.version_from_git()
         
         tokens['FILE_TEST'] = self._build_file_test(batch_job)
+
+        if batch_job.email_list:
+            tokens['EMAIL_LIST'] = batch_job.email_list
+        else:
+            tokens['EMAIL_LIST'] = "${USER}"
         
         return string.Template(self.script_template).substitute(tokens)
 

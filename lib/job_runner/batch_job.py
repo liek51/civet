@@ -25,7 +25,7 @@ class BatchJob(object):
     error_strings: A list of strings Civet will search for in the job's stderr.
                    If the string is found, the job is considered to have failed.
     mail_option  : parameter to pass to resource manager's mail options for the job
-    email_address        :  email address to send resource manager notification emails
+    email_list        :  email address to send resource manager notification emails
     files_to_test: list of file paths to check for before running command. if 
                    the file test returns true, the job will exit with success 
     file_test_logic : logic used to join file tests geneerated.  Can be "AND" or "OR"
@@ -37,7 +37,7 @@ class BatchJob(object):
                  name=None, stdout_path=None, stderr_path="/dev/null",
                  files_to_check=None,
                  epilogue=None, version_cmds=None, error_strings=None,
-                 mail_option="n", email_address=None, files_to_test=[],
+                 mail_option="n", email_list=None, files_to_test=[],
                  file_test_logic="AND", mem=None, date_time=None):
 
         #initialize some of the hidden properties
@@ -55,7 +55,7 @@ class BatchJob(object):
         self.stdout_path = stdout_path
         self.stderr_path = stderr_path
         self.mail_option = mail_option
-        self.email_address = email_address
+        self.email_list = email_list
         self.workdir = workdir
         self.walltime = walltime
         self.name = name

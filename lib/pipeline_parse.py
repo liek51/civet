@@ -58,13 +58,14 @@ class Pipeline(object):
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
-                  force_conditional_steps=False, delay=None, email_address=None):
+                  force_conditional_steps=False, delay=None, email_address=None,
+                  error_email_address=None):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
         self.master_XML_dir = os.path.split(xmlfile)[0]
-        
+
         # search path for tool XML files
         self.search_path = search_path
         
@@ -105,7 +106,14 @@ class Pipeline(object):
         self.force_conditional_steps = force_conditional_steps
         self.skip_validation = skip_validation
         self.delay = delay
-        self.email_address = email_address
+        if email_address:
+            self.email_address = os.path.expandvars(email_address)
+        else:
+            self.email_address = None
+        if error_email_address:
+            self.error_email_address = os.path.expandvars(error_email_address)
+        else:
+            self.error_email_address = None
         self.directory_version = 1
         
         # And track the major components of the pipeline
@@ -238,7 +246,7 @@ class Pipeline(object):
                 batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                      depends_on=depends,
                                      name='Remove_temp_files',
-                                     email_address=self.email_address)
+                                     email_list=self.email_address)
                 try:
                     job_id = self.job_runner.queue_job(batch_job)
                 except Exception as e:
@@ -268,7 +276,7 @@ class Pipeline(object):
                              name='Consolidate_log_files',
                              modules=['python/2.7.3'],
                              mail_option='a',
-                             email_address=self.email_address)
+                             email_list=self.email_address)
         try:
             self.job_runner.queue_job(batch_job)
         except Exception as e:
