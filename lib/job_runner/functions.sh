@@ -4,6 +4,12 @@
 #   submitted by civet
 #
 
+#make sure the shell is configured to use modulefiles
+module () 
+{ 
+    eval `/usr/bin/modulecmd bash $*`
+}
+
 function abort_pipeline {
     
     LOGDIR=$1
