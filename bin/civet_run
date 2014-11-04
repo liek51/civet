@@ -20,7 +20,7 @@ import utilities
 
 def main():
 
-    cleanup_command_line()
+    utilities.cleanup_command_line()
 
     version.parse_options()
     
