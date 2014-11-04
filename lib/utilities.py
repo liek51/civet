@@ -4,6 +4,7 @@
 import os
 import errno
 import sys
+import unicodedata
 
 def make_sure_path_exists(path):
     try:
@@ -25,3 +26,24 @@ def parse_delay_string(delay):
         minutes = int(split_string[0])
 
     return hours, minutes
+
+
+def cleanup_command_line():
+
+    conversion_pairs = {
+        'EN DASH': '-',
+        'EM DASH': '--',
+        'LEFT DOUBLE QUOTATION MARK': '"',
+        'RIGHT DOUBLE QUOTATION MARK': '"',
+        'LEFT SINGLE QUOTATION MARK': "'",
+        'RIGHT SINGLE QUOTATION MARK': "'"
+
+    }
+
+
+    for i in range(len(sys.argv)):
+        #create a unicode string with the decoded contents of the corresponding sys.argv string
+        decoded = unicode(sys.argv[i], sys.stdin.encoding)
+        for key,val in conversion_pairs.iteritems():
+            decoded = unicode.replace(decoded, unicodedata.lookup(key), val)
+        sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')  #this should probably do something other than 'replace'

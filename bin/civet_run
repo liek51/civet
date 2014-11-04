@@ -15,9 +15,13 @@ if lib_folder not in sys.path:
 
 import pipeline_parse as PL
 import version
+import utilities
 
 
 def main():
+
+    cleanup_command_line()
+
     version.parse_options()
     
     parser = argparse.ArgumentParser()

@@ -414,7 +414,7 @@ class TorqueJobRunner(object):
             
                 #XXX workaround for a TORQUE bug where local copies of stderr &
                 # stdout files to /dev/null don't work correctly but remote  
-                # copies (to submit host) are
+                # copies (to submit host) do
                 if job_attributes[pbs.ATTR_o] == "/dev/null":
                     job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
             else:
@@ -426,7 +426,7 @@ class TorqueJobRunner(object):
             
                 #XXX workaround for a TORQUE bug where local copies of stderr &
                 # stdout files to /dev/null don't work correctly but remote  
-                # copies (to submit host) are 
+                # copies (to submit host) do
                 if job_attributes[pbs.ATTR_e] == "/dev/null":
                     job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
             else:
