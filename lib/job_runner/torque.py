@@ -296,7 +296,7 @@ class TorqueJobRunner(object):
         
         echo "EXIT STATUS: $${CMD_EXIT_STATUS}" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
-            MESSAGE="Command returned non-zero value ($${CMD_EXIT_STATUS}).".
+            MESSAGE="Command returned non-zero value ($${CMD_EXIT_STATUS})."
             echo "$${MESSAGE}  Aborting pipeline!" >&2
             abort_pipeline $LOG_DIR $$CMD_EXIT_STATUS $$ELAPSED_TIME_FORMATTED $WALLTIME_REQUESTED $EMAIL_LIST $$MESSAGE
         fi
