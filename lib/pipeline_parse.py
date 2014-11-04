@@ -242,7 +242,8 @@ class Pipeline(object):
             # due to if_exists and if_not_exists, a temp file may not
             # exist.  Without -f the rm command would fail, causing
             # the entire pipeline to fail.
-            cmd = 'rm -f ' + ' '.join(tmps)
+            # must be recursive because some temp files are actually directories
+            cmd = 'rm -rf ' + ' '.join(tmps)
             if len(tmps):
                 batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                      depends_on=depends,
