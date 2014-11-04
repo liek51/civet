@@ -311,13 +311,14 @@ class PipelineFile():
 
         self.parameter_to_path()
 
+        self.apply_based_on(files, circularity)
+
         if self is PipelineFile.output_dir:
             if PL.directory_version == 2:
                 stamp_dir = "{0}-{1}".format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S'), os.getpid())
                 self.path = os.path.join(self.path, stamp_dir)
             utilities.make_sure_path_exists(self.path)
         else:
-            self.apply_based_on(files, circularity)
             self.apply_in_dir_and_create_temp(files, circularity)
 
         # Make sure a directory exists, unless explicitly requested
