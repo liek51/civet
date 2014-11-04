@@ -17,7 +17,7 @@ class Tool():
     # by the pipeline.
     # Tools are in separate files, so that we can substitute alternate
     # tools to perform the step.  Also, this allows a tool definition
-    # to be part of multipile pipelines.
+    # to be part of multiple pipelines.
     # The only access a tool has to the pipeline's files is through
     # the ins and outs file id lists.
     # 
@@ -385,7 +385,7 @@ class Tool():
                              version_cmds=self.collect_version_commands(),
                              files_to_test=self.exit_if_exists,
                              file_test_logic=self.exit_test_logic, mem=self.mem,
-                             date_time=date_time, email_list=PL.email_address)
+                             date_time=date_time, email_list=PL.error_email_address)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)

@@ -18,6 +18,7 @@ from tool_logger import *
 from job_runner.torque import *
 from job_runner.batch_job import *
 import utilities
+import getpass
 
 
 class Pipeline(object):
@@ -109,11 +110,11 @@ class Pipeline(object):
         if email_address:
             self.email_address = os.path.expandvars(email_address)
         else:
-            self.email_address = None
+            self.email_address = getpass.getuser()
         if error_email_address:
             self.error_email_address = os.path.expandvars(error_email_address)
         else:
-            self.error_email_address = None
+            self.error_email_address = self.email_address
         self.directory_version = 1
         
         # And track the major components of the pipeline
@@ -246,7 +247,7 @@ class Pipeline(object):
                 batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                      depends_on=depends,
                                      name='Remove_temp_files',
-                                     email_list=self.email_address)
+                                     email_list=self.error_email_address)
                 try:
                     job_id = self.job_runner.queue_job(batch_job)
                 except Exception as e:
@@ -266,7 +267,7 @@ class Pipeline(object):
                        " \"echo 'The pipeline running in:\n    " + 
                        PipelineFile.get_output_dir() +
                        "\nhas completed.'" +
-                       " | mailx -s 'Pipeline completed' ${USER}\"")
+                       " | mailx -s 'Pipeline completed' " + self.email_address + "\"")
             # Mask any potential mail failures.
             cmd.append("true")
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
@@ -276,7 +277,7 @@ class Pipeline(object):
                              name='Consolidate_log_files',
                              modules=['python/2.7.3'],
                              mail_option='a',
-                             email_list=self.email_address)
+                             email_list=self.error_email_address)
         try:
             self.job_runner.queue_job(batch_job)
         except Exception as e:
