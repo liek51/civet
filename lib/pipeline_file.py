@@ -143,8 +143,7 @@ class PipelineFile():
             default_output = att['default_output'].upper() == 'TRUE'
             assert 'in_dir' not in att, ('Must not combine default_output and '
                                          'in_dir attributes.')
-            assert 'filespec' in att or 'parameter' in att, ('default_output directory must include a relative or '
-                          'absolute path or be passed as a parameter')
+
 
         # Create directory?
         if is_dir:
