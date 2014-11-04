@@ -4,7 +4,7 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
-Version 1.5.1
+Version 1.6.0
 -------------
 Bug fixes
  - Fix exception in abort_submit()
