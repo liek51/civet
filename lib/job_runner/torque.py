@@ -331,6 +331,7 @@ class TorqueJobRunner(object):
             # sleep to overcome any lag with NFS file attribute cacheing
             # This ensures that downstream jobs will see all output files written by this job
             sleep 60
+            echo "Run finished on $$(date)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
     
         fi
     
