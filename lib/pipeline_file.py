@@ -321,10 +321,6 @@ class PipelineFile():
         else:
             self.apply_in_dir_and_create_temp(files, circularity)
 
-        # Make sure a directory exists, unless explicitly requested
-        # to not do so.
-        if self._is_dir and self.create:
-            utilities.make_sure_path_exists(self.path)
 
         # Turn all the paths into an absolute path, so changes in
         # working directory throughout the pipeline lifetime don't
@@ -343,6 +339,11 @@ class PipelineFile():
             self.path = os.path.abspath(path)
 
         self._is_fixed_up = True
+
+        # Make sure a directory exists, unless explicitly requested
+        # to not do so.
+        if self._is_dir and self.create:
+            utilities.make_sure_path_exists(self.path)
 
         check = circularity.pop()
 
