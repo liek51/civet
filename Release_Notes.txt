@@ -4,6 +4,16 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.6.1
+-------------
+Bug fixes
+ - Fix handling of absolute paths for tool definition files
+ 
+Features
+ - Implement tool tag "search_path" attribute
+ - Implement pipeline "tool_search_path" attribute
+
+
 Version 1.6.0
 -------------
 Bug fixes
@@ -25,6 +35,7 @@ Features
  - Cleanup some Unicode characters from command line (problem when example
    command lines are copy and pasted from Word Processors or email clients)
 
+
 Version 1.5.0
 -------------
 Bug fixes
@@ -39,12 +50,14 @@ Features
    multiple instances of same tool in pipeline to have unique names for job and
    file naming)
 
+
 Version 1.4.2
 -------------
 Bug fixes
  - Fix crash in civet_status
  - Fix typo in civet_status output
  - Move NFS sync to end of job
+
 
 Version 1.4.1
 -------------
@@ -78,6 +91,7 @@ Features
    that is conditional based on its exit_if_exists attribute, for force any 
    command to run that is conditional based on its if_exists or if_not_exists
    attribute
+
 
 Version 1.4.0
 -------------
@@ -122,6 +136,7 @@ Features
  - Implemented threads="True" tool options (value is taken from Tool's
    threads attribute)
 
+
 Version 1.2.1
 -------------
 Bug fixes
@@ -129,6 +144,7 @@ Bug fixes
    zero return status.
 
 This is a bug-fix-only release, and contains no new features.
+
 
 Version 1.2.0
 -------------
@@ -156,6 +172,7 @@ Features
    versions.  Updated the version reporting to leverage git capabilities.  
    Version is now obtained from git, rather than being hardcoded.
 
+
 Version 1.1.0
 -------------
 Bug fixes
@@ -175,6 +192,7 @@ Features
 Features added that are not used by cga pipelines:
   - For pipeline implementers: add civet_run option --no-submit (short form -n)
     ability to generate scripts but not actually submit them to the cluster
+
 
 Version 1.0.0
 -------------

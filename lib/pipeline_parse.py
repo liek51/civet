@@ -47,6 +47,10 @@ class Pipeline(object):
         'version'
     ]
 
+    valid_attributes = [
+        'tool_search_path'
+    ]
+
     valid_version_attributes = [
         'directory'
     ]
@@ -68,7 +72,8 @@ class Pipeline(object):
         self.master_XML_dir = os.path.split(xmlfile)[0]
 
         # search path for tool XML files
-        self.search_path = search_path
+        self.user_search_path = search_path
+        self.default_tool_search_path = ""
         
         # option overrides
         self.option_overrides = {}
@@ -149,15 +154,26 @@ class Pipeline(object):
                 self._steps.append(ForEach(child, self._files))
 
     @property
-    def search_path(self):
-        return self._search_path
-        
-    @search_path.setter
-    def search_path(self, val):
+    def user_search_path(self):
+        return self._user_search_path
+
+    @user_search_path.setter
+    def user_search_path(self, val):
         if val is None:
-            self._search_path = ""
+            self._user_search_path = ""
         else:
-            self._search_path = val
+            self._user_search_path = val
+
+    @property
+    def default_tool_search_path(self):
+        return self._default_tool_search_path
+
+    @default_tool_search_path.setter
+    def default_tool_search_path(self, val):
+        if val is None:
+            self._default_tool_search_path = ""
+        else:
+            self._default_tool_search_path = val
     
     @property
     def log_dir(self):

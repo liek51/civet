@@ -43,7 +43,8 @@ class Tool():
         'walltime',
         'mem',
         'exit_if_exists',
-        'exit_test_logic'
+        'exit_test_logic',
+        'search_path'
         ]
 
     def __init__(self, xml_file, ins, outs, pipeline_files, name=None):
@@ -61,6 +62,7 @@ class Tool():
         self.thread_option_max = 0
         self.modules = []
         self.name_from_pipeline = name
+        self.search_path = ""
 
         self.verify_files = []
         self.tool_files = {}
@@ -77,27 +79,25 @@ class Tool():
         # in a search path, so the tool XML needs to be in the same directory 
         # as the pipeline XML
         
-        # save the xml_file parameter in case search_for_xml() returns None
-        xml_file_param = xml_file
-        xml_file = self.search_for_xml(xml_file)
 
-        if not xml_file:
+        self.xml_file = self.search_for_xml(xml_file)
+
+        if not self.xml_file:
             print >> sys.stderr, ('ERROR: Could not find tool XML file:',
-                                  xml_file_param, '\nExiting...')
+                                  xml_file, '\nExiting...')
             sys.exit(1)
 
         #print >> sys.stderr, '***Parsing tool file:', xml_file
         #print >> sys.stderr, self.ins
 
-        self.xml_file = xml_file
 
         # Verify that the tool definition file has not changed.
-        self.verify_files.append(os.path.abspath(xml_file))
+        self.verify_files.append(os.path.abspath(self.xml_file))
 
         try:
-            tool = ET.parse(xml_file).getroot()
+            tool = ET.parse(self.xml_file).getroot()
         except ET.ParseError as e:
-            print >> sys.stderr, 'Exception raised while parsing', xml_file
+            print >> sys.stderr, 'Exception raised while parsing', self.xml_file
             print >> sys.stderr, e.msg
             sys.exit(1)
         atts = tool.attrib
@@ -211,7 +211,7 @@ class Tool():
                         print >> sys.stderr, \
                             'When parsing {0}: The file ID "{1}" ' \
                             'appears to not be valid'.format(
-                                xml_file, a['id'] )
+                                self.xml_file, a['id'] )
                         sys.exit(1)
                     # If not key error; let the exception escape.
                 else:
@@ -223,12 +223,19 @@ class Tool():
     def search_for_xml(self, xml_file):
         # get current pipeline symbols
         import pipeline_parse as PL
+
+        #is the path absolute?
+        if os.path.isabs(xml_file):
+            if os.path.exists:
+                return xml_file
+            else:
+                return None
     
-        # first search PL.search_path
-        for path in PL.search_path.split(':'):
-            if os.path.exists(os.path.join(path, xml_file)):
+        # search PL.user_search_path
+        for path in ':'.join([PL.user_search_path, self.search_path, PL.default_tool_search_path]).split(':'):
+            if path and os.path.exists(os.path.join(path, xml_file)):
                 return os.path.join(path, xml_file)
-                
+
         # didn't find it.  Check PL.master_XML_dir
         if os.path.exists(os.path.join(PL.master_XML_dir, xml_file)):
             return os.path.join(PL.master_XML_dir, xml_file)
