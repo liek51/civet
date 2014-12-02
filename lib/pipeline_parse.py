@@ -279,12 +279,10 @@ class Pipeline(object):
         
         # 3. And (finally) send completion email
         if self.completion_mail:
-            cmd.append("ssh " +
-                       os.uname()[1] +
-                       " \"echo 'The pipeline running in:\n    " + 
+            cmd.append("echo 'The pipeline running in:\n    " +
                        PipelineFile.get_output_dir() +
                        "\nhas completed.'" +
-                       " | mailx -s 'Pipeline completed' " + self.email_address + "\"")
+                       " | mailx -s 'Pipeline completed' " + self.email_address)
             # Mask any potential mail failures.
             cmd.append("true")
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')

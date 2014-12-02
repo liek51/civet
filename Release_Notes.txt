@@ -12,7 +12,8 @@ Bug fixes
 Features
  - Implement tool tag "search_path" attribute
  - Implement pipeline "tool_search_path" attribute
-
+ - Don't ssh to head node to send pipeline completion email (was a work around
+   for genome cluster config)
 
 Version 1.6.0
 -------------
