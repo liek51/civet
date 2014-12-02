@@ -64,7 +64,7 @@ class Pipeline(object):
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None):
+                  error_email_address=None, walltime_multiplier=1):
         pipe = ET.parse(xmlfile).getroot()
 
         # Register the directory of the master (pipeline) XML.
@@ -112,6 +112,7 @@ class Pipeline(object):
         self.force_conditional_steps = force_conditional_steps
         self.skip_validation = skip_validation
         self.delay = delay
+        self.walltime_multiplier=walltime_multiplier
         if email_address:
             self.email_address = os.path.expandvars(email_address)
         else:

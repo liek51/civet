@@ -34,6 +34,7 @@ def main():
     parser.add_argument('-d', '--delay', dest='delay', default=None, help="job delay")
     parser.add_argument('-e', '--email-address', dest='email_address', default=None, help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
     parser.add_argument('--error-email-address', dest='error_email_address', default=None, help="email address for error emails, defaults to '--email-address' value")
+    parser.add_argument('--walltime-multiplier', dest='walltime_multiplier', type=float, default=None, help="optional walltime multiplier to be applied to every job's walltime")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments", nargs=argparse.REMAINDER)
     parser.set_defaults(submit=True)
@@ -48,7 +49,8 @@ def main():
                  search_path=os.environ.get('CIVET_PATH'), 
                  user_override_file=args.option_file, keep_temp=args.keep_temp,
                  release_jobs=args.release_jobs, force_conditional_steps=args.force_conditional, delay=args.delay,
-                 email_address=args.email_address, error_email_address=args.error_email_address)
+                 email_address=args.email_address, error_email_address=args.error_email_address,
+                 walltime_multiplier=args.walltime_multiplier)
     PL.submit()
 
 if __name__ == "__main__":

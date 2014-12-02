@@ -481,16 +481,16 @@ class TorqueJobRunner(object):
                 job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                         self.queue, None)
 
+            pbs.pbs_disconnect(connection)
+
             #check to see if the job was submitted successfully. 
             if not job_id:
                 e, e_msg = pbs.error()
-                pbs.pbs_disconnect(connection)
                 # the batch system returned an error, throw exception 
                 raise Exception("Error submitting job.  "
                                 "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
        
-            pbs.pbs_disconnect(connection)
-            
+
             if self.submit_with_hold and not batch_job.depends_on:
                 self.held_jobs.append(job_id)
         

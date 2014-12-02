@@ -2,7 +2,7 @@ import os
 import string
 import re
 
-_DEFAULT_WALLTIME = "01:00:00"
+
 
 
 class BatchJob(object):
@@ -32,8 +32,10 @@ class BatchJob(object):
     mem     : batch job mem attribute (in GB)
     """
 
+    DEFAULT_WALLTIME = "01:00:00"
+
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1,
-                 walltime=_DEFAULT_WALLTIME, modules=[], depends_on=[],
+                 walltime=DEFAULT_WALLTIME, modules=[], depends_on=[],
                  name=None, stdout_path=None, stderr_path="/dev/null",
                  files_to_check=None,
                  epilogue=None, version_cmds=None, error_strings=None,
@@ -137,3 +139,40 @@ class BatchJob(object):
             self._mem = m + 'gb'
         else:
             self._mem = None
+
+    @staticmethod
+    def adjust_walltime(walltime, multiplier):
+        walltime_in_seconds = BatchJob.walltime_string_to_seconds(walltime)
+        walltime_in_seconds *= multiplier
+        return BatchJob.walltime_seconds_to_string(int(walltime_in_seconds))
+
+    @staticmethod
+    def walltime_string_to_seconds(walltime):
+
+        seconds = 0
+        parts = walltime.split(':')[::-1]
+        num_parts = len(parts)
+
+        if num_parts < 1:
+            return None
+
+        seconds += int(parts[0])
+        if num_parts >= 2:
+            seconds += int(parts[1])*60
+        if num_parts >= 3:
+            seconds += int(parts[2])*3600
+        if num_parts == 4:
+            seconds += float(parts[3])*24*3600
+
+        return seconds
+
+
+    @staticmethod
+    def walltime_seconds_to_string(walltime):
+        time = int(walltime)
+        hours = time // 3600
+        minutes = (time - hours * 3600) // 60
+        seconds = (time - hours * 3600 - minutes * 60)
+
+        return "{0}:{1}:{2}".format(hours, minutes, seconds)
+

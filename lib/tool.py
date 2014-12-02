@@ -133,7 +133,7 @@ class Tool():
         if 'walltime' in atts:
             self.walltime = atts['walltime']
         else:
-            self.walltime = '01:00:00'
+            self.walltime = BatchJob.DEFAULT_WALLTIME
             
         if 'exit_if_exists' in atts and not PL.force_conditional_steps:
             # this is going to have to be fixed later, since it may contain
@@ -219,6 +219,10 @@ class Tool():
                 self.verify_files.append(name)
             else:
                 print >> sys.stderr, 'Unprocessed tag:', t
+
+        # Do we need to adjust the walltime?
+        if PL.walltime_multiplier > 0 and PL.walltime_multiplier != 1:
+            self.walltime = BatchJob.adjust_walltime(self.walltime, PL.walltime_multiplier)
 
     def search_for_xml(self, xml_file):
         # get current pipeline symbols
