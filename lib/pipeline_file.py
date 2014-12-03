@@ -17,26 +17,56 @@ class PipelineFile():
     validFileTags = [
         'file',
         'filelist',
-        'dir'
+        'dir',
+        'string'
         ]
 
-    valid_file_attributes = [
+    # these attributes are shared between file, dir, and string tags (but not filelist)
+    valid_common_attributes = [
+        'id',
         'append',
-        'create',
         'datestamp_append',
         'datestamp_prepend',
-        'default_output',
-        'id',
-        'input',
-        'in_dir',
-        'temp',
-        'filespec',
         'parameter',
         'based_on',
         'pattern',
         'replace',
-        'foreach_id'
+    ]
+
+    # attributes that only make sense for a file tag
+    valid_file_attributes = [
+        'create',
+        'input',
+        'in_dir',
+        'temp',
+        'filespec',
         ]
+
+    # attributes that only make sense for a dir tag
+    valid_dir_attributes = [
+        'create',
+        'input',
+        'in_dir',
+        'temp',
+        'filespec',
+    ]
+
+    # attributes that only make sense for a string
+    valid_string_attributes = [
+        'value'
+    ]
+
+    # valid attributes for a file list
+    valid_list_attributes = [
+        'id',
+        'foreach_id',
+        'in_dir',
+        'pattern'
+    ]
+
+
+
+
 
     # Track the master output directory.
     output_dir = None
@@ -101,9 +131,6 @@ class PipelineFile():
         assert t in PipelineFile.validFileTags, ('Illegal pipeline file tag: "'
                                                  + t + '"')
 
-        for a in att:
-            assert a in PipelineFile.valid_file_attributes, (
-                'Illegal pipeline file attribute: "' + a + '"')
 
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
@@ -113,6 +140,7 @@ class PipelineFile():
         is_file = t == 'file'
         is_dir = t == 'dir'
         is_list = t == 'filelist'
+        is_string = t == 'string'
 
         # Init some variables.
         path_is_path = False
@@ -128,6 +156,32 @@ class PipelineFile():
         foreach_dep = None
 
 
+        # make sure that the attributes make sense with the type of tag we are
+        if is_file:
+            for a in att:
+                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_file_attributes, (
+                    'Illegal pipeline file attribute: "' + a + '"')
+        elif is_dir:
+            for a in att:
+                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_dir_attributes, (
+                    'Illegal pipeline dir attribute: "' + a + '"')
+
+            if 'default_output' in att:
+                default_output = att['default_output'].upper() == 'TRUE'
+                assert 'in_dir' not in att, ('Must not combine default_output and '
+                                             'in_dir attributes.')
+        elif is_string:
+            for a in att:
+                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_string_attributes, (
+                    'Illegal pipeline string attribute: "' + a + '"')
+        elif is_list:
+            for a in att:
+                assert a in PipelineFile.valid_list_attributes, (
+                    'Illegal pipeline filelist attribute: "' + a + '"')
+
+
+
+
         # What kind of file?
         is_temp = False
         if 'temp' in att:
@@ -138,11 +192,7 @@ class PipelineFile():
         if 'input' in att:
             is_input = att['input'].upper() == 'TRUE'
 
-        # Default output?
-        if 'default_output' in att:
-            default_output = att['default_output'].upper() == 'TRUE'
-            assert 'in_dir' not in att, ('Must not combine default_output and '
-                                         'in_dir attributes.')
+
 
 
         # Create directory?

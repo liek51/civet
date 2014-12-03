@@ -41,6 +41,7 @@ class Pipeline(object):
     valid_tags = [
         'file',
         'dir',
+        'string',
         'foreach',
         'step',
         'filelist',
@@ -137,6 +138,7 @@ class Pipeline(object):
             elif t == 'version':
                 self.parse_version_tag(child)
             else:
+                # <file> <dir> <filelist> and <string> are all handled by PipelineFile
                 PipelineFile.parse_XML(child, self._files)
         
         # Here we have finished parsing the files in the pipeline XML.
