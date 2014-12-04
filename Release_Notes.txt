@@ -10,9 +10,11 @@ Bug fixes
  - Fix handling of absolute paths for tool definition files
  
 Features
- - Implement tool tag "search_path" attribute
- - Implement pipeline "tool_search_path" attribute
- - Implement new --walltime-multiplier option to civet_run
+ - New tool tag "search_path" attribute
+ - New pipeline "tool_search_path" attribute
+ - New --walltime-multiplier option to civet_run
+ - Added <string> pipeline tag,  can be used similar to <file> but strings are
+   not modified (files may be expanded to absolute paths)
  - Don't ssh to head node to send pipeline completion email (was a work around
    for genome cluster config)
 

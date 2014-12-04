@@ -75,7 +75,7 @@ class PipelineFile():
     params = None
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
-                 files, is_path, based_on, pattern, replace, append,
+                 files, is_path, is_string, based_on, pattern, replace, append,
                  datestamp, datestamp_append, in_dir,
                  is_parameter, is_list, create=True, default_output=False,
                  foreach_dep=None):
@@ -86,6 +86,7 @@ class PipelineFile():
         self.is_input = is_input
         self._is_dir = is_dir
         self.is_path = is_path
+        self.is_string = is_string
         self.based_on = based_on
         self.pattern = pattern
         self.replace = replace
@@ -118,7 +119,7 @@ class PipelineFile():
         self.creator_job = j
 
     # Track the jobs that use this file as an input.  This is needed
-    # to properly known when we can remove our temp files at the end 
+    # to properly know when we can remove our temp files at the end
     # of a run.
     def add_consumer_job(self, j):
         self.consumer_jobs.append(j)
@@ -181,7 +182,6 @@ class PipelineFile():
 
 
 
-
         # What kind of file?
         is_temp = False
         if 'temp' in att:
@@ -192,9 +192,6 @@ class PipelineFile():
         if 'input' in att:
             is_input = att['input'].upper() == 'TRUE'
 
-
-
-
         # Create directory?
         if is_dir:
             if 'create' in att:
@@ -203,7 +200,6 @@ class PipelineFile():
                 create = True
         else:
             create = False
-                
 
         in_dir = None
         if 'in_dir' in att:
@@ -212,6 +208,9 @@ class PipelineFile():
         if 'filespec' in att:
             path = att['filespec']
             path_is_path = True
+
+        if 'value' in att:
+            path = att['value']
 
         if 'parameter' in att:
             assert not path, ('Must not have both filespec'
@@ -223,10 +222,6 @@ class PipelineFile():
             pattern = att['pattern']
             if 'foreach_id' in att:
                 foreach_dep = att['foreach_id']
-
-        if 'foreach_id' in att:
-            assert is_list, ('foreach_id attribute can only be used with '
-                             'a filelist tag.')
 
         if 'based_on' in att:
             assert (not path), (
@@ -271,8 +266,8 @@ class PipelineFile():
         #    print >> sys.stderr, "temp", id, "has no path"
 
         PipelineFile(
-            id, path, is_file, is_temp, is_input, is_dir, files, 
-            path_is_path, based_on, pattern, replace, append, 
+            id, path, is_file, is_temp, is_input, is_dir, files,
+            path_is_path, is_string, based_on, pattern, replace, append,
             datestamp, datestamp_append, in_dir,
             is_parameter, is_list, create, default_output, foreach_dep)
 
@@ -327,7 +322,7 @@ class PipelineFile():
             # create a default one in our current working directory
             PipelineFile.output_dir = PipelineFile('default_output', ".", False,
                                                    False, False, True, files,
-                                                   True, None, None, None, None,
+                                                   True, False, None, None, None, None,
                                                    None, None, None, False,
                                                    False, create=True,
                                                    default_output=True,
@@ -378,8 +373,10 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         if self.is_list:
+            #filelists are comprised of a directory and pattern,
+            #convert the directory to an absolute path
             self.in_dir = os.path.abspath(files[self.in_dir].path)
-        else:
+        elif not self.is_string:
             path = self.path
             if (os.path.split(path)[0] == '' and
                 (not self.is_input) and

@@ -79,8 +79,10 @@ class ForEach():
             cleanups = []
             files_to_delete = []
             iteration_ids = []
+            #TODO this is difficult to make sense of, create a static method in
+            #PipelineFile that only takes the id, path, file list, and directory
             PipelineFile(self.file.id, fn, True, False, True, False,
-                         self.pipelineFiles, True, None, None, None, None,
+                         self.pipelineFiles, True, False, None, None, None, None,
                          None, None, self.dir, False, False)
             cleanups.append(self.file.id)
 
@@ -97,8 +99,9 @@ class ForEach():
                     #related file is an output file and indir not specified
                     #write it to the default output directory
                     directory = None
+                #TODO see comments for PipelineFile above
                 PipelineFile(rel.id, rfn, True, False, rel.is_input, False,
-                             self.pipelineFiles, True, None, None, None,
+                             self.pipelineFiles, True, False, None, None, None,
                              None, None, None, directory, False, False)
                 cleanups.append(rel.id)
                 if rel.is_temp:
