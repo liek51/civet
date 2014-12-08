@@ -49,6 +49,7 @@ class PipelineFile():
         'in_dir',
         'temp',
         'filespec',
+        'default_output'
     ]
 
     # attributes that only make sense for a string
