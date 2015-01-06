@@ -34,7 +34,7 @@ Features
    directory for each run)
  - Add new error_email_address parameter to parse_XML, used by abort_pipeline
    Bash function to email the user when a pipeline is aborted. Also used for 
-   batch system abort emails. Can be passe to civet_run with
+   batch system abort emails. Can be passed to civet_run with
    --error-email-address option
  - Cleanup some Unicode characters from command line (problem when example
    command lines are copy and pasted from Word Processors or email clients)
