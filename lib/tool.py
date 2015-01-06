@@ -627,8 +627,11 @@ class Command():
             if tok in self.tool_files:
                 f = self.tool_files[tok]
                 if f.is_list:
-                    # Emit the code to invoke a file filter.
-                    return "$(process_filelist.py {0} '{1}')".format(f.in_dir, f.pattern)
+                    if f.list_from_param:
+                        return f.path.replace(',', ' ')
+                    else:
+                        # Emit the code to invoke a file filter.
+                        return "$(process_filelist.py {0} '{1}')".format(f.in_dir, f.pattern)
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.

@@ -62,7 +62,8 @@ class PipelineFile():
         'id',
         'foreach_id',
         'in_dir',
-        'pattern'
+        'pattern',
+        'parameter'
     ]
 
 
@@ -102,6 +103,13 @@ class PipelineFile():
         self.creator_job = None
         self.consumer_jobs = []
         self.foreach_dep = foreach_dep
+
+        # need a separate variable for this because is_parameter gets reset to
+        # False once the param number -> value conversion happens
+        if is_list and is_parameter:
+            self.list_from_param = True
+        else:
+            self.list_from_param = False
 
         if self.id in files:
             # We've already seen this file ID.
@@ -216,6 +224,8 @@ class PipelineFile():
         if 'parameter' in att:
             assert not path, ('Must not have both filespec'
                               'and parameter attributes.')
+            assert not in_dir, ('Must not have both in_dir'
+                              'and parameter attributes.')
             path = int(att['parameter'])
             is_parameter = True
 
@@ -257,9 +267,8 @@ class PipelineFile():
                     sys.exit(1)
                 append = att['append']
 
-
-        if is_list and not (pattern and in_dir):
-            print >> sys.stderr, 'filelist requires in_dir and pattern.'
+        if is_list and not ((pattern and in_dir) or is_parameter):
+            print >> sys.stderr, 'filelist requires in_dir and pattern or it must be passed as a parameter.'
             print >> sys.stderr, att
             sys.exit(1)
 
@@ -374,9 +383,17 @@ class PipelineFile():
         # i.e., just a filename.  If so, and it is not an input file,
         # place it in the output directory.
         if self.is_list:
-            #filelists are comprised of a directory and pattern,
-            #convert the directory to an absolute path
-            self.in_dir = os.path.abspath(files[self.in_dir].path)
+            if self.in_dir:
+                #filelist is comprised of a directory and pattern,
+                #convert the directory to an absolute path
+                self.in_dir = os.path.abspath(files[self.in_dir].path)
+            elif self.list_from_param:
+                # file list is passed as a parameter,  might be comma delimited
+                # convert paths in list to absolute path
+                file_list = []
+                for f in self.path.split(','):
+                    file_list.append(os.path.abspath(f))
+                self.path = ','.join(file_list)
         elif not self.is_string:
             path = self.path
             if (os.path.split(path)[0] == '' and
@@ -425,10 +442,12 @@ class PipelineFile():
         # whose path we're going to mangle to create ours.
         #print >> sys.stderr, 'processing based_on\n', self
         if not bo in files:
-            print >> sys.stderr, 'ERROR: based on unknown file:', bo
-            sys.exit(1)
+            sys.exit('ERROR: based on unknown file: {0}'.format(bo))
         bof = files[bo]
         bof.fix_up_file(files, circularity)
+
+        if bof.list_from_param:
+            sys.exit("ERROR: file can not be based on a list: {0} is based on {1}".format(self.id, bo))
 
         # strip out any path before using the re, in case the replacement
         # uses the leading string twice.
