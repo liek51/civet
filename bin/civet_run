@@ -7,7 +7,7 @@ import sys
 import inspect
 import os
 
-cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
     sys.path.insert(0, lib_folder)
