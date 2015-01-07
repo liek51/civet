@@ -113,7 +113,7 @@ class Pipeline(object):
         self.force_conditional_steps = force_conditional_steps
         self.skip_validation = skip_validation
         self.delay = delay
-        self.walltime_multiplier=walltime_multiplier
+        self.walltime_multiplier = walltime_multiplier
         if email_address:
             self.email_address = os.path.expandvars(email_address)
         else:
@@ -123,6 +123,10 @@ class Pipeline(object):
         else:
             self.error_email_address = self.email_address
         self.directory_version = 1
+
+        if 'tool_search_path' in pipe.attrib:
+            self.default_tool_search_path = pipe.attrib['tool_search_path']
+
         
         # And track the major components of the pipeline
         self._steps = []

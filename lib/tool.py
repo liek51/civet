@@ -83,13 +83,7 @@ class Tool():
         self.xml_file = self.search_for_xml(xml_file)
 
         if not self.xml_file:
-            print >> sys.stderr, ('ERROR: Could not find tool XML file:',
-                                  xml_file, '\nExiting...')
-            sys.exit(1)
-
-        #print >> sys.stderr, '***Parsing tool file:', xml_file
-        #print >> sys.stderr, self.ins
-
+            sys.exit("ERROR: Could not find tool XML file: {0}\nExiting...".format(xml_file))
 
         # Verify that the tool definition file has not changed.
         self.verify_files.append(os.path.abspath(self.xml_file))
