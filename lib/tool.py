@@ -124,7 +124,9 @@ class Tool():
         else:
             self.default_threads = 1
 
-        if 'walltime' in atts:
+        if 'walltime' in self.option_overrides:
+            self.walltime = self.option_overrides['walltime'][0].replace('"', '')
+        elif 'walltime' in atts:
             self.walltime = atts['walltime']
         else:
             self.walltime = BatchJob.DEFAULT_WALLTIME

@@ -17,6 +17,9 @@ Features
    not modified (files may be expanded to absolute paths)
  - Don't ssh to head node to send pipeline completion email (was a work around
    for genome cluster config)
+ - File lists can now be passed to pipeline as command line parameter
+ - A tool's walltime (specified it tool's XML file) can be overridden by adding 
+   tool_config_prefix.walltime=HH:MM:SS as an option override. 
 
 Version 1.6.0
 -------------
