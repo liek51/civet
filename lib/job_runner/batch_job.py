@@ -174,5 +174,5 @@ class BatchJob(object):
         minutes = (time - hours * 3600) // 60
         seconds = (time - hours * 3600 - minutes * 60)
 
-        return "{0}:{1}:{2}".format(hours, minutes, seconds)
+        return "{}:{:02}:{:02}".format(hours, minutes, seconds)
 

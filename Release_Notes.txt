@@ -10,7 +10,6 @@ Bug fixes
  - Fix handling of absolute paths for tool definition files
  
 Features
- - New tool tag "search_path" attribute
  - New pipeline "tool_search_path" attribute
  - New --walltime-multiplier option to civet_run
  - Added <string> pipeline tag,  can be used similar to <file> but strings are
@@ -19,7 +18,8 @@ Features
    for genome cluster config)
  - File lists can now be passed to pipeline as command line parameter
  - A tool's walltime (specified it tool's XML file) can be overridden by adding 
-   tool_config_prefix.walltime=HH:MM:SS as an option override. 
+   tool_config_prefix.walltime=HH:MM:SS as an option override or by using a new
+   optional pipeline tool tag attribute called "walltime". 
 
 Version 1.6.0
 -------------

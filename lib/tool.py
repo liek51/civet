@@ -44,10 +44,9 @@ class Tool():
         'mem',
         'exit_if_exists',
         'exit_test_logic',
-        'search_path'
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files, name=None):
+    def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -62,7 +61,6 @@ class Tool():
         self.thread_option_max = 0
         self.modules = []
         self.name_from_pipeline = name
-        self.search_path = ""
 
         self.verify_files = []
         self.tool_files = {}
@@ -125,10 +123,18 @@ class Tool():
             self.default_threads = 1
 
         if 'walltime' in self.option_overrides:
+            # walltime set in an option override file takes the highest priority
             self.walltime = self.option_overrides['walltime'][0].replace('"', '')
+        elif walltime:
+            # did we pass a walltime as a parameter? this would be set in the
+            # <tool> tag in the pipeline and should have priority over the
+            # walltime in the tool XML file
+            self.walltime = walltime
         elif 'walltime' in atts:
+            # walltime set in the tool's XML file
             self.walltime = atts['walltime']
         else:
+            # no walltime set anywhere.  Use a Civet default walltime.
             self.walltime = BatchJob.DEFAULT_WALLTIME
             
         if 'exit_if_exists' in atts and not PL.force_conditional_steps:
@@ -232,7 +238,7 @@ class Tool():
                 return None
     
         # search PL.user_search_path
-        for path in ':'.join([PL.user_search_path, self.search_path, PL.default_tool_search_path]).split(':'):
+        for path in ':'.join([PL.user_search_path, PL.default_tool_search_path]).split(':'):
             if path and os.path.exists(os.path.join(path, xml_file)):
                 return os.path.join(path, xml_file)
 

@@ -5,7 +5,8 @@ class PipelineTool():
         att = e.attrib
         input = []
         output = []
-        # Every tool requires a name and a description, which is 
+        walltime = None
+        # Every tool requires a name and a description, which is
         # the path to the tool's XML file.
         self.name = att['name'].replace(' ', '_')
         self.description = att['description']
@@ -13,12 +14,16 @@ class PipelineTool():
             input = att['input'].split(',')
             for n in range(len(input)):
                 input[n] = input[n].strip()
+
         if 'output' in att:
             output = att['output'].split(',')
             for n in range(len(output)):
                 output[n] = output[n].strip()
 
-        self.tool = Tool(self.description, input, output, files, self.name)
+        if 'walltime' in att:
+            walltime = att['walltime']
+
+        self.tool = Tool(self.description, input, output, files, self.name, walltime)
         
     def submit(self, name_prefix):
         return self.tool.submit(name_prefix)
