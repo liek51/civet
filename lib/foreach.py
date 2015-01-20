@@ -120,7 +120,7 @@ class ForEach():
             #submit a job that deletes all of the temporary files
             tmps = []
             for id in files_to_delete:
-                tmps.append(self.pipelineFiles[rel.id].path)
+                tmps.append(self.pipelineFiles[id].path)
 
             if len(tmps):
                 cmd = 'rm -f ' + ' '.join(tmps)

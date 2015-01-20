@@ -8,16 +8,19 @@ Version 1.6.1
 -------------
 Bug fixes
  - Fix handling of absolute paths for tool definition files
- 
+ - Fix issue with cleanup of <foreach> related> files declared temp 
+
 Features
- - New pipeline "tool_search_path" attribute
+ - New pipeline "tool_search_path" attribute, lets you specify colon delimted 
+   list of directories to search for tool XML files
  - New --walltime-multiplier option to civet_run
  - Added <string> pipeline tag,  can be used similar to <file> but strings are
    not modified (files may be expanded to absolute paths)
  - Don't ssh to head node to send pipeline completion email (was a work around
    for genome cluster config)
- - File lists can now be passed to pipeline as command line parameter
- - A tool's walltime (specified it tool's XML file) can be overridden by adding 
+ - File lists can now be passed to pipeline as command line parameter (comma
+   delimited list)
+ - A tool's walltime (specified in tool's XML file) can be overridden by adding 
    tool_config_prefix.walltime=HH:MM:SS as an option override or by using a new
    optional pipeline tool tag attribute called "walltime". 
 
