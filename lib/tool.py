@@ -112,12 +112,13 @@ class Tool():
 
         if 'tool_config_prefix' in atts:
             self.config_prefix = atts['tool_config_prefix']
-            if self.config_prefix in PL.option_overrides:
-                self.option_overrides = PL.option_overrides[self.config_prefix]   
         elif tool_config_prefix:
             self.config_prefix = tool_config_prefix
         else:
             self.config_prefix = None
+
+        if self.config_prefix in PL.option_overrides:
+            self.option_overrides = PL.option_overrides[self.config_prefix]
 
         if 'threads' in atts:
             self.default_threads = int(atts['threads'])
