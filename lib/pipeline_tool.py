@@ -27,7 +27,7 @@ class PipelineTool():
             walltime = att['walltime']
 
         if 'tool_config_prefix' in att:
-            tool_config_prefix = att['prefix']
+            tool_config_prefix = att['tool_config_prefix']
 
         self.tool = Tool(self.description, input, output, files, self.name, walltime, tool_config_prefix)
         
