@@ -46,7 +46,7 @@ class Tool():
         'exit_test_logic',
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None):
+    def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None, tool_config_prefix=None):
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -114,6 +114,8 @@ class Tool():
             self.config_prefix = atts['tool_config_prefix']
             if self.config_prefix in PL.option_overrides:
                 self.option_overrides = PL.option_overrides[self.config_prefix]   
+        elif tool_config_prefix:
+            self.config_prefix = tool_config_prefix
         else:
             self.config_prefix = None
 
