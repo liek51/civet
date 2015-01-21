@@ -60,7 +60,7 @@ class Pipeline(object):
 
     def __init__(self):
         pass
-        
+
     def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
@@ -383,7 +383,7 @@ class Pipeline(object):
                 opt,val = line.split('.', 1)[1].split('=')
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
-                self.option_overrides[prefix][opt] = (val, source)
+                self.option_overrides[prefix][opt.strip] = (val, source)
 
 
     def parse_version_tag(self, tag):
