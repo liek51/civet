@@ -110,10 +110,10 @@ class Tool():
         else:
             self.error_strings = None
 
-        if 'tool_config_prefix' in atts:
-            self.config_prefix = atts['tool_config_prefix']
-        elif tool_config_prefix:
+        if tool_config_prefix:
             self.config_prefix = tool_config_prefix
+        elif 'tool_config_prefix' in atts:
+            self.config_prefix = atts['tool_config_prefix']
         else:
             self.config_prefix = None
 
