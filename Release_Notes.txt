@@ -9,6 +9,7 @@ Version 1.6.1
 Bug fixes
  - Fix handling of absolute paths for tool definition files
  - Fix issue with cleanup of <foreach> related> files declared temp 
+ - Properly parse option override files with whitespace around the =
 
 Features
  - New pipeline "tool_search_path" attribute, lets you specify colon delimted 
@@ -23,6 +24,8 @@ Features
  - A tool's walltime (specified in tool's XML file) can be overridden by adding 
    tool_config_prefix.walltime=HH:MM:SS as an option override or by using a new
    optional pipeline tool tag attribute called "walltime". 
+ - Ability to specify a tool_config_prefix as an attribute in the pipeline tool
+   tag.  Takes precedence over tool_config_prefix set in tool XML file.
 
 Version 1.6.0
 -------------
@@ -72,7 +75,7 @@ Bug fixes
 Version 1.4.1
 -------------
 Bug fixes:
- - Fixed problem where tool exit_test_logic was not geting validated properly
+ - Fixed problem where tool exit_test_logic was not getting validated properly
  - Fix problem where civet_cancel was not removing queued jobs (only running and
    held jobs were canceled)
  - Use U.S. spelling of "canceled" (vs cancelled)

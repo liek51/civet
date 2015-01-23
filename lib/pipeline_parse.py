@@ -380,10 +380,10 @@ class Pipeline(object):
                     continue
                 line = line.split(' #')[0]
                 prefix = line.split('.', 1)[0]
-                opt,val = line.split('.', 1)[1].split('=')
+                opt, val = line.split('.', 1)[1].split('=')
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
-                self.option_overrides[prefix][opt.strip()] = (val, source)
+                self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
 
 
     def parse_version_tag(self, tag):
