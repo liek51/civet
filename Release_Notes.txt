@@ -12,7 +12,7 @@ Bug fixes
  - Properly parse option override files with whitespace around the =
 
 Features
- - New pipeline "tool_search_path" attribute, lets you specify colon delimted 
+ - New pipeline "tool_search_path" attribute, lets you specify colon delimited
    list of directories to search for tool XML files
  - New --walltime-multiplier option to civet_run
  - Added <string> pipeline tag,  can be used similar to <file> but strings are
