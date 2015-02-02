@@ -46,4 +46,4 @@ def cleanup_command_line():
         decoded = unicode(sys.argv[i], sys.stdin.encoding)
         for key,val in conversion_pairs.iteritems():
             decoded = unicode.replace(decoded, unicodedata.lookup(key), val)
-        sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')  #this should probably do something other than 'replace'
+        sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')  #Should probably be doing 'strict' here instead of 'replace'
