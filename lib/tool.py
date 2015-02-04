@@ -431,7 +431,11 @@ class Tool():
         for fid in self.tool_files:
             f = self.tool_files[fid]
             if f.is_input:
-                if not os.path.exists(f.path):
+                if f.is_list:
+                    for lf in f.path.split(','):
+                        if not os.path.exists(lf):
+                            missing.append(lf)
+                elif not os.path.exists(f.path):
                     missing.append(f.path)
         return missing
 

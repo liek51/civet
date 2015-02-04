@@ -4,6 +4,15 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.6.2
+-------------
+Bug fixes
+ - none
+
+Features
+ - filelist parameter can now have 'input' attribute.  If true,  each file
+   in list will be checked to see if it exists at submit time.
+
 Version 1.6.1
 -------------
 Bug fixes

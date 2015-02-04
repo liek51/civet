@@ -63,7 +63,8 @@ class PipelineFile():
         'foreach_id',
         'in_dir',
         'pattern',
-        'parameter'
+        'parameter',
+        'input'
     ]
 
 
