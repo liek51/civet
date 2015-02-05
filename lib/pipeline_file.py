@@ -272,6 +272,9 @@ class PipelineFile():
             print >> sys.stderr, 'filelist requires in_dir and pattern or it must be passed as a parameter.'
             print >> sys.stderr, att
             sys.exit(1)
+        if is_list and pattern and is_input:
+            sys.stderr.write('pattern based filelist may not be specified as input.\n')
+            sys.exit(1)
 
         #if is_temp and not path:
         #    print >> sys.stderr, "temp", id, "has no path"
