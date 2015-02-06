@@ -1,0 +1,6 @@
+<pipeline name="hello">
+    <step name="step">
+        <tool name="hello-tool"
+              description="hello_tool.xml" />
+    </step>
+</pipeline>

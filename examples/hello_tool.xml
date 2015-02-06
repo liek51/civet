@@ -1,0 +1,5 @@
+<tool name="hello" >
+        <command program="echo">
+            Hello
+        </command>
+</tool>
