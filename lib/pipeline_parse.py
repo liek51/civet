@@ -72,6 +72,12 @@ class Pipeline(object):
         # We'll use it to locate tool XML files.
         self.master_XML_dir = os.path.split(xmlfile)[0]
 
+        # Save some that we only need for reporting use, later.
+        self.xmlfile = xmlfile
+        self.params = params
+        self.search_path = search_path
+        self.user_override_file = user_override_file
+
         # search path for tool XML files
         self.user_search_path = search_path
         self.default_tool_search_path = ""
@@ -205,14 +211,39 @@ class Pipeline(object):
         of.write('Working directory at time of pipeline submission:\n')
         of.write(os.getcwd() + '\n\n')
         of.write('Command line used to invoke the pipeline:\n')
-        of.write(' '.join(sys.argv) + '\n')
+        of.write(' '.join(sys.argv) + '\n\n')
+        of.write('Parameters to parse_XML:\n')
+        of.write('  xmlfile: {0}\n'.format(self.xmlfile))
+        of.write('  params: {0}\n'.format(self.params))
+        of.write('  skip_validation: {0}\n'.format(
+            self.skip_validation))
+        of.write('  queue: {0}\n'.format(self.queue))
+        of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
+        of.write('  completion_mail: {0}\n'.format(
+            self.completion_mail))
+        of.write('  search_path: {0}\n'.format(self.search_path))
+        of.write('  user_override_file: {0}\n'.format(
+            self.user_override_file))
+        of.write('  keep_temp: {0}\n'.format(self.keep_temp))
+        of.write('  release_jobs: {0}\n'.format(self.release_jobs))
+        of.write('  force_conditional_steps: {0}\n'.format(
+            self.force_conditional_steps))
+        of.write('  delay: {0}\n'.format(self.delay))
+        of.write('  email_address: {0}\n'.format(self.email_address))
+        of.write('  error_email_address: {0}\n'.format(
+            self.error_email_address))
+        of.write('  walltime_multiplier: {0}\n'.format(
+            self.walltime_multiplier))
+
         of.close()
         
         #capture the overrides loaded into a log file:
-        of = open(os.path.join(self.log_dir, 'option_overrides.txt'), 'w')
-        for prefix, overrides in self.option_overrides.iteritems() :
+        of = open(os.path.join(self.log_dir, 'option_overrides.txt'),
+                  'w')
+        for prefix, overrides in self.option_overrides.iteritems():
             for opt, (val,source) in overrides.iteritems():
-                of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt, val, source))
+                of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt,
+                                                      val, source))
         of.close()
 
         # Most of the dependencies are file-based; a job can run
@@ -389,7 +420,7 @@ class Pipeline(object):
     def parse_version_tag(self, tag):
         for attr in tag.attrib:
             assert attr in self.valid_version_attributes, (
-                'Illegal version attribute: "' + a + '"')
+                'Illegal version attribute: "' + attr + '"')
             if attr == 'directory':
                 version = int(tag.attrib[attr])
                 assert version in self.valid_directory_versions
