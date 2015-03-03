@@ -19,7 +19,7 @@ class ForEach():
     # perhaps someday we will have a more sophisticated Civet run time and
     # possibly have the ability to throttle job submission or bundle jobs
     # together
-    MAX_JOBS = 512
+    MAX_JOBS = 1200
 
     def __init__(self, e, pipeline_files):
         self.file = None
