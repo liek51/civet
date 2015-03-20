@@ -453,20 +453,20 @@ class PipelineFile():
         if bof.list_from_param:
             sys.exit("ERROR: file can not be based on a list: {0} is based on {1}".format(self.id, bo))
 
-        # strip out any path before using the re, in case the replacement
-        # uses the leading string twice.
-        original_path = os.path.basename(bof.path)
-
         if self.append:
-            self.path = original_path + self.append
+            self.path = self.path + self.append
         elif self.datestamp:
             ds = datetime.datetime.now().strftime(self.datestamp)
             if self.datestamp_append:
-                self.path = original_path + ds
+                self.path = self.path + ds
             else:
-                self.path = ds + original_path
+                #split the original path, strip trailing slashes so we get the
+                #basename
+                original_path, filename = os.path.split(self.path.rstrip('/'))
+                self.path = os.path.join(original_path, ds + filename)
         else: # replace
-            self.path = re.sub(self.pattern, self.replace, original_path)
+            original_path, filename = os.path.split(self.path.rstrip('/'))
+            self.path = os.path.join(original_path, re.sub(self.pattern, self.replace, filename))
 
     def apply_in_dir_and_create_temp(self, files, circularity):
         ind = self.in_dir
