@@ -462,10 +462,10 @@ class PipelineFile():
             else:
                 #split the original path, strip trailing slashes so we get the
                 #basename
-                original_path, filename = os.path.split(bof.rstrip('/'))
+                original_path, filename = os.path.split(bof.path.rstrip('/'))
                 self.path = os.path.join(original_path, ds + filename)
         else: # replace
-            original_path, filename = os.path.split(bof.rstrip('/'))
+            original_path, filename = os.path.split(bof.path.rstrip('/'))
             self.path = os.path.join(original_path, re.sub(self.pattern, self.replace, filename))
 
     def apply_in_dir_and_create_temp(self, files, circularity):
