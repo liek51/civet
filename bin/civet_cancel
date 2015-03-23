@@ -28,134 +28,162 @@ def main():
     version.parse_options()
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('log_dir', help="Path to pipeline log directory")
+    parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="Run in recursive mode")
+    parser.add_argument('dirs', help="Path to pipeline log directory", nargs=argparse.REMAINDER)
+    parser.set_defaults(recursive=False)
+    
     args = parser.parse_args()
 
-    log_dir = args.log_dir
+    dir_list_arg = []
     
-    if not os.path.isdir(log_dir):
-        sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
-        return 1
+        
+    if len(args.dirs) > 0:
+        dir_list_arg = args.dirs
+    else:
+        dir_list_arg.append('.')
+
+    if args.recursive:
+        all_log_dirs = []
+        for d in dir_list_arg:
+            dirs = []
+            for root, children, files in os.walk(d):
+                if job_runner.common.BATCH_ID_LOG in files:
+                    dirs.append(root)
+            dirs.sort()
+            all_log_dirs += dirs
+
+        
+        if len(all_log_dirs) == 0:
+            sys.stderr.write("ERROR: no valid log directory found!\n")
+            return 1
     
+    else:
+        all_log_dirs = dir_list_arg
+        
     jm = batch_system.JobManager()
     
-    # get listing of batch jobs from the pipeline's log directory
-    # each line in batch_jobs is [batch_id, job_name, [dependencies]])
-    try:
-        batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
-    except IOError, e:
-        sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory:\n".format(log_dir))
-        sys.stderr.write("\t{0}\n".format(e))
-        return 1
+    for log_dir in all_log_dirs:
     
-    print "\n\nCancelling pipeline with log directory:"
-    print "\t{0}\n".format(log_dir)
+        # get listing of batch jobs from the pipeline's log directory
+        # each line in batch_jobs is [batch_id, job_name, [dependencies]])
+        try:
+            batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
+        except IOError, e:
+            sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory:\n".format(log_dir))
+            sys.stderr.write("\t{0}\n".format(e))
+            return 1
     
-    # we will build a list of unfinished and complete jobs
-    unfinished_jobs = []
-    complete_jobs = []
+        print "\n\nCancelling pipeline with log directory:"
+        print "\t{0}\n".format(log_dir)
     
-    # and a dict that lets us lookup the name associated with a job id
-    job_name_lookup = {}
+        # we will build a list of unfinished and complete jobs
+        unfinished_jobs = []
+        complete_jobs = []
     
-    for job in batch_jobs:
-        job_name_lookup[job[0]] = job[1]
-        if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
-            # for now if the job does not have a status file we assume it is
-            # still running or held
-            unfinished_jobs.append(job[0])
-        else:
-            complete_jobs.append(job[0])
+        # and a dict that lets us lookup the name associated with a job id
+        job_name_lookup = {}
     
-    if len(unfinished_jobs) == 0:
-        print "\tAll jobs are complete, no jobs to cancel."
-        return 0
-    
-    # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
-    # check the queues and send batch delete requests for them
-    cancel_log = open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME), 'w')
-    cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
-    
-    unknown_jobs = []
-    running_jobs = []
-    held_jobs = []
-    queued_jobs = []
-    
-    # check all job id's that don't have a -status.txt file and record their
-    # state (running or held) before we do anything else
-    for id in unfinished_jobs:
-        status = jm.query_job(id)
-        if status:
-            if status.state == 'R':
-                running_jobs.append(id)
-            elif status.state == 'Q':
-                 queued_jobs.append(id)
-            elif status.state == 'H':
-                held_jobs.append(id)
+        for job in batch_jobs:
+            job_name_lookup[job[0]] = job[1]
+            if not os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)):
+                # for now if the job does not have a status file we assume it is
+                # still running or held
+                unfinished_jobs.append(job[0])
             else:
-                # for now treat any other state as running,  
-                # we many want to change this
-                running_jobs.append(id)
-        else:
-            unknown_jobs.append(id)
-            
+                complete_jobs.append(job[0])
     
-    # log status of jobs before issuing any qdels
-    cancel_log.write("COMPLETE_JOBS={0}\n".format(complete_jobs))
-    cancel_log.write("RUNNING_JOBS={0}\n".format(running_jobs))
-    cancel_log.write("PENDING_JOBS={0}\n".format(held_jobs))
-    if unknown_jobs:
-        cancel_log.write("UNKNOWN_STATE={0}\n".format(unknown_jobs))
+        if len(unfinished_jobs) == 0:
+            print "\tAll jobs are complete, no jobs to cancel."
+            return 0
     
-    cancel_log.close()
+        # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
+        # check the queues and send batch delete requests for them
+        try:
+            with open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME), 'w') as cancel_log:
+                cancel_log.write("DATESTAMP=" + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
     
-    # delete jobs, starting with held jobs first
-    for id in held_jobs + queued_jobs + running_jobs:
-        rval = jm.delete_job(id)
-        if rval and (rval != batch_system.JobManager.E_UNKNOWN or rval != batch_system.JobManager.E_STATE):
-            # rval is not zero and it is no an unknown job id or invalid state 
-            # error (job may have completed between when we last checked and 
-            # now, those return values may be expected)
-            print "Error deleting {0} from queue. ({1}).".format(id, rval)
+                unknown_jobs = []
+                running_jobs = []
+                held_jobs = []
+                queued_jobs = []
+
+                # check all job id's that don't have a -status.txt file and record their
+                # state (running or held) before we do anything else
+                for id in unfinished_jobs:
+                    status = jm.query_job(id)
+                    if status:
+                        if status.state == 'R':
+                            running_jobs.append(id)
+                        elif status.state == 'Q':
+                             queued_jobs.append(id)
+                        elif status.state == 'H':
+                            held_jobs.append(id)
+                        else:
+                            # for now treat any other state as running,  
+                            # we many want to change this
+                            running_jobs.append(id)
+                    else:
+                        unknown_jobs.append(id)
+
+
+                # log status of jobs before issuing any qdels
+                cancel_log.write("COMPLETE_JOBS={0}\n".format(complete_jobs))
+                cancel_log.write("RUNNING_JOBS={0}\n".format(running_jobs))
+                cancel_log.write("PENDING_JOBS={0}\n".format(held_jobs))
+                if unknown_jobs:
+                    cancel_log.write("UNKNOWN_STATE={0}\n".format(unknown_jobs))
+    
+        except EnvironmentError:
+            print "Unable to open Cancel Log...skipping (maybe you don't own this Civet log directory"
+            continue
+    
+        # delete jobs, starting with held jobs first
+        for id in held_jobs + queued_jobs + running_jobs:
+            rval = jm.delete_job(id)
+            if rval and (rval != batch_system.JobManager.E_UNKNOWN or rval != batch_system.JobManager.E_STATE):
+                # rval is not zero and it is no an unknown job id or invalid state 
+                # error (job may have completed between when we last checked and 
+                # now, those return values may be expected)
+                print "Error deleting {0} from queue. ({1}).".format(id, rval)
             
            
             
-    print "Pipeline status prior to cancel:"
-    print "Total Pipeline Jobs: {0}".format(len(batch_jobs))
-    print "\tCompleted Jobs: {0}".format(len(complete_jobs))
-    print "\tRunning Jobs: {0}".format(len(running_jobs))
-    print "\tPending Jobs: {0}".format(len(held_jobs))
-    if unknown_jobs:
-        print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
-    
-    if len(running_jobs) + len(held_jobs) > 0:
-        print "\n\tCancel signal sent for all running and pending jobs"
-        
-        for id in running_jobs:
-            if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
-                summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("canceled=TRUE\n")
-                summary_file.write("state_at_cancel=R")
-                summary_file.close()
-                
-        for id in held_jobs:
-            if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
-                summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("canceled=TRUE\n")
-                summary_file.write("state_at_cancel=H")
-                summary_file.close()
-                
-        for id in queued_jobs:
-            if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
-                summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                summary_file.write("canceled=TRUE\n")
-                summary_file.write("state_at_cancel=Q")
-                summary_file.close()
-        
-    else:
-        print "\n\tNo jobs to cancel; pipeline is not running or queued on the cluster."
-     
-    
+        print "Pipeline status prior to cancel:"
+        print "Total Pipeline Jobs: {0}".format(len(batch_jobs))
+        print "\tCompleted Jobs: {0}".format(len(complete_jobs))
+        print "\tRunning Jobs: {0}".format(len(running_jobs))
+        print "\tPending Jobs: {0}".format(len(held_jobs))
+        if unknown_jobs:
+            print "\tUnknown State (job may have crashed or was previously deleted): {0}".format(len(unknown_jobs))
+
+        if len(running_jobs) + len(held_jobs) > 0:
+            print "\n\tCancel signal sent for all running and pending jobs"
+
+            for id in running_jobs:
+                if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
+                    summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
+                    summary_file.write("canceled=TRUE\n")
+                    summary_file.write("state_at_cancel=R")
+                    summary_file.close()
+
+            for id in held_jobs:
+                if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
+                    summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
+                    summary_file.write("canceled=TRUE\n")
+                    summary_file.write("state_at_cancel=H")
+                    summary_file.close()
+
+            for id in queued_jobs:
+                if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
+                    summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
+                    summary_file.write("canceled=TRUE\n")
+                    summary_file.write("state_at_cancel=Q")
+                    summary_file.close()
+
+        else:
+            print "\n\tNo jobs to cancel; pipeline is not running or queued on the cluster."
+
+
 
 if __name__ == '__main__':
     main()
