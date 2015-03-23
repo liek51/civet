@@ -11,6 +11,7 @@ Bug fixes
 
 Features
  - Increase limit for maximum number of jobs spawned by foreach
+ - Add recursive mode for civet_cancel
 
 Version 1.6.2
 -------------
