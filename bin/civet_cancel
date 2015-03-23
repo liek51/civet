@@ -29,7 +29,7 @@ def main():
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="Run in recursive mode")
-    parser.add_argument('dirs', help="Path to pipeline log directory", nargs=argparse.REMAINDER)
+    parser.add_argument('dirs', help="Path to pipeline log directory (can be space separated list of dirs)", nargs=argparse.REMAINDER)
     parser.set_defaults(recursive=False)
     
     args = parser.parse_args()
