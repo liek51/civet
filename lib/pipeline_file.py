@@ -49,7 +49,8 @@ class PipelineFile():
         'in_dir',
         'temp',
         'filespec',
-        'default_output'
+        'default_output',
+        'from_file'
     ]
 
     # attributes that only make sense for a string
@@ -80,7 +81,7 @@ class PipelineFile():
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, is_string, based_on, pattern, replace, append,
                  datestamp, datestamp_append, in_dir,
-                 is_parameter, is_list, create=True, default_output=False,
+                 is_parameter, is_list, from_file, create=True, default_output=False,
                  foreach_dep=None):
         self.id = id
         self.path = path
@@ -104,6 +105,7 @@ class PipelineFile():
         self.creator_job = None
         self.consumer_jobs = []
         self.foreach_dep = foreach_dep
+        self.from_file = from_file
 
         # need a separate variable for this because is_parameter gets reset to
         # False once the param number -> value conversion happens
@@ -165,6 +167,7 @@ class PipelineFile():
         is_parameter = False
         default_output = False
         foreach_dep = None
+        from_file = None
 
 
         # make sure that the attributes make sense with the type of tag we are
@@ -181,6 +184,11 @@ class PipelineFile():
                 default_output = att['default_output'].upper() == 'TRUE'
                 assert 'in_dir' not in att, ('Must not combine default_output and '
                                              'in_dir attributes.')
+            if 'from_file' in att:
+                assert 'filespec' not in att, ("Must not combine 'from_file' and "
+                                               "'filespec'")
+                from_file = att['from_file']
+                
         elif is_string:
             for a in att:
                 assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_string_attributes, (
@@ -236,8 +244,8 @@ class PipelineFile():
                 foreach_dep = att['foreach_id']
 
         if 'based_on' in att:
-            assert (not path), (
-                'Must not have based_on and path or parameter attributes.')
+            assert (not path and not from_file), (
+                'Must not have based_on and filespec, parameter, or from_file attributes.')
             based_on = att['based_on']
 
             if 'pattern' in att:
@@ -283,7 +291,7 @@ class PipelineFile():
             id, path, is_file, is_temp, is_input, is_dir, files,
             path_is_path, is_string, based_on, pattern, replace, append,
             datestamp, datestamp_append, in_dir,
-            is_parameter, is_list, create, default_output, foreach_dep)
+            is_parameter, is_list, from_file, create, default_output, foreach_dep)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -338,7 +346,7 @@ class PipelineFile():
                                                    False, False, True, files,
                                                    True, False, None, None, None, None,
                                                    None, None, None, False,
-                                                   False, create=True,
+                                                   False, None, create=True,
                                                    default_output=True,
                                                    foreach_dep=None)
 
@@ -369,7 +377,7 @@ class PipelineFile():
         circularity.append(self)
 
         self.parameter_to_path()
-
+        self.apply_from_file(files, circularity)
         self.apply_based_on(files, circularity)
 
         if self is PipelineFile.output_dir:
@@ -438,6 +446,18 @@ class PipelineFile():
             self.is_path = True
             self.is_parameter = False
 
+    def apply_from_file(self, files, circularity):
+        if not self.from_file:
+            return
+            
+        if self.from_file not in files:
+            sys.exit("ERROR: 'from_file' specifies unknown file id: {0}".format(ff))
+        ff = files[self.from_file]
+        ff.fix_up_file(files, circularity)
+        
+        # get the directory from ff, strip any trailing slashes so os.path.dirname does what we want
+        self.path = os.path.dirname(ff.path.rstrip(os.path.sep))
+
     def apply_based_on(self, files, circularity):
         bo = self.based_on
         if not bo:
@@ -445,7 +465,7 @@ class PipelineFile():
         # the based_on attribute is the fid of another file
         # whose path we're going to mangle to create ours.
         #print >> sys.stderr, 'processing based_on\n', self
-        if not bo in files:
+        if bo not in files:
             sys.exit('ERROR: based on unknown file: {0}'.format(bo))
         bof = files[bo]
         bof.fix_up_file(files, circularity)
@@ -460,13 +480,15 @@ class PipelineFile():
             if self.datestamp_append:
                 self.path = bof.path + ds
             else:
-                #split the original path, strip trailing slashes so we get the
-                #basename
-                original_path, filename = os.path.split(bof.path.rstrip('/'))
+                #split the original path, strip trailing slashes so 
+                #os.path.split does what we expect it to, 
+                #not that we expect any trailing slashes
+                original_path, filename = os.path.split(bof.path.rstrip(os.path.sep))
                 self.path = os.path.join(original_path, ds + filename)
         else: # replace
-            original_path, filename = os.path.split(bof.path.rstrip('/'))
+            original_path, filename = os.path.split(bof.path.rstrip(os.path.sep))
             self.path = re.sub(self.pattern, self.replace, filename)
+
 
     def apply_in_dir_and_create_temp(self, files, circularity):
         ind = self.in_dir
@@ -476,7 +498,7 @@ class PipelineFile():
 
         utilities.make_sure_path_exists(dir)
         if ind:
-            if not ind in files:
+            if ind not in files:
                 print >> sys.stderr, ('ERROR: while processing ' 
                                       'file with id: ' + self.id +
                                       ', in_dir is unknown file: ' + ind)

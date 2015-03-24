@@ -83,7 +83,7 @@ class ForEach():
             #PipelineFile that only takes the id, path, file list, and directory
             PipelineFile(self.file.id, fn, True, False, True, False,
                          self.pipelineFiles, True, False, None, None, None, None,
-                         None, None, self.dir, False, False)
+                         None, None, self.dir, False, False, None)
             cleanups.append(self.file.id)
 
             for id in self.relatedFiles:
