@@ -383,7 +383,7 @@ class TorqueJobRunner(object):
             
         #write batch script
         script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
-        make_sure_path_exists(script_dir)
+        utilities.make_sure_path_exists(script_dir)
         os.chmod(script_dir, stat.S_IRWXU)
 
         
