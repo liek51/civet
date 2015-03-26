@@ -6,13 +6,15 @@ import errno
 import sys
 import unicodedata
 
-def make_sure_path_exists(path):
+def make_sure_path_exists(path, mode=None):
     try:
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             print >> sys.stderr, 'Error while creating directory', path
             raise
+    if mode:
+        os.chmod(path, mode)
 
 
 def parse_delay_string(delay):
