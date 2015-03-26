@@ -383,14 +383,13 @@ class TorqueJobRunner(object):
             
         #write batch script
         script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
-        if not os.path.exists(script_dir):
-            os.mkdir(script_dir)
-            os.chmod(script_dir, stat.S_IRWXU)
+        make_sure_path_exists(script_dir)
+        os.chmod(script_dir, stat.S_IRWXU)
+
         
         filename = os.path.join(script_dir, "{0}.sh".format(batch_job.name))
-        script_file = open(filename, "w")
-        script_file.write(self.generate_script(batch_job))
-        script_file.close()
+        with open(filename, "w") as script_file:
+            script_file.write(self.generate_script(batch_job))
         
         if self.submit:
             
