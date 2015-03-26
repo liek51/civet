@@ -7,11 +7,12 @@ redmine:/var/git/civet.git
 Version 1.6.3
 -------------
 Bug fixes
- - Fix "based_on" stripping of absolute paths
+ - none
 
 Features
  - Increase limit for maximum number of jobs spawned by foreach
  - Add recursive mode for civet_cancel
+ - Add new "from_file" attribute for <dir> tag
 
 Version 1.6.2
 -------------
