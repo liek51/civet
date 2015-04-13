@@ -330,7 +330,7 @@ class TorqueJobRunner(object):
 
         # the TORQUE epilogue doesn't seem to have USER defined, which is the default
         # Civet uses for sending error emails unless one supplied.  Fix that.
-        if [ -z ${USER+x} ]; then
+        if [ -z $${USER+x} ]; then
             USER=$$(whoami)
         fi
 
