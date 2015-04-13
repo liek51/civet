@@ -20,7 +20,6 @@ class BatchJob(object):
     stdout_path : path to final location for job's stdout spool (default = resource manager default)
     stderr_path : path to final location for job's stderr spool (default = resource manager default)
     files_to_check : files to validate before running command
-    epilogue : optional post-job checks
     version_cmds : list of command lines to report version of the executables being used
     error_strings: A list of strings Civet will search for in the job's stderr.
                    If the string is found, the job is considered to have failed.
@@ -37,8 +36,7 @@ class BatchJob(object):
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1,
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[],
                  name=None, stdout_path=None, stderr_path="/dev/null",
-                 files_to_check=None,
-                 epilogue=None, version_cmds=None, error_strings=None,
+                 files_to_check=None, version_cmds=None, error_strings=None,
                  mail_option="n", email_list=None, files_to_test=[],
                  file_test_logic="AND", mem=None, date_time=None):
 
@@ -62,7 +60,6 @@ class BatchJob(object):
         self.walltime = walltime
         self.name = name
         self.files_to_check = files_to_check
-        self.epilogue = epilogue
         self.version_cmds = version_cmds
         self.error_strings = error_strings
         self.files_to_test = files_to_test
