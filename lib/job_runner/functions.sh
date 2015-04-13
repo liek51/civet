@@ -27,6 +27,19 @@ function get_walltime {
 }
 
 function send_failure_email {
+
+    if [ -z ${PBS_JOBID+x} ]; then
+        local JOBID=$3
+    else
+        local JOBID=$PBS_JOBID
+    fi
+
+    if [ -z ${PBS_JOBNAME+x} ]; then
+        local JOBNAME=$4
+    else
+        local JOBNAME=$PBS_JOBNAME
+    fi
+
     # send an email notification regarding the pipeline failure
     echo "Civet Pipeline Failure:  Tool ${PBS_JOBNAME} (Batch job ${PBS_JOBID}) $2" |  mailx -s "Civet Pipeline Failure" $1
 }

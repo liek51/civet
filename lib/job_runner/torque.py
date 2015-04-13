@@ -327,9 +327,12 @@ class TorqueJobRunner(object):
         WALLTIME=$$(get_walltime $$7)
         WALLTIME_REQUESTED=$$(get_walltime $$6)
 
-        echo $$EXIT_STATUS
-        echo $$WALLTIME
-        echo $$WALLTIME_REQUESTED
+
+        # the TORQUE epilogue doesn't seem to have USER defined, which is the default
+        # Civet uses for sending error emails unless one supplied.  Fix that.
+        if [ -z ${USER+x} ]; then
+            USER=$$(whoami)
+        fi
 
         if [ $$EXIT_STATUS -lt 0 ]; then
             # Negative job exit status indicates Torque error, such as wall time limit
@@ -338,7 +341,7 @@ class TorqueJobRunner(object):
             else
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
             fi
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            send_failure_email $EMAIL_LIST "$$MESSAGE" $$JOBID $$JOBNAME
             abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED $$JOBID $$JOBNAME
         elif [ $$EXIT_STATUS -gt 0 ]; then
             # Job exited with non-zero, Job script should have already sent email
