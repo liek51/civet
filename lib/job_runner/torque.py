@@ -333,7 +333,7 @@ class TorqueJobRunner(object):
 
         if [ $$EXIT_STATUS -lt 0 ]; then
             # Negative job exit status indicates Torque error, such as wall time limit
-            if [ $$EXIST_STATUS -eq -11 ]; then
+            if [ $$EXIT_STATUS -eq "-11" ]; then
                 MESSAGE="Job hit walltime limit ($${WALLTIME_REQUESTED})"
             else
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
