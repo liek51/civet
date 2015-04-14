@@ -28,20 +28,8 @@ function get_walltime {
 
 function send_failure_email {
 
-    if [ -z ${PBS_JOBID+x} ]; then
-        local JOBID=$3
-    else
-        local JOBID=$PBS_JOBID
-    fi
-
-    if [ -z ${PBS_JOBNAME+x} ]; then
-        local JOBNAME=$4
-    else
-        local JOBNAME=$PBS_JOBNAME
-    fi
-
     # send an email notification regarding the pipeline failure
-    echo "Civet Pipeline Failure:  Tool ${JOBNAME} (Batch job ${JOBID}) $2" |  mailx -s "Civet Pipeline Failure" $1
+    echo "Civet Pipeline Failure:  Tool ${PBS_JOBNAME} (Batch job ${PBSJOBID}) $2" |  mailx -s "Civet Pipeline Failure" $1
 }
 
 function abort_pipeline {
@@ -51,17 +39,6 @@ function abort_pipeline {
     local WALLTIME=$3
     local WALLTIME_REQ=$4
 
-    if [ -z ${PBS_JOBID+x} ]; then
-        local JOBID=$5
-    else
-        local JOBID=$PBS_JOBID
-    fi
-
-    if [ -z ${PBS_JOBNAME+x} ]; then
-        local JOBNAME=$6
-    else
-        local JOBNAME=$PBS_JOBNAME
-    fi
 
     echo "Aborting pipeline" > ${LOGDIR}/abort.log
     echo "calling qdel on all jobs (ignoring previous job state)" >> ${LOGDIR}/abort.log
@@ -69,16 +46,16 @@ function abort_pipeline {
     # just iterate over all of the job ids in this pipeline and try to 
     # qdel them.  We don't care what the state is, or even if they still exit
     while read ID NAME DEP; do
-        if [ "$ID" != "$JOBID" ]; then
+        if [ "$ID" != "$PBS_JOBID" ]; then
             echo "calling qdel on $ID (${NAME})" >> ${LOGDIR}/abort.log
             qdel ${ID} >> ${LOGDIR}/abort.log 2>&1
         fi
     done < ${LOGDIR}/pipeline_batch_id_list.txt
     
     
-    echo "exit_status=${EXIT_VAL}" > ${LOGDIR}/${JOBNAME}-status.txt
-    echo "walltime=${WALLTIME}" >> ${LOGDIR}/${JOBNAME}-status.txt
-    echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${JOBNAME}-status.txt
+    echo "exit_status=${EXIT_VAL}" > ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    echo "walltime=${WALLTIME}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
 
 }
 

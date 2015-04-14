@@ -321,8 +321,8 @@ class TorqueJobRunner(object):
         #define civet shell functions
         source $FUNCTIONS
 
-        JOBID=$$1
-        JOBNAME=$$4
+        PBS_JOBID=$$1
+        PBS_JOBNAME=$$4
         EXIT_STATUS=$${10}
         WALLTIME=$$(get_walltime $$7)
         WALLTIME_REQUESTED=$$(get_walltime $$6)
@@ -341,20 +341,20 @@ class TorqueJobRunner(object):
             else
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
             fi
-            send_failure_email $EMAIL_LIST "$$MESSAGE" $$JOBID $$JOBNAME
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED $$JOBID $$JOBNAME
+            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
         elif [ $$EXIT_STATUS -gt 0 ]; then
             # Job exited with non-zero, Job script should have already sent email
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED $$JOBID $$JOBNAME
+            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
         else
             # normal exit
 
             # in some specific cases, the job script may have created the -status.txt file
             # if so,  don't recreate it
-            if [ ! -f $LOG_DIR/$${JOBNAME}-status.txt]; then
-                echo "exit_status=0" > $LOG_DIR/$${JOBNAME}-status.txt
-                echo "walltime=$$WALLTIME" >> $LOG_DIR/$${JOBNAME}-status.txt
-                echo "requested_walltime=$$WALLTIME_REQUESTED" >> $LOG_DIR/$${JOBNAME}-status.txt
+            if [ ! -f $LOG_DIR/$${PBS_JOBNAME}-status.txt]; then
+                echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
+                echo "walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
+                echo "requested_walltime=$$WALLTIME_REQUESTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             fi
 
             # sleep to overcome any lag with NFS file attribute cacheing

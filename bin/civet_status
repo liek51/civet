@@ -10,7 +10,7 @@ import sys
 import os
 import inspect
 
-cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
      sys.path.insert(0, lib_folder)
@@ -36,16 +36,19 @@ def format_state(state):
 def main():
 
     version.parse_options()
- 
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('-r', '--recursive', dest='recursive', action='store_true', help="Run in recursive mode")
-    parser.add_argument('--verbose', dest='verbose', action='store_true', help="More verbose output")
-    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', help="Only produce output for failed runs")
+    parser.add_argument('-r', '--recursive', dest='recursive',
+                        action='store_true', help="Run in recursive mode")
+    parser.add_argument('--verbose', dest='verbose', action='store_true',
+                        help="More verbose output")
+    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+                        help="Only produce output for failed runs")
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
     parser.set_defaults(quiet=False)
     parser.set_defaults(verbose=False)
-    parser.set_defaults(recursive=True)  # change default behavior to recursive, keep option to preserve backwards compatibility
+    # change default behavior to recursive, keep option to preserve backwards compatibility
+    parser.set_defaults(recursive=True)
     args = parser.parse_args()
 
     verbose = args.verbose
@@ -138,8 +141,7 @@ def main():
         for job in batch_jobs:
             if verbose:
                 print "\n{0} ({1}):".format(job[1], job[0])
-            
-            
+
             if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
                 status = job_runner.common.get_status_from_file(log_dir, job[1])
                 if 'canceled' in status or 'cancelled' in status:
@@ -225,13 +227,13 @@ def main():
         elif complete_jobs_success == total_jobs:
             summary_status = "completed successfully"
         elif unknown_state:
-            summary_status = "TERMINATED (reason unknown, possibly walltime limit exceeded)"
+            summary_status = "TERMINATED (reason unknown)"
         else:
             summary_status = "running"
          
         if verbose:
             print "\nSummary:"
-        elif not quiet or summary_status == "FAILED" or summary_status == "CANCELED":
+        elif not quiet or summary_status == 'FAILED' or summary_status == 'CANCELED' or 'TERMINATED' in summary_status:
             print "{0}: {1}".format(log_dir, summary_status)
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
