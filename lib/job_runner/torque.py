@@ -351,7 +351,7 @@ class TorqueJobRunner(object):
 
             # in some specific cases, the job script may have created the -status.txt file
             # if so,  don't recreate it
-            if [ ! -f $LOG_DIR/$${PBS_JOBNAME}-status.txt]; then
+            if [ ! -f $LOG_DIR/$${PBS_JOBNAME}-status.txt ]; then
                 echo "exit_status=0" > $LOG_DIR/$${PBS_JOBNAME}-status.txt
                 echo "walltime=$$WALLTIME" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
                 echo "requested_walltime=$$WALLTIME_REQUESTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
