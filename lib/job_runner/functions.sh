@@ -29,7 +29,7 @@ function get_walltime {
 function send_failure_email {
 
     # send an email notification regarding the pipeline failure
-    echo "Civet Pipeline Failure:  Tool ${PBS_JOBNAME} (Batch job ${PBSJOBID}) $2" |  mailx -s "Civet Pipeline Failure" $1
+    echo "Civet Pipeline Failure:  Tool ${PBS_JOBNAME} (Batch job ${PBS_JOBID}) $2" |  mailx -s "Civet Pipeline Failure" $1
 }
 
 function abort_pipeline {
