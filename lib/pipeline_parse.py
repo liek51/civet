@@ -7,6 +7,7 @@ import sys
 import re
 import datetime
 import os
+import getpass
 import xml.etree.ElementTree as ET
 
 from foreach import *
@@ -18,7 +19,6 @@ from tool_logger import *
 from job_runner.torque import *
 from job_runner.batch_job import *
 import utilities
-import getpass
 
 
 class Pipeline(object):
@@ -208,6 +208,8 @@ class Pipeline(object):
 
         # Capture the CWD and the command line that invoked us.
         of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
+        of.write('User:\n')
+        of.write(getpass.getuser() + '\n\n')
         of.write('Working directory at time of pipeline submission:\n')
         of.write(os.getcwd() + '\n\n')
         of.write('Command line used to invoke the pipeline:\n')
