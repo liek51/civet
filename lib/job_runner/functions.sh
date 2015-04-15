@@ -57,6 +57,11 @@ function abort_pipeline {
     echo "walltime=${WALLTIME}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
     echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
 
+    if [ ! -f $LOG_DIR/cancel.log ]; then
+        echo "canceled=TRUE" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+        echo "state_at_cancel=R" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
+    fi
+
 }
 
 # Iterate over all loaded moulefiles and unload them.
