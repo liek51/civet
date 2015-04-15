@@ -134,7 +134,7 @@ def main():
                     cancel_log.write("UNKNOWN_STATE={0}\n".format(unknown_jobs))
     
         except EnvironmentError:
-            print "Unable to open Cancel Log...skipping (maybe you don't own this Civet log directory"
+            print "Unable to open Cancel Log...skipping (maybe you don't own this Civet log directory)"
             continue
     
         # delete jobs, starting with held jobs first
@@ -158,13 +158,6 @@ def main():
 
         if len(running_jobs) + len(held_jobs) > 0:
             print "\n\tCancel signal sent for all running and pending jobs"
-
-            for id in running_jobs:
-                if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
-                    summary_file = open(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX), 'w')
-                    summary_file.write("canceled=TRUE\n")
-                    summary_file.write("state_at_cancel=R")
-                    summary_file.close()
 
             for id in held_jobs:
                 if not os.path.exists(os.path.join(log_dir, job_name_lookup[id] + job_runner.common.JOB_STATUS_SUFFIX)):
