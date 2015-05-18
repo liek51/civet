@@ -232,7 +232,8 @@ class TorqueJobRunner(object):
         
         #define civet shell functions
         source $FUNCTIONS
-        
+
+        CIVET_LOGDIR=$LOG_DIR
         
         DATE=$$(date)
         
@@ -326,6 +327,7 @@ class TorqueJobRunner(object):
         EXIT_STATUS=$${10}
         WALLTIME=$$(get_walltime $$7)
         WALLTIME_REQUESTED=$$(get_walltime $$6)
+        CIVET_LOGDIR=$LOG_DIR
 
 
         # the TORQUE epilogue doesn't seem to have USER defined, which is the default
