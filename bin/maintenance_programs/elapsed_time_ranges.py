@@ -91,6 +91,7 @@ def main():
 
     try:
         avg = sum / count
+        print 'Times for {0} runs:'.format(count)
         print 'Max: ', time_as_string(max)
         print 'Average: ', time_as_string(sum/count)
         print 'Min: ', time_as_string(min)
