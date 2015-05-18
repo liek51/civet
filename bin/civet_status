@@ -218,7 +218,6 @@ def main():
                         else:
                             print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
                     unknown_state += 1
-                
 
         if complete_jobs_failure:
             summary_status = "FAILED"
