@@ -9,6 +9,7 @@ import argparse
 import sys
 import os
 import inspect
+import glob
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
@@ -112,13 +113,22 @@ def main():
             print log_dir + ":\n\tThis pipeline was run with --no-submit, so no status is applicable."
             continue
     
-        # check for the abort.log -- this will indicate something went wrong with
+        # check for any *-abort.log -- this will indicate something went wrong with
         # the run
         run_aborted = False
-        if verbose and os.path.exists(os.path.join(log_dir, "abort.log")):
+
+        # this works for older versions of Civet before the abort.log filename
+        # was changed to include the name of the job that called abort_pipeline
+        if os.path.exists(os.path.join(log_dir, "abort.log")):
             run_aborted = True
+
+        # for newer versions of Civet:
+        if glob.glob(os.path.join(log_dir, "*-abort.log")):
+            run_aborted = True
+
+        if run_aborted and verbose:
             print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
-        
+
         if os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
             run_canceled = True
             if verbose:

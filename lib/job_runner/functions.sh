@@ -40,14 +40,14 @@ function abort_pipeline {
     local WALLTIME_REQ=$4
 
 
-    echo "Aborting pipeline" > ${LOGDIR}/abort.log
-    echo "calling qdel on all jobs (ignoring previous job state)" >> ${LOGDIR}/abort.log
+    echo "Aborting pipeline" > ${LOGDIR}/${PBS_JOBNAME}-abort.log
+    echo "calling qdel on all jobs (ignoring previous job state)" >> ${LOGDIR}/${PBS_JOBNAME}-abort.log
     
     # just iterate over all of the job ids in this pipeline and try to 
     # qdel them.  We don't care what the state is, or even if they still exit
     while read ID NAME DEP; do
         if [ "$ID" != "$PBS_JOBID" ]; then
-            echo "calling qdel on $ID (${NAME})" >> ${LOGDIR}/abort.log
+            echo "calling qdel on $ID (${NAME})" >> ${LOGDIR}/${PBS_JOBNAME}-abort.log
             qdel ${ID} >> ${LOGDIR}/abort.log 2>&1
         fi
     done < ${LOGDIR}/pipeline_batch_id_list.txt
