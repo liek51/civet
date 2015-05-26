@@ -134,7 +134,7 @@ def main():
             if verbose:
                 cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
                 if 'DATESTAMP' in cancel_info:
-                    print "PIPELINE WAS CANCELED by user at {1}\n".format(cancel_info['DATESTAMP'])
+                    print "PIPELINE WAS CANCELED by user at {}\n".format(cancel_info['DATESTAMP'])
                 else:
                     print "PIPELINE WAS CANCELED by user.\n"
     
