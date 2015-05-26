@@ -57,7 +57,10 @@ function abort_pipeline {
     echo "walltime=${WALLTIME}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
     echo "requested_walltime=${WALLTIME_REQ}" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
 
-    if [ ! -f $LOG_DIR/cancel.log ]; then
+    # there is a race condition here..  its possible the pipeline could be
+    # canceled, but we can't see the cancel.log file yet.  Not much
+    # we can do about that.  In that case, it will
+    if [ -f $LOG_DIR/cancel.log ]; then
         echo "canceled=TRUE" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
         echo "state_at_cancel=R" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
     fi
