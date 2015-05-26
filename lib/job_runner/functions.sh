@@ -48,7 +48,7 @@ function abort_pipeline {
     while read ID NAME DEP; do
         if [ "$ID" != "$PBS_JOBID" ]; then
             echo "calling qdel on $ID (${NAME})" >> ${LOGDIR}/${PBS_JOBNAME}-abort.log
-            qdel ${ID} >> ${LOGDIR}/abort.log 2>&1
+            qdel ${ID} >> ${LOGDIR}/${PBS_JOBNAME}-abort.log 2>&1
         fi
     done < ${LOGDIR}/pipeline_batch_id_list.txt
     

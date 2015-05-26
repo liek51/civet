@@ -159,7 +159,7 @@ def main():
                         print "\tJob canceled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
                     canceled_jobs += 1
                 
-                if 'exit_status' in status:
+                elif 'exit_status' in status:
                     if status['exit_status'] == '0':
                         complete_jobs_success += 1
                         if verbose:
