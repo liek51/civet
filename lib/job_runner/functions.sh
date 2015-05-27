@@ -59,7 +59,8 @@ function abort_pipeline {
 
     # there is a race condition here..  its possible the pipeline could be
     # canceled, but we can't see the cancel.log file yet.  Not much
-    # we can do about that.  In that case, it will
+    # we can do about that.  The civet_status code can still figure it out if
+    # the job was canceled while running.
     if [ -f $LOG_DIR/cancel.log ]; then
         echo "canceled=TRUE" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
         echo "state_at_cancel=R" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt

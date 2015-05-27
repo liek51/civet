@@ -3,8 +3,6 @@ import string
 import re
 
 
-
-
 class BatchJob(object):
     """
     a container for a batch job
@@ -162,7 +160,6 @@ class BatchJob(object):
             seconds += float(parts[3])*24*3600
 
         return seconds
-
 
     @staticmethod
     def walltime_seconds_to_string(walltime):
