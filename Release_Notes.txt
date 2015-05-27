@@ -7,17 +7,21 @@ redmine:/var/git/civet.git
 Version 1.7.0
 -------------
 Bug fixes
- - Summary mode of civet_status now correctly indicates terminated pipelines
+ - Summary mode of civet_status now indicates terminated pipelines
    (pipelines where one or more job was cancelled or deleted manually or by
    the batch system)
 
 Features
+ - Pipeline log directory is now included in failure emails
  - Use TORQUE job epilogue to catch termination due to walltime violation and
    provide more useful error messages and logging.
  - Log username in the command_line.txt file
  - Increase limit for maximum number of jobs spawned by foreach
  - Add recursive mode for civet_cancel
- - Add new "from_file" attribute for <dir> tag
+ - Add new "from_file" attribute for <dir> tag, will assign the parent
+   directory of a file to the <dir> tag
+ - Each job that initiates an abort pipeline process now creates its own
+   abort.log file (now JOBNAME-abort.log)
 
 Version 1.6.2
 -------------
