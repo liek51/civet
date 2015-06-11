@@ -8,8 +8,8 @@ Version 1.7.0
 -------------
 Bug fixes
  - Summary mode of civet_status now indicates terminated pipelines
-   (pipelines where one or more job was cancelled or deleted manually or by
-   the batch system)
+   (pipelines where one or more job was cancelled or deleted either manually or 
+   by the batch system)
 
 Features
  - Pipeline log directory is now included in failure emails
