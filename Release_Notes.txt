@@ -4,6 +4,12 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.7.1
+-------------
+Bug fixes
+ - Fix bug where job epilogue was not run for the Consolidate Logs job for
+   TORQUE systems with "spool_as_final_name true" pbs_mom configuration
+
 Version 1.7.0
 -------------
 Bug fixes

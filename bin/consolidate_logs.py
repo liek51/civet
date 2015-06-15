@@ -29,6 +29,8 @@ def get_file_names(dir):
 
     all = os.listdir(dir)
     for f in all:
+        if f.startswith("Consolidate"):
+            continue
         if f[-8:] == '-run.log':
             runs.append(f)
         elif f[-2:] == '.o':
