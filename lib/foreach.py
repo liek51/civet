@@ -102,7 +102,7 @@ class ForEach():
                 #TODO see comments for PipelineFile above
                 PipelineFile(rel.id, rfn, True, False, rel.is_input, False,
                              self.pipelineFiles, True, False, None, None, None,
-                             None, None, None, directory, False, False)
+                             None, None, None, directory, False, False, None)
                 cleanups.append(rel.id)
                 if rel.is_temp:
                     files_to_delete.append(rel.id)
