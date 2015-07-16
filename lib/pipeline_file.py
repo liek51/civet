@@ -50,7 +50,8 @@ class PipelineFile():
         'temp',
         'filespec',
         'default_output',
-        'from_file'
+        'from_file',
+        'pipeline_root'
     ]
 
     # attributes that only make sense for a string
@@ -138,6 +139,9 @@ class PipelineFile():
 
     @staticmethod        
     def parse_XML(e, files):
+
+        import pipeline_parse as PL
+
         t = e.tag
         att = e.attrib
         # Make sure that we have the right kind of tag.
@@ -182,12 +186,17 @@ class PipelineFile():
 
             if 'default_output' in att:
                 default_output = att['default_output'].upper() == 'TRUE'
-                assert 'in_dir' not in att, ('Must not combine default_output and '
-                                             'in_dir attributes.')
+                assert 'in_dir' not in att, ("Must not combine default_output and "
+                                             "in_dir attributes.")
             if 'from_file' in att:
                 assert 'filespec' not in att, ("Must not combine 'from_file' and "
                                                "'filespec'")
                 from_file = att['from_file']
+
+            if 'pipeline_root' in att:
+                assert 'filespec' not in att, ("Must not combine 'pipeline_root' "
+                                               "and 'filespec'")
+
                 
         elif is_string:
             for a in att:
@@ -225,6 +234,10 @@ class PipelineFile():
 
         if 'filespec' in att:
             path = att['filespec']
+            path_is_path = True
+
+        if 'pipeline_root' in att and att['pipeline_root'].upper() == "TRUE":
+            path = PL.master_XML_dir
             path_is_path = True
 
         if 'value' in att:
