@@ -81,7 +81,7 @@ class PipelineFile():
 
     def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
                  files, is_path, is_string, based_on, pattern, replace, append,
-                 datestamp, datestamp_append, in_dir,
+                 datestamp_prepend, datestamp_append, in_dir,
                  is_parameter, is_list, from_file, create=True, default_output=False,
                  foreach_dep=None):
         self.id = id
@@ -96,7 +96,7 @@ class PipelineFile():
         self.pattern = pattern
         self.replace = replace
         self.append = append
-        self.datestamp = datestamp
+        self.datestamp_prepend = datestamp_prepend
         self.datestamp_append = datestamp_append
         self.in_dir = in_dir
         self.is_parameter = is_parameter
@@ -166,8 +166,8 @@ class PipelineFile():
         pattern = None
         replace = None
         append = None
-        datestamp = None
-        datestamp_append = False
+        datestamp_prepend = None
+        datestamp_append = None
         is_parameter = False
         default_output = False
         foreach_dep = None
@@ -276,13 +276,12 @@ class PipelineFile():
                     print >> sys.stderr, att
                     sys.exit(1)
                 if 'datestamp_append' in att:
-                    datestamp = att['datestamp_append']
-                    datestamp_append = True
-                else:
-                    datestamp = att['datestamp_prepend']
+                    datestamp_append = att['datestamp_append']
+                if 'datestamp_prepend' in att:
+                    datestamp_prepend = att['datestamp_prepend']
 
             if 'append' in att:
-                if pattern or replace or datestamp:
+                if pattern or replace or datestamp_append or datestamp_prepend:
                     print >> sys.stderr, ('append is incompatible with '
                                           'datestamp, pattern and replace.')
                     print >> sys.stderr, att
@@ -303,7 +302,7 @@ class PipelineFile():
         PipelineFile(
             id, path, is_file, is_temp, is_input, is_dir, files,
             path_is_path, is_string, based_on, pattern, replace, append,
-            datestamp, datestamp_append, in_dir,
+            datestamp_prepend, datestamp_append, in_dir,
             is_parameter, is_list, from_file, create, default_output, foreach_dep)
 
     def compatible(self, o):
@@ -323,7 +322,7 @@ class PipelineFile():
         return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} DS:{10} DSA:{11} inD:{12}'.format(
             self.id, self.path, self.is_path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.append, self.datestamp, self.datestamp_append,
+            self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
             self.in_dir)
 
     def set_output_dir(self):
@@ -491,12 +490,14 @@ class PipelineFile():
 
         if self.append:
             self.path = original_path + self.append
-        elif self.datestamp:
-            ds = datetime.datetime.now().strftime(self.datestamp)
+        elif self.datestamp_prepend or self.datestamp_append:
+            now = datetime.datetime.now()
+            temp_path = original_path
             if self.datestamp_append:
-                self.path = original_path + ds
-            else:
-                self.path = ds + original_path
+                temp_path = temp_path + now.strftime(self.datestamp_append)
+            if self.datestamp_prepend:
+                temp_path = now.strftime(self.datestamp_prepend) + temp_path
+            self.path = temp_path
         else: # replace
             self.path = re.sub(self.pattern, self.replace, original_path)
 
