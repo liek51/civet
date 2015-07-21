@@ -69,10 +69,6 @@ class PipelineFile():
         'input'
     ]
 
-
-
-
-
     # Track the master output directory.
     output_dir = None
 
@@ -148,7 +144,6 @@ class PipelineFile():
         assert t in PipelineFile.validFileTags, ('Illegal pipeline file tag: "'
                                                  + t + '"')
 
-
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
         id = att['id']
@@ -197,7 +192,6 @@ class PipelineFile():
                 assert 'filespec' not in att, ("Must not combine 'pipeline_root' "
                                                "and 'filespec'")
 
-                
         elif is_string:
             for a in att:
                 assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_string_attributes, (
@@ -206,7 +200,6 @@ class PipelineFile():
             for a in att:
                 assert a in PipelineFile.valid_list_attributes, (
                     'Illegal pipeline filelist attribute: "' + a + '"')
-
 
 
         # What kind of file?
@@ -281,7 +274,7 @@ class PipelineFile():
                     datestamp_prepend = att['datestamp_prepend']
 
             if 'append' in att:
-                if pattern or replace or datestamp_append or datestamp_prepend:
+                if pattern or replace or datestamp_append:
                     print >> sys.stderr, ('append is incompatible with '
                                           'datestamp, pattern and replace.')
                     print >> sys.stderr, att
@@ -486,20 +479,18 @@ class PipelineFile():
             sys.exit("ERROR: file can not be based on a list: {0} is based on {1}".format(self.id, bo))
 
         # strip out any path - based_on only operates on filenames
-        original_path = os.path.basename(bof.path)
+        temp_path = os.path.basename(bof.path)
+        now = datetime.datetime.now()
 
         if self.append:
-            self.path = original_path + self.append
-        elif self.datestamp_prepend or self.datestamp_append:
-            now = datetime.datetime.now()
-            temp_path = original_path
-            if self.datestamp_append:
-                temp_path = temp_path + now.strftime(self.datestamp_append)
-            if self.datestamp_prepend:
-                temp_path = now.strftime(self.datestamp_prepend) + temp_path
-            self.path = temp_path
-        else: # replace
-            self.path = re.sub(self.pattern, self.replace, original_path)
+            temp_path = temp_path + self.append
+        if self.datestamp_append:
+            temp_path = temp_path + now.strftime(self.datestamp_append)
+        if self.datestamp_prepend:
+            temp_path = now.strftime(self.datestamp_prepend) + temp_path
+        if self.replace:
+            temp_path = re.sub(self.pattern, self.replace, temp_path)
+        self.path = temp_path
 
 
     def apply_in_dir_and_create_temp(self, files, circularity):

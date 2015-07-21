@@ -9,6 +9,7 @@ Version 1.7.3
 Features
  - Add new "pipeline_root" attribute for <dir> tag.  If true, Civet will set
    the directory to the pipeline's XML root directory.
+ - datestamp_prepend can now be combined with append and datestamp_append tags
 
 Version 1.7.2
 -------------
