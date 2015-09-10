@@ -68,26 +68,6 @@ function abort_pipeline {
 
 }
 
-# Iterate over all loaded moulefiles and unload them.
-#
-# The purpose is to start with a clean slate and only load modules specified
-# by the pipeline tool if the user has modulefiles loaded automatically in 
-# their .bashrc
-# If a user loaded some modulefiles automatically it is possible that they 
-# could conflict with specific versions specified in the tool xml
-function unload_all_modules {
-    local saveIFS=$IFS
-    IFS=:
-    for MOD in $LOADEDMODULES
-    do
-        # module unload command gets confused unless we reset IFS
-        IFS=$saveIFS module unload ${MOD}
-    done
-
-    IFS=$saveIFS
-
-}
-
 function file_test_exit {
     local LOGDIR=$1
     local WALLTIME_REQ=$2

@@ -253,7 +253,7 @@ class TorqueJobRunner(object):
         #first unload any loaded modulefiles, these may be loaded automatically
         #in a user's startup scripts, but they could conflict with modulefiles
         #specified by the Civet tool
-        unload_all_modules
+        module purge
         
         #then load modulefiles specified by the tool xml
         $MODULE_LOAD_CMDS

@@ -10,6 +10,7 @@ Features
  - Add new "pipeline_root" attribute for <dir> tag.  If true, Civet will set
    the directory to the pipeline's XML root directory.
  - datestamp_prepend can now be combined with append and datestamp_append tags
+ - Use "module purge" to clear loaded modulefiles rather than bash function
 
 Version 1.7.2
 -------------
