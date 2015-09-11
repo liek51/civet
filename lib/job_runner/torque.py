@@ -255,7 +255,7 @@ class TorqueJobRunner(object):
         #specified by the Civet tool
         module purge
         
-        #then load modulefiles specified by the tool xml
+        #then load modulefiles, if any, specified by the tool xml
         $MODULE_LOAD_CMDS
         
         #add the Civet bin directory to our PATH
@@ -850,5 +850,4 @@ def main():
 
     
 if __name__ == '__main__': 
-    main() 
-
+    main()
