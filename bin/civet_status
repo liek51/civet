@@ -60,7 +60,7 @@ def main():
         return 1
     
     dir_list_arg = []
-    
+
     if len(args.dirs) > 0:
         dir_list_arg = args.dirs
     else:
@@ -68,15 +68,22 @@ def main():
 
     if args.recursive:
         all_log_dirs = []
+        followed_dirs = set()
         for d in dir_list_arg:
-            dirs = []
-            for root, children, files in os.walk(d):
+            log_dirs = []
+            for root, dirs, files in os.walk(d, topdown=True, followlinks=True):
+                followed_dirs.add(os.path.realpath(root))
                 if job_runner.common.BATCH_ID_LOG in files:
-                    dirs.append(root)
-            dirs.sort()
-            all_log_dirs += dirs
+                    log_dirs.append(root)
 
-        
+                # make sure we don't follow any symlinks that point to a dir we've already processed
+                for dir in dirs:
+                    if os.path.realpath(os.path.join(root,dir)) in followed_dirs:
+                        dirs.remove(dir)
+
+            log_dirs.sort()
+            all_log_dirs += log_dirs
+
         if len(all_log_dirs) == 0:
             sys.stderr.write("ERROR: no valid log directory found!\n")
             return 1
