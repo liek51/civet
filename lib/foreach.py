@@ -72,7 +72,7 @@ class ForEach():
         total_jobs *= len(matched_files)
 
         if total_jobs > ForEach.MAX_JOBS:
-            PL.abort_submit("error submitting foreach: {0} jobs exceed limit (max = {1})\n".format(total_jobs, ForEach.MAX_JOBS))
+            PL.abort_submit("error submitting foreach: {} jobs exceed limit (max = {})\n".format(total_jobs, ForEach.MAX_JOBS))
 
         for fn in matched_files:
             iteration += 1
@@ -112,7 +112,7 @@ class ForEach():
             for s in self.steps:
                 step_iteration += 1
                 step = Step(s, self.pipelineFiles)
-                prefix = "{0}-{1}_S{2}".format(name_prefix, iteration, step_iteration)
+                prefix = "{}-{}_S{}".format(name_prefix, iteration, step_iteration)
                 for jid in step.submit(prefix):
                     job_ids.append(jid)
                     iteration_ids.append(jid)
@@ -126,7 +126,7 @@ class ForEach():
                 cmd = 'rm -f ' + ' '.join(tmps)
                 cleanup_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                                depends_on=iteration_ids,
-                               name="{0}-{1}_temp_file_cleanup".format(name_prefix, iteration),
+                               name="{}-{}_temp_file_cleanup".format(name_prefix, iteration),
                                walltime="00:30:00",
                                email_list=PL.error_email_address)
                 try:

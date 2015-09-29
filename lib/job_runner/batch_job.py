@@ -33,7 +33,7 @@ class BatchJob(object):
 
     def __init__(self, cmd, workdir=None, nodes=1, ppn=1,
                  walltime=DEFAULT_WALLTIME, modules=[], depends_on=[],
-                 name=None, stdout_path=None, stderr_path="/dev/null",
+                 name=None, stdout_path=None, stderr_path=None,
                  files_to_check=None, version_cmds=None, error_strings=None,
                  mail_option="n", email_list=None, files_to_test=[],
                  file_test_logic="AND", mem=None, date_time=None):

@@ -6,11 +6,17 @@ redmine:/var/git/civet.git
 
 Version 1.7.3
 -------------
+Bug fixes
+ - civet_status recursive mode now follows symlinks
+ - civet_status does not report success if the pipeline_batch_id_list.txt is
+   empty, now reports that there was a submission failure
+
 Features
  - Add new "pipeline_root" attribute for <dir> tag.  If true, Civet will set
    the directory to the pipeline's XML root directory.
  - datestamp_prepend can now be combined with append and datestamp_append tags
- - Use "module purge" to clear loaded modulefiles rather than bash function
+ - Use "module purge" command to clear loaded modulefiles rather than  our own
+   bash function
 
 Version 1.7.2
 -------------

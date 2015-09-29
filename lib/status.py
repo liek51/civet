@@ -131,7 +131,6 @@ class PipelineStatus(object):
                 self.canceled_jobs += 1
 
 
-
         if self.canceled_jobs:
             self.status = "CANCELED"
 

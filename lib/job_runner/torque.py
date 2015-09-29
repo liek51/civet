@@ -57,23 +57,18 @@ def _connect_to_server(server):
     return connection
 
 
-def torque_strerror(errno):
+def torque_strerror(err):
     global _error_strings
     if not _error_strings:
         _error_strings = dict(line.strip().split('\t') for line in open(os.path.join(common.CIVET_HOME, "lib/job_runner/torque_errors.txt")))
             
-    return _error_strings[str(errno)]             
+    return _error_strings[str(err)]
 
         
 class JobManager(object):
     """
         This class encapsulates the functionality for monitoring and controlling
-        a Torque job. 
-        
-        An instance will hold a connection to pbs_server open 
-        and reuse it for multiple client commands.  We have had problems
-        with rapidly opening and closing connections -- it seems you use up
-        connections faster than they get cleaned up and you run out.
+        a Torque job.
     """
 
 
@@ -87,16 +82,16 @@ class JobManager(object):
         self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
         self.pbs_server = pbs_server
 
-    def query_job(self, id):
+    def query_job(self, job_id):
         """
             Query server for status of job
         
             query_job will return None if the job does not exist on the server, 
             otherwise it will return a JobStatus object.
 
-            :param id: job id of job to query
+            :param job_id: job id of job to query
         """ 
-        job_status = self.pbsq.getjob(id)
+        job_status = self.pbsq.getjob(job_id)
         # check to see if the job existed.  this is kind of lame, but we can't
         # just do "if job_status:" because PBSQuery.getjob returns an empty 
         # dictionary if the job is not found, but it returns some other object
@@ -107,15 +102,15 @@ class JobManager(object):
         else:
             return None
 
-    def delete_job(self, id):
+    def delete_job(self, job_id):
         """
            Sends job delete request to pbs_server for job
 
-           :param id: job id to delete
+           :param job_id: job id to delete
            :return:  pbs_deljob return value (0 on success)
         """
         connection = _connect_to_server(self.pbs_server)
-        rval = pbs.pbs_deljob(connection, id, '')
+        rval = pbs.pbs_deljob(connection, job_id, '')
         pbs.pbs_disconnect(connection)
         return rval
 
@@ -127,21 +122,21 @@ class JobManager(object):
         :param ids: list of all jobs
         :return: zero on success, otherwise return value of failed pbs_deljob
         """
-        for id in ids:
+        for job_id in ids:
             connection = _connect_to_server(self.pbs_server)
-            rval = pbs.pbs_deljob(connection, id, '')
+            rval = pbs.pbs_deljob(connection, job_id, '')
             pbs.pbs_disconnect(connection)
             if rval and (rval != self.E_UNKNOWN or rval != self.E_STATE):
                 return rval
         return 0
         
-    def release_job(self, id):
+    def release_job(self, job_id):
         """
         Release a user hold on a job
-        :param id: job to release
+        :param job_id: job to release
         """
         connection = _connect_to_server(self.pbs_server)
-        rval = pbs.pbs_rlsjob(self.connection, id, 'u', '')
+        rval = pbs.pbs_rlsjob(self.connection, job_id, 'u', '')
         pbs.pbs_disconnect(connection)
         return rval
 
@@ -311,7 +306,8 @@ class TorqueJobRunner(object):
     
     """)
 
-    # the template job epilogue, which will be customized for each run
+    # the template job epilogue, which will be shared between all jobs
+    # submitted by this TorqueJobRunner
     # $VAR will be substituted before job submission $$VAR will become $VAR
     # after substitution
     epilogue_template = textwrap.dedent("""\
@@ -370,7 +366,7 @@ class TorqueJobRunner(object):
 
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validation_cmd="ls -l", 
-                 execution_log_dir=None, queue=None, submit=True):
+                 execution_log_dir=None, queue=None, submit=True, epilogue_email=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -383,6 +379,7 @@ class TorqueJobRunner(object):
         self.submit = submit
         self._id_seq = 0  # used to fake Torque job IDs when self.submit is False
         self.need_to_write_epilogue = True
+        self.epilogue_email=epilogue_email
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
@@ -408,6 +405,8 @@ class TorqueJobRunner(object):
         
         # batch job names should be unique for civet pipelines because the 
         # job name is used to name log files and other output
+        # Civet generates unique names for each step, so this is just checking
+        # for a programming error
         assert batch_job.name not in self._job_names
         
         if self.execution_log_dir:
@@ -417,7 +416,6 @@ class TorqueJobRunner(object):
             
         #create script directory if necessary
         self._setup_script_dir(batch_job.email_list)
-
 
         #write batch script
         filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "{0}.sh".format(batch_job.name))
@@ -466,7 +464,7 @@ class TorqueJobRunner(object):
                     job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
             else:
                 job_attributes[pbs.ATTR_e] = os.path.join(log_dir, 
-                                                          batch_job.name + ".e")
+                                                          batch_job.name + "torque-errors.txt")
             
             if batch_job.depends_on:
                 job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
@@ -523,7 +521,6 @@ class TorqueJobRunner(object):
                 # the batch system returned an error, throw exception 
                 raise Exception("Error submitting job.  "
                                 "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
-       
 
             if self.submit_with_hold and not batch_job.depends_on:
                 self.held_jobs.append(job_id)
@@ -661,8 +658,6 @@ class TorqueJobRunner(object):
 
         return string.Template(self.epilogue_template).substitute(tokens)
 
-
-
     @staticmethod
     def _generate_env(batch_job):
         """
@@ -779,8 +774,6 @@ class TorqueJobRunner(object):
         else:
             test_type = '&&'  #else default to AND to be safe, but BatchJob should force it to be either AND or OR
 
-    
-
         if not batch_job.files_to_test:
             bash_code = ""
         elif isinstance(batch_job.files_to_test, basestring):  #python 2.x specific, type is str in Python3
@@ -796,6 +789,15 @@ class TorqueJobRunner(object):
         return bash_code
 
     def _setup_script_dir(self, email_list):
+        """
+        setup the directory in the log_dir to hold all of the shell scripts we
+        will generate.  Also write the epilogue script to this directory
+
+        :param email_list:  we need the list of email addresses (usually a
+            single address) when generating the epilogue script from the
+            template
+        """
+
         script_dir = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR)
         try:
             os.makedirs(script_dir)
@@ -812,7 +814,6 @@ class TorqueJobRunner(object):
                 print >> sys.stderr, 'Error while creating directory', path
                 raise
 
-            
 
 def main():
     """
@@ -828,7 +829,6 @@ def main():
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
                    modules=["python"], mail_option="be")
 
-    
     print "submitting job with the following script:"
     print "---------------------------------------------------"
     print job_runner.generate_script(job)
@@ -840,7 +840,6 @@ def main():
     status = jm.query_job(id)
     if status:
         print "Status of job is " + status.state
-    
     
     print "calling job_runner.release_all()"
     job_runner.release_all()
