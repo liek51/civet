@@ -464,7 +464,7 @@ class TorqueJobRunner(object):
                     job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
             else:
                 job_attributes[pbs.ATTR_e] = os.path.join(log_dir, 
-                                                          batch_job.name + "torque-errors.txt")
+                                                          batch_job.name + "_torque-errors.txt")
             
             if batch_job.depends_on:
                 job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
