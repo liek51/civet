@@ -407,10 +407,12 @@ class TorqueJobRunner(object):
         gid = os.stat(g_test_file).st_gid
         os.remove(g_test_file)
         if gid not in os.getgroups():
-            print("\nERROR: New files created in the log directory are being \n"
-                  "given group ownership of a group that you are not a member \n"
-                  "of. This will prevent TORQUE from executing job epilog \n"
-                  "scripts.\n", file=sys.stderr)
+            print(textwrap.fill("ERROR: The log directory {} has a group ID "
+                                "that you are not a member of. This will "
+                                "prevent Torque from operating correctly.".format(self.log_dir),
+                                width=80, break_long_words=False),
+                  file=sys.stderr)
+            print("\nPIPELINE NOT SUBMITTED\n", file=sys.stderr)
             sys.exit(1)
 
 
