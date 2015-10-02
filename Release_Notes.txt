@@ -13,7 +13,7 @@ Bug fixes
 
 Features
  - Detect conditions where Torque stdout/stderr files will get created with a
-   group that the user does not belong to.  This prevents the user job epilogue
+   group that the user does not belong to, which prevents the user job epilogue
    from executing.
  - Add new "pipeline_root" attribute for <dir> tag.  If true, Civet will set
    the directory to the pipeline's XML root directory.
