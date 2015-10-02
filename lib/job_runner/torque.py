@@ -407,10 +407,10 @@ class TorqueJobRunner(object):
         gid = os.stat(g_test_file).st_gid
         os.remove(g_test_file)
         if gid not in os.getgroups():
-            print("ERROR: New files created in the log directory are being \n"
+            print("\nERROR: New files created in the log directory are being \n"
                   "given group ownership of a group that you are not a member \n"
                   "of. This will prevent TORQUE from executing job epilog \n"
-                  "scripts.", file=sys.stderr)
+                  "scripts.\n", file=sys.stderr)
             sys.exit(1)
 
 
@@ -484,9 +484,9 @@ class TorqueJobRunner(object):
                 if job_attributes[pbs.ATTR_e] == "/dev/null":
                     job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
             else:
-                job_attributes[pbs.ATTR_e] = os.path.join(log_dir, 
-                                                          batch_job.name + "_torque-errors.txt")
-            
+                job_attributes[pbs.ATTR_e] = log_dir
+
+
             if batch_job.depends_on:
                 job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
             elif self.submit_with_hold:

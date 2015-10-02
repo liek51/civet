@@ -8,7 +8,9 @@ with header sections separating the content from different input
 logs.
 """
 
-import sys, os
+import sys
+import os
+import re
 
 if len(sys.argv) != 2:
     print >> sys.stderr, 'USAGE:', sys.argv[0], 'path-to-log-dir'
@@ -23,22 +25,23 @@ def get_file_names(dir):
     o_s = []
     errs = []
     es = []
-    statuses = []
     shells = []
     versions = []
+    batch_stderr = []
 
-    all = os.listdir(dir)
-    for f in all:
+    pattern = re.compile(r'^.*\.e\d+$')
+
+    for f in os.listdir(dir):
         if f.startswith("Consolidate"):
             continue
-        if f[-8:] == '-run.log':
+        elif pattern.match(f):
+            batch_stderr.append(f)
+        elif f[-8:] == '-run.log':
             runs.append(f)
         elif f[-2:] == '.o':
             o_s.append(f)
         elif f[-8:] == '-err.log':
             errs.append(f)
-        elif f[-2:] == '.e':
-            es.append(f)
         elif f[-3:] == '.sh':
             shells.append(f)
         elif f[-12:] == '-version.log':
@@ -57,7 +60,7 @@ def get_file_names(dir):
     shells.sort()
     versions.sort()
 
-    return(runs, o_s, errs, es, shells, versions)
+    return(runs, o_s, errs, batch_stderr, shells, versions)
 
 
 def write_header(of, fn):
@@ -124,14 +127,16 @@ def process_file_list(dir, list, ofn):
     of.close()
 
 
-def handle_es(dir, list):
+def handle_batch_errs(dir, list):
     """
     Handle *.e files; they're all empty.
     We can't keep torque from creating these files, but we don't
     need to leave them hanging around...
     """
     for fn in list:
-        os.remove(os.path.join(dir, fn))
+        file_path = os.path.join(dir, fn)
+        if os.path.getsize(file_path) == 0:
+            os.remove(os.path.join(dir, fn))
 
 
 
@@ -141,12 +146,13 @@ def main():
     output and error log files created by the various batch jobs.
     """
     dir = sys.argv[1]
-    (runs, o_s, errs, es, shells, versions) = get_file_names(dir)
+    (runs, o_s, errs, batch_stderr, shells, versions) = get_file_names(dir)
 
     process_file_list(dir, runs, 'concatenated_run_logs.txt')
     process_file_list(dir, o_s, 'concatenated_stdout.txt')
     process_file_list(dir, errs, 'concatenated_stderr.txt')
     process_file_list(dir, versions, 'concatenated_versions.txt')
-    handle_es(dir, es)
+
+    handle_batch_errs(dir, batch_stderr)
 
 main()
