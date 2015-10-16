@@ -29,7 +29,7 @@ def get_file_names(dir):
     versions = []
     batch_stderr = []
 
-    pattern = re.compile(r'^.*\.e\d+$')
+    pattern = re.compile(r'^.*\.e$')
 
     for f in os.listdir(dir):
         if f.startswith("Consolidate"):
