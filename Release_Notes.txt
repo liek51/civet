@@ -4,6 +4,12 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.7.4
+-------------
+Bug fixes
+ - Specify filename for torque stderr file, Torque had problems in certain
+   cases if we only provide the directory and not filename for stderr.
+
 Version 1.7.3
 -------------
 Bug fixes
