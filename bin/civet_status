@@ -106,7 +106,7 @@ def main():
         if not os.path.isdir(log_dir):
             print("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir), file=sys.stderr)
             continue
-    
+
         # get listing of batch jobs from the pipeline's log directory
         # each line in batch_jobs is [batch_id, job_name, [dependencies]])
         try:
@@ -117,7 +117,7 @@ def main():
             continue
 
         if len(batch_jobs) == 0:
-            print("ERROR: '{0}' pipeline submission error".format(log_dir), file=sys.stderr)
+            print("{0}: Pipeline submission error".format(log_dir), file=sys.stderr)
             continue
     
         # check to see if the log directory was created with civet_run --no-submit
