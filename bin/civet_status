@@ -229,7 +229,7 @@ def main():
                         held_jobs += 1
                         if verbose:
                             print("\tWalltime(Requested)={0}".format(status.requested_walltime))
-                            print("\tDepends on {0}".format(job[2])             )
+                            print("\tDepends on {0}".format(job[2]))
                     elif status.state == 'Q':
                         queued_jobs += 1
                         if verbose:
