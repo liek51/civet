@@ -5,6 +5,8 @@
    the path to its log directory, which is unique for each pipeline
 """
 
+from __future__ import print_function
+
 import argparse
 import sys
 import os
@@ -56,7 +58,7 @@ def main():
     quiet = args.quiet
     
     if verbose and quiet:
-        sys.stderr.write("--quiet (-q) and --verbose options are mutually exclusive\n")
+        print("--quiet (-q) and --verbose options are mutually exclusive\n", file=sys.stderr)
         return 1
     
     dir_list_arg = []
@@ -85,7 +87,7 @@ def main():
             all_log_dirs += log_dirs
 
         if len(all_log_dirs) == 0:
-            sys.stderr.write("ERROR: no valid log directory found!\n")
+            print("ERROR: no valid log directory found!\n", file=sys.stderr)
             return 1
     else:
         all_log_dirs = dir_list_arg
@@ -98,30 +100,29 @@ def main():
         run_canceled = False
     
         if verbose:
-            print "\n\nGetting status for pipeline with log directory at:"
-            print "\t{0}\n".format(log_dir)
+            print("\n\nGetting status for pipeline with log directory at:")
+            print("\t{0}".format(log_dir))
     
         if not os.path.isdir(log_dir):
-            sys.stderr.write("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir))
+            print("ERROR: {0} does not appear to be a valid pipeline log directory.\n".format(log_dir), file=sys.stderr)
             continue
-    
     
         # get listing of batch jobs from the pipeline's log directory
         # each line in batch_jobs is [batch_id, job_name, [dependencies]])
         try:
             batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
         except IOError, e:
-            sys.stderr.write("ERROR: '{0}' does not appear to be a valid pipeline log directory:\n".format(log_dir))
-            sys.stderr.write("\t{0}\n".format(e))
+            print("ERROR: '{0}' does not appear to be a valid pipeline log directory:".format(log_dir), file=sys.stderr)
+            print("\t{0}".format(e), file=sys.stderr)
             continue
 
         if len(batch_jobs) == 0:
-            sys.stderr.write("ERROR: '{0}' pipeline submission error\n".format(log_dir))
+            print("ERROR: '{0}' pipeline submission error".format(log_dir), file=sys.stderr)
             continue
     
         # check to see if the log directory was created with civet_run --no-submit
         if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
-            print log_dir + ":\n\tThis pipeline was run with --no-submit, so no status is applicable."
+            print(log_dir + ":\n\tThis pipeline was run with --no-submit, so no status is applicable.")
             continue
     
         # check for any *-abort.log -- this will indicate something went wrong with
@@ -138,16 +139,16 @@ def main():
             run_aborted = True
 
         if run_aborted and verbose:
-            print "WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n"
+            print("WARNING: Pipeline aborted due to non-zero exit value of at least one job.  Details below.\n")
 
         if os.path.exists(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)):
             run_canceled = True
             cancel_info = dict(line.strip().split('=') for line in open(os.path.join(log_dir, job_runner.common.CANCEL_LOG_FILENAME)))
             if verbose:
                 if 'DATESTAMP' in cancel_info:
-                    print "PIPELINE WAS CANCELED by user at {}\n".format(cancel_info['DATESTAMP'])
+                    print("PIPELINE WAS CANCELED by user at {}\n".format(cancel_info['DATESTAMP']))
                 else:
-                    print "PIPELINE WAS CANCELED by user.\n"
+                    print("PIPELINE WAS CANCELED by user.\n")
     
         complete_jobs_success = 0
         complete_jobs_failure = 0
@@ -161,13 +162,13 @@ def main():
     
         for job in batch_jobs:
             if verbose:
-                print "\n{0} ({1}):".format(job[1], job[0])
+                print("\n{0} ({1}):".format(job[1], job[0]))
 
             if os.path.exists(os.path.join(log_dir, job[1] + job_runner.common.JOB_STATUS_SUFFIX)): 
                 status = job_runner.common.get_status_from_file(log_dir, job[1])
                 if 'canceled' in status or 'cancelled' in status:
                     if verbose:
-                        print "\tJob canceled (state at cancel = {0})".format(format_state(status['state_at_cancel']))
+                        print("\tJob canceled (state at cancel = {0})".format(format_state(status['state_at_cancel'])))
                     canceled_jobs += 1
 
                 #in some cases a job was running when the pipeline was canceled,
@@ -176,30 +177,30 @@ def main():
                 #that
                 elif run_canceled and job[0] in cancel_info['RUNNING_JOBS']:
                     if verbose:
-                        print "\tJob canceled (state at cancel = Running)"
+                        print("\tJob canceled (state at cancel = Running)")
                     canceled_jobs += 1
                 
                 elif 'exit_status' in status:
                     if status['exit_status'] == '0':
                         complete_jobs_success += 1
                         if verbose:
-                            print "\tFinished=Success"
+                            print("\tFinished=Success")
                     else:
                         complete_jobs_failure += 1
                         if verbose:
-                            print "\tFinished=Failure"
+                            print("\tFinished=Failure")
                     if verbose:
-                        print "\tExit Status={0}".format(status['exit_status'])
+                        print("\tExit Status={0}".format(status['exit_status']))
                 if verbose:
                     if 'walltime' in status:
-                        print "\tWalltime={0}".format(status['walltime'])
+                        print("\tWalltime={0}".format(status['walltime']))
                     if 'requested_walltime' in status:
-                        print "\tWalltime(Requested)={0}".format(status['requested_walltime'])
+                        print("\tWalltime(Requested)={0}".format(status['requested_walltime']))
             else:
                 status = jm.query_job(job[0])
                 if status:
                     if verbose:
-                        print "\tState={0}".format(format_state(status.state))
+                        print("\tState={0}".format(format_state(status.state)))
                     if status.state == 'R' or status.state == 'C':
                         if status.state == 'R':
                             running_jobs += 1
@@ -214,38 +215,38 @@ def main():
                                 #unexpected state
                                 complete_jobs_success += 1
                                 if verbose:
-                                    print "\tFinished=Success"
+                                    print("\tFinished=Success")
                             else:
                                 complete_jobs_failure += 1
                                 if verbose:
-                                    print "\tFinished=Failure"
+                                    print("\tFinished=Failure")
                             if verbose:
-                                print "\tExit Status={0}".format(status.exit_status)
+                                print("\tExit Status={0}".format(status.exit_status))
                         if verbose:
-                            print "\tWalltime={0}".format(status.walltime)
-                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                            print("\tWalltime={0}".format(status.walltime))
+                            print("\tWalltime(Requested)={0}".format(status.requested_walltime))
                     elif status.state == 'H':
                         held_jobs += 1
                         if verbose:
-                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
-                            print "\tDepends on {0}".format(job[2])             
+                            print("\tWalltime(Requested)={0}".format(status.requested_walltime))
+                            print("\tDepends on {0}".format(job[2])             )
                     elif status.state == 'Q':
                         queued_jobs += 1
                         if verbose:
-                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                            print("\tWalltime(Requested)={0}".format(status.requested_walltime))
                     elif status.state == 'W':
                         delayed_jobs += 1
                         if verbose:
-                            print "\tWalltime(Requested)={0}".format(status.requested_walltime)
+                            print("\tWalltime(Requested)={0}".format(status.requested_walltime))
 
                 else:
                     if verbose:
                         if run_aborted:
-                            print "\tpbs_server returned no information for job {0} (job aborted)".format(job[0])
+                            print("\tpbs_server returned no information for job {0} (job aborted)".format(job[0]))
                         elif run_canceled:
-                            print "\tpbs_server returned no information for job {0} (pipeline canceled by user)".format(job[0])
+                            print("\tpbs_server returned no information for job {0} (pipeline canceled by user)".format(job[0]))
                         else:
-                            print "\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0])
+                            print("\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job[0]))
                     unknown_state += 1
 
         if complete_jobs_failure:
@@ -260,9 +261,9 @@ def main():
             summary_status = "running"
          
         if verbose:
-            print "\nSummary:"
+            print("\nSummary:")
         elif not quiet or summary_status == 'FAILED' or summary_status == 'CANCELED' or 'TERMINATED' in summary_status:
-            print "{0}: {1}".format(log_dir, summary_status)
+            print("{0}: {1}".format(log_dir, summary_status))
             
         if verbose or (not quiet and complete_jobs_success != total_jobs):
             print("\tTotal Pipeline Jobs: {0}".format(total_jobs))
