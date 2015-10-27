@@ -4,6 +4,13 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.7.5
+-------------
+Bug fixes
+ - abort_pipeline bash function writes status file first, before issuing 
+   all of the qdel commands.  This is in case the qdels hang and cause 
+   the epilogue to time out. 
+
 Version 1.7.4
 -------------
 Bug fixes
