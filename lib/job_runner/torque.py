@@ -435,6 +435,12 @@ class TorqueJobRunner(object):
             log_dir = self.execution_log_dir
         else:
             log_dir = self.log_dir
+
+        # set batch_job.stderr_path and batch_job.stdout_path if they aren't already set
+        if not batch_job.stdout_path:
+            batch_job.stdout_path =  os.path.join(log_dir, batch_job.name + ".o")
+        if not batch_job.stderr_path:
+            batch_job.stderr_path = os.path.join(log_dir, batch_job.name + ".e")
             
         #create script directory if necessary
         self._setup_script_dir(batch_job.email_list)
@@ -464,29 +470,21 @@ class TorqueJobRunner(object):
             if batch_job.name:
                 job_attributes[pbs.ATTR_N] = batch_job.name
         
-            if batch_job.stdout_path:
-                job_attributes[pbs.ATTR_o] = batch_job.stdout_path
+            job_attributes[pbs.ATTR_o] = batch_job.stdout_path
+
+            #XXX workaround for a TORQUE bug where local copies of stderr &
+            # stdout files to /dev/null don't work correctly but remote
+            # copies (to submit host) do
+            if job_attributes[pbs.ATTR_o] == "/dev/null":
+                job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
             
-                #XXX workaround for a TORQUE bug where local copies of stderr &
-                # stdout files to /dev/null don't work correctly but remote  
-                # copies (to submit host) do
-                if job_attributes[pbs.ATTR_o] == "/dev/null":
-                    job_attributes[pbs.ATTR_o] = socket.gethostname() + ":/dev/null"
-            else:
-                job_attributes[pbs.ATTR_o] = os.path.join(log_dir, 
-                                                          batch_job.name + ".o")
-            
-            if batch_job.stderr_path:
-                job_attributes[pbs.ATTR_e] = batch_job.stderr_path
-            
-                #XXX workaround for a TORQUE bug where local copies of stderr &
-                # stdout files to /dev/null don't work correctly but remote  
-                # copies (to submit host) do
-                if job_attributes[pbs.ATTR_e] == "/dev/null":
-                    job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
-            else:
-                job_attributes[pbs.ATTR_e] = os.path.join(log_dir,
-                                                          batch_job.name + ".e")
+            job_attributes[pbs.ATTR_e] = batch_job.stderr_path
+
+            #XXX workaround for a TORQUE bug where local copies of stderr &
+            # stdout files to /dev/null don't work correctly but remote
+            # copies (to submit host) do
+            if job_attributes[pbs.ATTR_e] == "/dev/null":
+                job_attributes[pbs.ATTR_e] = socket.gethostname() + ":/dev/null"
 
             if batch_job.depends_on:
                 job_attributes[pbs.ATTR_depend] = self._dependency_string(batch_job)
@@ -724,16 +722,20 @@ class TorqueJobRunner(object):
 
             :param batch_job: BatchJob for which to generate #PBS directives
         """
-        directives = []
-        
-        directives.append("#PBS -l walltime={0}".format(batch_job.walltime))
-        directives.append("#PBS -l nodes={0}:ppn={1}".format(batch_job.nodes, batch_job.ppn))
+        directives = ["#PBS -l walltime=" + batch_job.walltime,
+                      "#PBS -l nodes={0}:ppn={1}".format(batch_job.nodes, batch_job.ppn)]
         
         if batch_job.mem:
-            directives.append("#PBS -l mem={0}".format(batch_job.mem))
+            directives.append("#PBS -l mem=" + batch_job.mem)
             
         if batch_job.name:
-            directives.append("#PBS -N {0}".format(batch_job.name))
+            directives.append("#PBS -N " + batch_job.name)
+
+        if batch_job.stderr_path:
+            directives.append("#PBS -e " + batch_job.stderr_path)
+
+        if batch_job.stdout_path:
+            directives.append("#PBS -o " + batch_job.stdout_path)
         
         return '\n'.join(directives)
 

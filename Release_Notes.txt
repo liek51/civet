@@ -14,6 +14,8 @@ Bug fixes
 Features
  - Batch scripts now include as a comment the path to the tool XML file used to
    generate the script.
+ - Batch scripts now include #PBS directives for stdout/stderr naming used
+   during submission.
 
 Version 1.7.4
 -------------
