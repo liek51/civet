@@ -9,7 +9,11 @@ Version 1.7.5
 Bug fixes
  - abort_pipeline bash function writes status file first, before issuing 
    all of the qdel commands.  This is in case the qdels hang and cause 
-   the epilogue to time out. 
+   the epilogue to time out.
+
+Features
+ - Batch scripts now include as a comment the path to the tool XML file used to
+   generate the script.
 
 Version 1.7.4
 -------------
