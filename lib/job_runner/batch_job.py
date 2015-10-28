@@ -27,6 +27,8 @@ class BatchJob(object):
                    the file test returns true, the job will exit with success 
     file_test_logic : logic used to join file tests geneerated.  Can be "AND" or "OR"
     mem     : batch job mem attribute (in GB)
+    date_time: datetime job will be eligible at this time (for delayed job)
+    info: extra information recorded as comment in generated batch script
     """
 
     DEFAULT_WALLTIME = "01:00:00"
@@ -36,7 +38,7 @@ class BatchJob(object):
                  name=None, stdout_path=None, stderr_path=None,
                  files_to_check=None, version_cmds=None, error_strings=None,
                  mail_option="n", email_list=None, files_to_test=[],
-                 file_test_logic="AND", mem=None, date_time=None):
+                 file_test_logic="AND", mem=None, date_time=None, info=None):
 
         #initialize some of the hidden properties
         self._name = None
@@ -64,6 +66,7 @@ class BatchJob(object):
         self.file_test_logic = file_test_logic
         self.mem = mem
         self.date_time = date_time
+        self.info = info
 
     @property
     def workdir(self):
