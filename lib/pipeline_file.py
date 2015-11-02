@@ -8,7 +8,7 @@ import utilities
 
 import pipeline_parse as PL
 
-class PipelineFile():
+class PipelineFile(object):
     """
     Initialize ourselves from an XML tag that represents some kind
     of file.  Arguments: XML element representing the file, and a

@@ -12,7 +12,7 @@ import pipeline_parse as PL
 from pipeline_file import *
 
 
-class Tool():
+class Tool(object):
     # This script parses all of a tool definition.  Tools may be invoked
     # by the pipeline.
     # Tools are in separate files, so that we can substitute alternate
@@ -442,7 +442,7 @@ class Tool():
                     missing.append(f.path)
         return missing
 
-class Option():
+class Option(object):
     def __init__(self, e, tool):
         self.command_text = ''
         self.value = ''
@@ -506,7 +506,7 @@ class Option():
     def __str__(self):
         return self.__repr__()
 
-class Command():
+class Command(object):
     validAtts = [
         'delimiters',
         'program',

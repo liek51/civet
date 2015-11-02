@@ -1,6 +1,6 @@
 from tool import *
 
-class PipelineTool():
+class PipelineTool(object):
     def __init__(self, e, files):
         att = e.attrib
         input = []
