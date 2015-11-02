@@ -16,7 +16,6 @@ import socket
 import stat
 import time
 
-
 import pbs
 import PBSQuery
 
@@ -229,7 +228,7 @@ class TorqueJobRunner(object):
         
         $PBS_DIRECTIVES
         
-        #define civet shell functions
+        # define civet shell functions
         source $FUNCTIONS
 
         CIVET_LOGDIR=$LOG_DIR
@@ -247,23 +246,29 @@ class TorqueJobRunner(object):
         
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+
+        echo "JOB EPILOGUE PERMISSIONS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+        echo `ls -l $LOG_DIR/submitted_shell_scripts/epilogue.sh` >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+
         
-        
-        #first unload any loaded modulefiles, these may be loaded automatically
-        #in a user's startup scripts, but they could conflict with modulefiles
-        #specified by the Civet tool
+        # first unload any loaded modulefiles, these may be loaded automatically
+        # in a user's startup scripts, but they could conflict with modulefiles
+        # specified by the Civet tool
         module purge
         
-        #then load modulefiles, if any, specified by the tool xml
+        # then load modulefiles, if any, specified by the tool xml
         $MODULE_LOAD_CMDS
         
         #add the Civet bin directory to our PATH
         PATH=$CIVET_BIN:$$PATH
+
+        # log the PATH in the job's -run.log to assist with debugging
+        echo "PATH=$$PATH" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         
         cd $$PBS_O_WORKDIR
 
 
-        #run any supplied pre-job check
+        # run any supplied pre-job check
         $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 
         VALIDATION_STATUS=$$?
         
@@ -277,12 +282,12 @@ class TorqueJobRunner(object):
         $FILE_TEST
 
 
-        #all pre-job checks passed, run any supplied version commands and
-        #execute command(s)
+        # all pre-job checks passed, run any supplied version commands and
+        # execute command(s)
 
         echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
-        #optional version command
+        # optional version command
         $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1
 
         # command(s) passed into BatchJob:
@@ -298,7 +303,7 @@ class TorqueJobRunner(object):
             exit $$CMD_EXIT_STATUS
         fi
         
-        #check error log for list of keywords
+        # check error log for list of keywords
         for str in $ERROR_STRINGS; do
             if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                 MESSAGE="Found error string in stderr log."
