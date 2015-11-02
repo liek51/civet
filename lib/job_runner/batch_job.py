@@ -15,8 +15,8 @@ class BatchJob(object):
     modules  : modules to load, pass a list to load multiple module files
     depends_on  : list of job IDs that this job has a dependency on
     name        : name for batch job
-    stdout_path : path to final location for job's stdout spool (default = resource manager default)
-    stderr_path : path to final location for job's stderr spool (default = resource manager default)
+    stdout_path : path to final location for job's stdout spool (default = job runner default)
+    stderr_path : path to final location for job's stderr spool (default = job runner default)
     files_to_check : files to validate before running command
     version_cmds : list of command lines to report version of the executables being used
     error_strings: A list of strings Civet will search for in the job's stderr.
@@ -117,8 +117,7 @@ class BatchJob(object):
     def file_test_logic(self, val):
         if not val or val.upper() not in ["AND", "OR"]:
             raise ValueError(
-                'Invalid exit_test_bool option ({0}). Must be "AND" or "OR"'.format(
-                val))
+                'Invalid exit_test_bool option ({0}). Must be "AND" or "OR"'.format(val))
         self._file_test_logic = val.upper()
 
     @property
