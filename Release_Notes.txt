@@ -16,6 +16,10 @@ Features
    generate the script.
  - Batch scripts now include #PBS directives for stdout/stderr naming used
    during submission.
+ - Log the PATH in the step's 'run log'
+ - Reset epilogue.sh permissions before exiting job (if a user changes the
+   permissions of epilogue.sh before the pipeline finishes, they could cause
+   it to not be executed by Torque)
 
 Version 1.7.4
 -------------
