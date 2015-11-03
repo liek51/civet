@@ -79,3 +79,13 @@ function file_test_exit {
     
     exit 0
 }
+
+function check_epilogue {
+
+    # for now, all this function does is make sure the epilogue.sh script has
+    # the correct permissions.  It is created with 700, but we have had some
+    # users change them before the pipeline finishes.  If the permissions are
+    # too loose, Torque may refuse to execute the epilogue
+    chmod 700 $1
+
+}

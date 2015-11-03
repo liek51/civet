@@ -247,10 +247,7 @@ class TorqueJobRunner(object):
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
-        echo "JOB EPILOGUE PERMISSIONS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
-        echo `ls -l $LOG_DIR/submitted_shell_scripts/epilogue.sh` >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
-        
         # first unload any loaded modulefiles, these may be loaded automatically
         # in a user's startup scripts, but they could conflict with modulefiles
         # specified by the Civet tool
@@ -276,6 +273,7 @@ class TorqueJobRunner(object):
             MESSAGE="Command not run, pre-run validation returned non-zero value."
             echo "$$MESSAGE  Aborting pipeline!" >&2
             send_failure_email $EMAIL_LIST "$$MESSAGE"
+            check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
             exit $$VALIDATION_STATUS
         fi
         
@@ -295,11 +293,13 @@ class TorqueJobRunner(object):
         
         CMD_EXIT_STATUS=$$?
 
+
         echo "EXIT STATUS: $$CMD_EXIT_STATUS" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
             MESSAGE="Command returned non-zero value ($$CMD_EXIT_STATUS)."
             echo "$$MESSAGE  Aborting pipeline!" >&2
             send_failure_email $EMAIL_LIST "$$MESSAGE"
+            check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
             exit $$CMD_EXIT_STATUS
         fi
         
@@ -309,9 +309,12 @@ class TorqueJobRunner(object):
                 MESSAGE="Found error string in stderr log."
                 echo "$$MESSAGE  Aborting pipeline!" >&2
                 send_failure_email $EMAIL_LIST "$$MESSAGE"
+                check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
                 exit 1
             fi
         done
+
+        check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
     
     """)
 
