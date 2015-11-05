@@ -186,7 +186,14 @@ class Pipeline(object):
         if val is None:
             self._default_tool_search_path = ""
         else:
-            self._default_tool_search_path = val
+            paths = []
+            for path in val.split(':'):
+                if os.path.isabs(path):
+                    paths.append(path)
+                else:
+                    paths.append(os.path.join(self.master_XML_dir, path))
+
+            self._default_tool_search_path = ':'.join(paths)
     
     @property
     def log_dir(self):
