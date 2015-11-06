@@ -235,7 +235,7 @@ class Tool(object):
 
         #is the path absolute?
         if os.path.isabs(xml_file):
-            if os.path.exists:
+            if os.path.exists(xml_file):
                 return xml_file
             else:
                 return None
