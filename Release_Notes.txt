@@ -10,6 +10,10 @@ Bug fixes
  - Fix so relative paths in tool_search_path pipeline attribute are treated as
    relative to the XML directory, not the current working directory
 
+Features
+ - Add optional "path" attribute for <pipeline> and <tool> (in tool xml file)
+   tags.  These paths will be added to the PATH after loading modulefiles
+
 Version 1.7.5
 -------------
 Bug fixes
