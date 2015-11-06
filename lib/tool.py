@@ -44,6 +44,7 @@ class Tool(object):
         'mem',
         'exit_if_exists',
         'exit_test_logic',
+        'path',
         ]
 
     def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None, tool_config_prefix=None):
@@ -160,6 +161,18 @@ class Tool(object):
             assert self.mem.isdigit() and self.mem > 0, 'mem attribute must be positive integer: ' + self.mem
         else:
             self.mem = None
+
+        if 'path' in atts:
+            path_dirs = []
+            file_dir = os.path.dirname(os.path.abspath(self.xml_file))
+            for d in atts['path'].split(':'):
+                if os.path.isabs(d):
+                    path_dirs.append(d)
+                else:
+                    path_dirs.append(os.path.join(file_dir, d))
+            self.path = ':'.join(path_dirs)
+        else:
+            self.path = None
             
 
 
@@ -404,7 +417,8 @@ class Tool(object):
                              date_time=date_time,
                              email_list=PL.error_email_address,
                              info=("Tool Definition File: " +
-                                   os.path.abspath(self.xml_file)))
+                                   os.path.abspath(self.xml_file)),
+                             tool_path=self.path)
     
         try:
             job_id = PL.job_runner.queue_job(batch_job)

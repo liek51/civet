@@ -256,8 +256,9 @@ class TorqueJobRunner(object):
         # then load modulefiles, if any, specified by the tool xml
         $MODULE_LOAD_CMDS
         
-        #add the Civet bin directory to our PATH
-        PATH=$CIVET_BIN:$$PATH
+        # add any tool/pipeline paths (if specified) to PATH
+        # add the Civet bin directory to our PATH
+        PATH=${TOOL_PATH}${PIPELINE_PATH}$CIVET_BIN:$$PATH
 
         # log the PATH in the job's -run.log to assist with debugging
         echo "PATH=$$PATH" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
@@ -378,7 +379,8 @@ class TorqueJobRunner(object):
 
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validation_cmd="ls -l", 
-                 execution_log_dir=None, queue=None, submit=True, epilogue_email=None):
+                 execution_log_dir=None, queue=None, submit=True,
+                 epilogue_email=None, pipeline_path=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validation_cmd = validation_cmd
@@ -392,6 +394,7 @@ class TorqueJobRunner(object):
         self._id_seq = 0  # used to fake Torque job IDs when self.submit is False
         self.need_to_write_epilogue = True
         self.epilogue_email=epilogue_email
+        self.pipeline_path = pipeline_path
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
@@ -670,6 +673,16 @@ class TorqueJobRunner(object):
             tokens['EMAIL_LIST'] = batch_job.email_list
         else:
             tokens['EMAIL_LIST'] = "${USER}"
+
+        if self.pipeline_path:
+            tokens['PIPELINE_PATH'] = self.pipeline_path + ":"
+        else:
+            tokens['PIPELINE_PATH'] = ''
+
+        if batch_job.tool_path:
+            tokens['TOOL_PATH'] = batch_job.tool_path + ":"
+        else:
+            tokens['TOOL_PATH'] = ''
         
         return string.Template(self.script_template).substitute(tokens)
 

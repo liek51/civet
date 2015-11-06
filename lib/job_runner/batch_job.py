@@ -38,7 +38,8 @@ class BatchJob(object):
                  name=None, stdout_path=None, stderr_path=None,
                  files_to_check=None, version_cmds=None, error_strings=None,
                  mail_option="n", email_list=None, files_to_test=[],
-                 file_test_logic="AND", mem=None, date_time=None, info=None):
+                 file_test_logic="AND", mem=None, date_time=None, info=None,
+                 tool_path=None):
 
         #initialize some of the hidden properties
         self._name = None
@@ -67,6 +68,7 @@ class BatchJob(object):
         self.mem = mem
         self.date_time = date_time
         self.info = info
+        self.tool_path = tool_path
 
     @property
     def workdir(self):

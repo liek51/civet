@@ -49,7 +49,8 @@ class Pipeline(object):
     ]
 
     valid_attributes = [
-        'tool_search_path'
+        'tool_search_path',
+        'path'
     ]
 
     valid_version_attributes = [
@@ -132,6 +133,18 @@ class Pipeline(object):
 
         if 'tool_search_path' in pipe.attrib:
             self.default_tool_search_path = pipe.attrib['tool_search_path']
+
+        if 'path' in pipe.attrib:
+            path_dirs = []
+            file_dir = os.path.abspath(self.master_XML_dir)
+            for d in pipe.attrib['path'].split(':'):
+                if os.path.isabs(d):
+                    path_dirs.append(d)
+                else:
+                    path_dirs.append(os.path.join(file_dir, d))
+            self.path = ':'.join(path_dirs)
+        else:
+            self.path = None
 
         
         # And track the major components of the pipeline
@@ -382,7 +395,8 @@ class Pipeline(object):
                                                 validation_cmd="validate -m "
                                                 + self.validation_file,
                                                 pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
-                                                queue=self.queue, submit=self.submit_jobs)
+                                                queue=self.queue, submit=self.submit_jobs,
+                                                pipeline_path=self.path)
         return self._job_runner
 
     def collect_files_to_validate(self):
