@@ -1,4 +1,7 @@
 # Standard imports
+
+from __future__ import print_function
+
 import sys
 import os
 import re
@@ -66,23 +69,43 @@ class Tool(object):
         self.verify_files = []
         self.tool_files = {}
         self.pipeline_files = pipeline_files
-        for n in range(len(ins)):
-            f = pipeline_files[ins[n]]
-            self.tool_files['in_' + str(n+1)] = f
-        for n in range(len(outs)):
-            f = pipeline_files[outs[n]]
-            self.tool_files['out_' + str(n+1)] = f
 
-        # check the search path for the XML file, otherwise fall back to 
+        # check the search path for the XML file, otherwise fall back to
         # the same directory as the pipeline XML.  CLIA pipelines do not pass
-        # in a search path, so the tool XML needs to be in the same directory 
+        # in a search path, so the tool XML needs to be in the same directory
         # as the pipeline XML
-        
-
         self.xml_file = self.search_for_xml(xml_file)
-
         if not self.xml_file:
             sys.exit("ERROR: Could not find tool XML file: {0}\nExiting...".format(xml_file))
+
+        bad_inputs = []
+        bad_outputs = []
+
+        for n in range(len(ins)):
+            try:
+                f = pipeline_files[ins[n]]
+                self.tool_files['in_' + str(n+1)] = f
+            except KeyError as e:
+                bad_inputs.append(ins[n])
+
+
+        for n in range(len(outs)):
+            try:
+                f = pipeline_files[outs[n]]
+                self.tool_files['out_' + str(n+1)] = f
+            except KeyError as e:
+                bad_outputs.append(outs[n])
+
+        for f in bad_inputs:
+            print("{}: Tool input error, unknown file ID: {}".format(self.name_from_pipeline, f), file=sys.stderr)
+        for f in bad_outputs:
+            print("{}: Tool output error, unknown file ID: {}".format(self.name_from_pipeline, f), file=sys.stderr)
+
+        if bad_inputs or bad_outputs:
+            sys.exit(1)
+
+
+
 
         # Verify that the tool definition file has not changed.
         self.verify_files.append(os.path.abspath(self.xml_file))
@@ -90,8 +113,8 @@ class Tool(object):
         try:
             tool = ET.parse(self.xml_file).getroot()
         except ET.ParseError as e:
-            print >> sys.stderr, 'Exception raised while parsing', self.xml_file
-            print >> sys.stderr, e.msg
+            print('Exception raised while parsing' + xml_file, file=sys.stderr)
+            print(e.msg, file=sys.stderr)
             sys.exit(1)
         atts = tool.attrib
         # Validate the attributes
@@ -226,17 +249,16 @@ class Tool(object):
                     try:
                         name = self.tool_files[a['id']].path
                     except KeyError:
-                        print >> sys.stderr, \
-                            'When parsing {0}: The file ID "{1}" ' \
-                            'appears to not be valid'.format(
-                                self.xml_file, a['id'] )
+                        print('When parsing {0}: The file ID "{1}" appears to '
+                              'not be valid'.format(self.xml_file, a['id']),
+                              file=sys.stderr)
                         sys.exit(1)
                     # If not key error; let the exception escape.
                 else:
                     name = child.text
                 self.verify_files.append(name)
             else:
-                print >> sys.stderr, 'Unprocessed tag:', t
+                print('Unprocessed tag:' + t, file=sys.stderr)
 
         # Do we need to adjust the walltime?
         if PL.walltime_multiplier > 0 and PL.walltime_multiplier != 1:
@@ -494,8 +516,8 @@ class Option(object):
                     raise ValueError("invalid value for binary option,  must be True or False")
                 
         except:
-            print >> sys.stderr, 'unexpected problem with {0}'.format(self)
-            print >> sys.stderr, sys.exc_info()[0]
+            print('unexpected problem with {0}'.format(self), file=sys.stderr)
+            print(sys.exc_info()[0], file=sys.stderr)
             raise
 
         self.isFile = False
@@ -661,10 +683,9 @@ class Command(object):
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
-            print >> sys.stderr, "\n\nUNKNOWN OPTION OR FILE ID:", \
-                tok, 'in file', self.tool.xml_file
-            print >> sys.stderr, 'Tool files:', self.tool_files
-            print >> sys.stderr, 'Options:', self.options, '\n\n'
+            print("\n\nUNKNOWN OPTION OR FILE ID: {} in file {}".format(tok, self.tool.xml_file), file=sys.stderr)
+            print('Tool files: {}'.format(self.tool_files), file=sys.stderr)
+            print('Options: {}\n\n'.format(self.options), file=sys.stderr)
             PL.abort_submit('UNKNOWN OPTION OR FILE ID: ' + tok)
 
         # Fix up a command by replacing all the delimited option names and

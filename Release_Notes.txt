@@ -9,6 +9,9 @@ Version 1.7.6
 Bug fixes
  - Fix so relative paths in tool_search_path pipeline attribute are treated as
    relative to the XML directory, not the current working directory
+ - Unknown file IDs in a pipeline tool tag's inputs="" or outputs="" attribute
+   no longer causes a Traceback.  A helpful error message is printed for the
+   unknown IDs and the parsing process terminates.
 
 Features
  - Add optional "path" attribute for <pipeline> and <tool> (in tool xml file)
