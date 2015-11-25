@@ -192,6 +192,12 @@ class PipelineFile(object):
                 assert 'filespec' not in att, ("Must not combine 'pipeline_root' "
                                                "and 'filespec'")
 
+            valid_source = ['filespec', 'based_on', 'parameter', 'from_file', 'pipeline_root']
+            if True not in [x in att for x in valid_source]:
+                print >> sys.stderr, "dir tag must contain one of:  {}".format(", ".join(valid_source))
+                print >> sys.stderr, "\tFound these attributes: ", e.attrib
+                sys.exit(1)
+
         elif is_string:
             for a in att:
                 assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_string_attributes, (

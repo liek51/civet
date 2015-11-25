@@ -542,6 +542,7 @@ class Option(object):
     def __str__(self):
         return self.__repr__()
 
+
 class Command(object):
     validAtts = [
         'delimiters',
@@ -552,6 +553,7 @@ class Command(object):
         'if_not_exists',
         'if_exists_logic'
         ]
+
     def __init__(self, e, tool):
         # Stash the options and tool_files dictionaries.  We'll need
         # them to fix up the command lines.
