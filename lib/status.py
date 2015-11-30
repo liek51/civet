@@ -5,6 +5,7 @@ import os
 
 import job_runner.torque as batch_system
 import job_runner.common
+import glob
 
 class JobStatus(object):
 
@@ -90,7 +91,7 @@ class PipelineStatus(object):
 
         jm = job_runner.torque.JobManager()
 
-        self.status = "UNKOWN"
+        self.status = "UNKNOWN"
 
         # check to see if the log directory was created with civet_run --no-submit
         if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
@@ -129,7 +130,6 @@ class PipelineStatus(object):
                 self.deleted_jobs += 1
             elif state == "CANCELED":
                 self.canceled_jobs += 1
-
 
         if self.canceled_jobs:
             self.status = "CANCELED"
