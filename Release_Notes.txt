@@ -12,6 +12,8 @@ Bug fixes
  - Unknown file IDs in a pipeline tool tag's inputs="" or outputs="" attribute
    no longer causes a Traceback.  A helpful error message is printed for the
    unknown IDs and the parsing process terminates.
+ - Print a more helpful error message if a <dir> tag is missing filespec,
+   parameter, based_on, from_file, or pipeline_root
 
 Features
  - Add optional "path" attribute for <pipeline> and <tool> (in tool xml file)
