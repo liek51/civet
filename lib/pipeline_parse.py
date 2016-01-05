@@ -201,10 +201,7 @@ class Pipeline(object):
         else:
             paths = []
             for path in val.split(':'):
-                if os.path.isabs(path):
-                    paths.append(path)
-                else:
-                    paths.append(os.path.join(self.master_XML_dir, path))
+                paths.append(os.path.join(self.master_XML_dir, path))
 
             self._default_tool_search_path = ':'.join(paths)
     
