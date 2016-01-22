@@ -4,6 +4,13 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.7.7
+-------------
+
+Features
+ - pulled core functionality out of civet_status script and put it into a
+   module
+
 Version 1.7.6
 -------------
 Bug fixes
