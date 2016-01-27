@@ -78,7 +78,14 @@ class Status(object):
                     else:
                         self.state = "FAILED"
                 else:
-                    self.state = status.state
+                    if status.state == 'Q':
+                        self.state = "QUEUED"
+                    elif status.state == 'H':
+                        self.state = "HELD"
+                    elif status.state == 'W':
+                        self.state = "WAITING"
+                    else:
+                        self.state = "RUNNING"
 
                 self.exit_status = status.exit_status
                 if self.exit_status is not None:
