@@ -422,8 +422,7 @@ class Tool(object):
                 verify_file_list.append('python')
 
         if PL.delay:
-            hours, minutes = utilities.parse_delay_string(PL.delay)
-            date_time = datetime.datetime.now() + datetime.timedelta(hours=hours, minutes=minutes)
+            date_time = PL.delay_timestamp
         else:
             date_time = None
 

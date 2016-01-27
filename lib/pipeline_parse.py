@@ -4,7 +4,6 @@
 # Process the XML file describing the overall pipeline.
 
 import sys
-import re
 import datetime
 import os
 import getpass
@@ -130,6 +129,14 @@ class Pipeline(object):
         else:
             self.error_email_address = self.email_address
         self.directory_version = 1
+
+        if self.delay:
+            try:
+                hours, minutes = utilities.parse_delay_string(self.delay)
+            except ValueError as e:
+                message = "Error parsing delay parameter '{}'. {}".format(self.delay, e.message)
+                sys.exit(message)
+            self.delay_timestamp = datetime.datetime.now() + datetime.timedelta(hours=hours, minutes=minutes)
 
         if 'tool_search_path' in pipe.attrib:
             self.default_tool_search_path = pipe.attrib['tool_search_path']
