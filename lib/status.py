@@ -82,7 +82,7 @@ class Status(object):
 
                 self.exit_status = status.exit_status
                 if self.exit_status is not None:
-                self.exit_status = int(self.exit_status)
+                    self.exit_status = int(self.exit_status)
             else:
                 # no information for job, as of Civet 1.7.0 this should only be
                 # possible if the job is deleted (cancelled because of failed
