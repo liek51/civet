@@ -2,8 +2,7 @@
 import xml.etree.ElementTree as ET
 
 from pipeline_tool import *
-import civet_exceptions
-
+from civet_exceptions import *
 
 class Step(object):
     validTags = [
@@ -14,7 +13,7 @@ class Step(object):
         if 'name' not in e.attrib or len(e.attrib) != 1:
             msg = ("Step must have (only) a name attribute. Tag had these "
                    "attributes: '{}'\n{}".format(", ".join(e.attrib.keys()), ET.tostring(e)))
-            raise civet_exceptions.ParseError(msg)
+            raise ParseError(msg)
 
         self.name = e.attrib['name'].replace(' ', '_')
         self.tools = []
@@ -26,7 +25,7 @@ class Step(object):
                        "{}\n\nValid Tags: '{}'".format(self.name,
                                                    ET.tostring(child).rstrip(),
                                                    ", ".join(Step.validTags)))
-                raise civet_exceptions.ParseError(msg)
+                raise ParseError(msg)
             self.tools.append(PipelineTool(child, files))
 
     def submit(self, name_prefix):
