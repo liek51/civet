@@ -1,20 +1,30 @@
+
+import xml.etree.ElementTree as ET
+
 from pipeline_tool import *
+import civet_exceptions
 
 
-class Step():
+class Step(object):
     validTags = [
         'tool']
 
     def __init__(self, e, files):
         # Every step requires a name.
-        assert len(e.attrib) == 1, "Step must have (only) a name attribute"
+        if 'name' not in e.attrib or len(e.attrib) != 1:
+            msg = ("Step must have (only) a name attribute. Tag had these "
+                   "attributes: '{}'".format(", ".join(e.attrib.keys())))
+            raise civet_exceptions.ParseError(msg)
+
         self.name = e.attrib['name'].replace(' ', '_')
         self.tools = []
         self.code = "S"
         for child in e:
             t = child.tag
-            # print 'Step child:', t, child.attrib
-            assert t in Step.validTags, 'Illegal tag in step: ' + t
+            if t not in Step.validTags:
+                msg = ("Illegal tag in step '{}': \n"
+                       "{}".format(self.name, ET.tostring(child)))
+                raise civet_exceptions.ParseError(msg)
             self.tools.append(PipelineTool(child, files))
 
     def submit(self, name_prefix):
