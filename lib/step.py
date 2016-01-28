@@ -13,7 +13,7 @@ class Step(object):
         # Every step requires a name.
         if 'name' not in e.attrib or len(e.attrib) != 1:
             msg = ("Step must have (only) a name attribute. Tag had these "
-                   "attributes: '{}'".format(", ".join(e.attrib.keys())))
+                   "attributes: '{}'\n{}".format(", ".join(e.attrib.keys()), ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
 
         self.name = e.attrib['name'].replace(' ', '_')
@@ -22,8 +22,10 @@ class Step(object):
         for child in e:
             t = child.tag
             if t not in Step.validTags:
-                msg = ("Illegal tag in step '{}': \n"
-                       "{}".format(self.name, ET.tostring(child)))
+                msg = ("Illegal tag in step '{}': \n\n"
+                       "{}\n\nValid Tags: '{}'".format(self.name,
+                                                   ET.tostring(child).rstrip(),
+                                                   ", ".join(Step.validTags)))
                 raise civet_exceptions.ParseError(msg)
             self.tools.append(PipelineTool(child, files))
 
