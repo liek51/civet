@@ -50,7 +50,7 @@ class ForEach(object):
         for child in e:
             t = child.tag
             if t not in ForEach.validTags:
-                msg = ("Illegal tag in foreach '{}': \n\n"
+                msg = ("Unknown tag in foreach '{}': \n\n"
                        "{}\n\nValid Tags: '{}'".format(self.name,
                                                        ET.tostring(child).rstrip(),
                                                        ", ".join(ForEach.validTags)))
@@ -203,7 +203,7 @@ class ForEachFile(object):
         atts = e.attrib
         for a in atts:
             if a not in ForEachFile.requiredAtts:
-                msg = ("Illegal attribute in foreach file: {}\n\n"
+                msg = ("Unknown attribute in foreach file: {}\n\n"
                        "{}\n\nValid Attributes: '{}'".format(a, ET.tostring(e).rstrip(),
                                                              ", ".join(ForEachFile.requiredAtts)))
                 raise ParseError(msg)
