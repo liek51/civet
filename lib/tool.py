@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 import utilities
 from job_runner.batch_job import *
 import pipeline_parse as PL
+import civet_exceptions
 from pipeline_file import *
 
 
@@ -88,7 +89,6 @@ class Tool(object):
             except KeyError as e:
                 bad_inputs.append(ins[n])
 
-
         for n in range(len(outs)):
             try:
                 f = pipeline_files[outs[n]]
@@ -117,12 +117,21 @@ class Tool(object):
             print(e.msg, file=sys.stderr)
             sys.exit(1)
         atts = tool.attrib
+
         # Validate the attributes
         for a in atts:
-            assert a in Tool.validAtts, 'unknown attribute in tool tag: ' + a
+            if a not in Tool.validAtts:
+                msg = ("Unknown attribute in tool '{}': {}\n"
+                       "Valid Attributes: '{}'".format(self.name_from_pipeline,
+                                                       a,
+                                                       ", ".join(Tool.validAtts)))
+                raise civet_exceptions.ParseError(msg)
 
         # The name attribute is required.  All others are optional.
-        self.name = atts['name'].replace(' ', '_')
+        try:
+            self.name = atts['name'].replace(' ', '_')
+        except KeyError:
+            raise civet_exceptions.ParseError("'{}' is mising required attribute 'name'".format(os.path.basename(self.xml_file)))
 
         if 'error_strings' in atts:
             self.error_strings = []
@@ -145,7 +154,11 @@ class Tool(object):
             self.option_overrides = PL.option_overrides[self.config_prefix]
 
         if 'threads' in atts:
-            self.default_threads = int(atts['threads'])
+            try:
+                self.default_threads = int(atts['threads'])
+            except ValueError:
+                msg = "{}: tool threads attribute must be an integer. Value was '{}'".format(os.path.basename(self.xml_file), atts['threads'])
+                raise civet_exceptions.ParseError(msg)
         else:
             self.default_threads = 1
 
@@ -175,13 +188,17 @@ class Tool(object):
             #if this is invalid, then BatchJob __init__() will throw a ValueError
             #should be "and" or "or" (case insensitive)
             self.exit_test_logic = atts['exit_test_logic']
-            assert self.exit_test_logic.upper() in ['AND', 'OR'], 'exit_test_logic must be "AND" or "OR" (case insensitive)' + self.exit_test_logic
+            if self.exit_test_logic.upper() not in ['AND', 'OR']:
+                msg = "'{}': exit_test_logic attribute must be 'AND' or 'OR' (case insensitive). Value was: {}".format(os.path.basename(self.xml_file), self.exit_test_logic)
+                raise civet_exceptions.ParseError(msg)
         else:
             self.exit_test_logic = "AND"  #default to AND
             
         if 'mem' in atts:
             self.mem = atts['mem']
-            assert self.mem.isdigit() and self.mem > 0, 'mem attribute must be positive integer: ' + self.mem
+            if not self.mem.isdigit() and self.mem <= 0:
+                msg = "'{}': mem attribute must be a positive integer: {}".format(os.path.basename(self.xml_file), self.mem)
+                raise civet_exceptions.ParseError(msg)
         else:
             self.mem = None
 
@@ -208,8 +225,9 @@ class Tool(object):
         # Now process our child tags
         for child in tool:
             t = child.tag
-            assert t in Tool.validTags, 'unknown child tag in tool tag: ' + t
-
+            if t not in Tool.validTags:
+                msg = "'{}': Unknown tag {}\n\n{}".format(os.path.basename(self.xml_file), t, ET.tostring(child))
+                raise civet_exceptions.ParseError(msg)
 
             if t == 'file' or t == 'dir':
                 # Register the file in the tool's file dictionary
@@ -225,7 +243,8 @@ class Tool(object):
             files_to_test = []
             for f in self.exit_if_exists.split(","):
                 f = f.strip()
-                assert f in self.tool_files, 'unkown file ID in exit_if_exists attribute: ' + f
+                if f not in self.tool_files:
+                    raise civet_exceptions.ParseError("unkown file ID in exit_if_exists attribute: {}".format(f))
                 files_to_test.append(self.tool_files[f].path)
             self.exit_if_exists = files_to_test  
                     
@@ -292,10 +311,11 @@ class Tool(object):
 
         id = atts['id']
         # Ensure that the id is unique.
-        assert id not in self.options, ('file id duplicates an option'
-                                        'name: ' + self.id)
-        assert id not in self.tool_files, ('file id is a duplicate: ' +
-                                          self.id)
+        if id in self.options:
+            raise civet_exceptions.ParseError("{}: file id duplicates an option"
+                                              "name: ".format(os.path.basename(self.xml_file), self.id))
+        if id in self.tool_files:
+            raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), self.id))
         
 
         PipelineFile.parse_XML(e, self.tool_files)
@@ -482,56 +502,91 @@ class Option(object):
         self.command_text = ''
         self.value = ''
         self.binary = False
-        try:
-            name = e.attrib['name'].strip()
-            self.name = name
-            if 'command_text' in e.attrib:
-                self.command_text = e.attrib['command_text'].strip()
-            if 'value' in e.attrib:
-                if name in tool.option_overrides:
-                    value = tool.option_overrides[name][0]
-                else:
-                    value = e.attrib['value'].strip()
-            elif 'from_file' in e.attrib:
-                fid = e.attrib['from_file']
+
+        name = e.attrib['name'].strip()
+        self.name = name
+        if 'command_text' in e.attrib:
+            self.command_text = e.attrib['command_text'].strip()
+        if 'value' in e.attrib:
+            if name in tool.option_overrides:
+                value = tool.option_overrides[name][0]
+            else:
+                value = e.attrib['value'].strip()
+        elif 'from_file' in e.attrib:
+            fid = e.attrib['from_file']
+            try:
                 fn = tool.tool_files[fid].path
-                value = '$(cat ' + fn + ') '
-            elif 'threads' in e.attrib and e.attrib['threads'].upper() == 'TRUE':
-                if name in tool.option_overrides:
-                    value = tool.option_overrides[name][0]
-                else:
-                    value = str(tool.default_threads)
-                if int(value) > tool.thread_option_max:
-                    tool.thread_option_max = int(value)
-            
-            if 'binary' in e.attrib:
-                self.binary = True
-                                       
-                if value.upper() == 'TRUE' or value == '1':
-                    value = True
-                elif value.upper() == 'FALSE' or value == '0':
-                    value = False
-                else:
-                    raise ValueError("invalid value for binary option,  must be True or False")
-                
-        except:
-            print('unexpected problem with {0}'.format(self), file=sys.stderr)
-            print(sys.exc_info()[0], file=sys.stderr)
-            raise
+            except KeyError:
+                msg = "{}: Unknown file ID '{}' in option 'from_file' attribute:\n\n{}".format(os.path.basename(tool.xml_file), fid, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+            value = '$(cat ' + fn + ') '
+        elif 'threads' in e.attrib and e.attrib['threads'].upper() == 'TRUE':
+            if name in tool.option_overrides:
+                try:
+                    value = int(tool.option_overrides[name][0])
+                except ValueError:
+                    msg = "{}: Invalid value for option override '{}' (must be integer): {}".format(os.path.basename(tool.xml_file), name, tool.option_overrides[name][0])
+                    raise civet_exceptions.ParseError(msg)
+            else:
+                value = tool.default_threads
+
+            if value > tool.thread_option_max:
+                tool.thread_option_max = value
+
+            # now that we've made sure it is an integer and we've set
+            # thread_option_max we need to turn it back into a string for
+            # substitution in the command line
+            value = str(value)
+
+        if 'binary' in e.attrib:
+            self.binary = True
+
+            if value.upper() == 'TRUE' or value == '1':
+                value = True
+            elif value.upper() == 'FALSE' or value == '0':
+                value = False
+            else:
+                msg = "{}: invalid value '{}' for binary option, must be 'True' or 'False'\n\n{}".format(os.path.basename(tool.xml_file), value, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+
 
         self.isFile = False
         self.value = value
 
         # We don't allow the same option name in a tool twice
-        assert self.name not in tool.options, 'Option ' + self.name + 'is a duplicate'
-        assert self.name not in tool.tool_files, 'Option ' + self.name + 'is a duplicate of a file ID'
+        if self.name in tool.options:
+            msg = "{}: Option {} is a duplicate".format(os.path.basename(tool.xml_file), self.name)
+            raise civet_exceptions.ParseError(msg)
+        if self.name in tool.tool_files:
+            msg = "{}: Option {} is a duplicate of a file ID".format(os.path.basename(tool.xml_file), self.name)
+            raise civet_exceptions.ParseError(msg)
         
         # some attributes are mutually exclusive
-        assert not ('binary' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': binary and from_file attributes are mutually exclusive'
-        assert not ('binary' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': binary and threads attributes are mutually exclusive'
-        assert not ('value' in e.attrib and 'from_file' in e.attrib), 'Option ' + self.name + ': value and from_file attributes are mutually exclusive'
-        assert not ('value' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': value and threads attributes are mutually exclusive'
-        assert not ('from_file' in e.attrib and 'threads' in e.attrib), 'Option ' + self.name + ': from_file and threads attributes are mutually exclusive'
+        if 'binary' in e.attrib and 'from_file' in e.attrib:
+            msg = ("{}: Option {}: binary and from_file attributes are mutually"
+                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+                                             self.name, ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
+        if 'binary' in e.attrib and 'threads' in e.attrib:
+            msg = ("{}: Option {}: binary and threads attributes are mutually"
+                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+                                             self.name, ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
+        if 'value' in e.attrib and 'from_file' in e.attrib:
+            msg = ("{}: Option {}: value and from_file attributes are mutually"
+                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+                                             self.name, ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
+        if 'value' in e.attrib and 'threads' in e.attrib:
+            msg = ("{}: Option {}: value and threads attributes are mutually"
+                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+                                             self.name, ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
+        if 'from_file' in e.attrib and 'threads' in e.attrib:
+            msg = ("{}: Option {}: from_file and threads attributes are mutually"
+                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+                                             self.name, ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
         tool.options[name] = self
         
 
@@ -571,14 +626,22 @@ class Command(object):
 
         atts = e.attrib
         for a in atts:
-            assert a in Command.validAtts, 'Unknown attribute in command tag: ' + a
+            if a not in Command.validAtts:
+                msg = "{}: Unknown attribute in command tag: {}\n\n{}".format(os.path.basename(tool.xml_file), a, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
         # The program attribute is required.  The remainder are optional.
-        self.program = atts['program']
+        try:
+            self.program = atts['program']
+        except KeyError:
+            msg = "{}: program attribute is required for <command> tag.\n\n{}"
+            raise civet_exceptions.ParseError(msg.format(tool.xml_file, ET.tostring(e)))
 
         # Delimiters are optional (and unusual!)
         if 'delimiters' in atts:
             self.delims = atts['delimiters']
-            assert len(self.delims) == 2, 'command tag delimiters must be exactly two characters.'
+            if len(self.delims) != 2:
+                msg = "{}: command tag delimiters must be exactly two characters.\n\n{}".format(os.path.basename(tool.xml_file), ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
         else:
             self.delims = '{}'
         delim_1 = self.delims[0]
@@ -602,19 +665,24 @@ class Command(object):
         if 'if_exists' in atts and not PL.force_conditional_steps:
             for f in atts['if_exists'].split(','):
                 f = f.strip()
-                assert f in self.tool_files, "unkown file ID in command 'if_exists' attribute: " + f
+                if f not in self.tool_files:
+                    msg = "{}: unknown file ID in command 'if_exists' attribute: {}\n\n{}".format(os.path.basename(tool.xml_file), f, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
                 self.if_exists_files.append(self.tool_files[f].path)
                 
         if 'if_not_exists' in atts and not PL.force_conditional_steps:
             for f in atts['if_not_exists'].split(','):
                 f = f.strip()
-                assert f in self.tool_files, "unkown file ID in command 'if_not_exists' attribute: " + f
+                if f not in self.tool_files:
+                    msg = "{}: unknown file ID in command 'if_not_exists' attribute: {}\n\n{}".format(os.path.basename(tool.xml_file), f, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
                 self.if_not_exists_files.append(self.tool_files[f].path)
                 
         if 'if_exists_logic' in atts:
             logic_type = atts['if_exists_logic'].strip().upper()
-            assert logic_type in ['AND', 'OR'], \
-                "value of 'if_exists_logic' must be 'AND' or 'OR'"
+            if logic_type not in ['AND', 'OR']:
+                msg = "{}: value of 'if_exists_logic' must be 'AND' or 'OR'\n\n{}".format(os.path.basename(tool.xml_file), ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
             self.if_exists_logic = logic_type
         else:
             self.if_exists_logic = 'AND'
@@ -630,14 +698,15 @@ class Command(object):
         # Only allow one child in a Command tag
         child_found = False
         for child in e:
-            assert not child_found, ('only one subtag allowed in '
-                                           'command tag')
+            if child_found:
+                msg = "{}: only one subtag allowed in command tag:\n\n{}".format(os.path.basename(tool.xml_file), ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
             child_found = True
             t = child.tag
-            assert t == 'version_command', ('unknown child tag in a command'
-                                            ' tag: ' + t)
-            assert not self.version_command, ('a command must have at most one'
-                                              'version command: ' + t)
+
+            if t != 'version':
+                msg = "{}: unknown child tag '{}' in command:\n\n{}".format(os.path.basename(tool.xml_file), t, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
             self.version_command = re.sub('\s+', ' ', child.text).strip()
 
             # Get any command text that the parser considers part of this
