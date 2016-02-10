@@ -18,6 +18,7 @@ from tool_logger import *
 from job_runner.torque import *
 from job_runner.batch_job import *
 import utilities
+import civet_exceptions
 
 
 class Pipeline(object):
@@ -98,9 +99,11 @@ class Pipeline(object):
         
         # The outermost tag must be pipeline; it must have a name
         # and must not have text
-        assert pipe.tag == 'pipeline'
+        if pipe.tag != "pipeline":
+            raise civet_exceptions.ParseError("Outermost tag of pipeline definition must be <pipeline></pipeline>")
         self.name = pipe.attrib['name']
-        assert not pipe.text.strip()
+        if pipe.text.strip():
+            raise civet_exceptions.ParseError("<pipeline> tag may not contain text")
 
         # We need to process all our files before we process anything
         # else. Stash anything not a file and process it in a later pass.
