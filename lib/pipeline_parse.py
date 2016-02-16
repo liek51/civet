@@ -165,7 +165,9 @@ class Pipeline(object):
         # Walk the child tags.
         for child in pipe:
             t = child.tag
-            assert t in Pipeline.valid_tags, ' illegal tag:' + t
+            if t not in Pipeline.valid_tags:
+                msg = "{}: Illegal tag: {}".format(os.path.basename(self.xmlfile), t)
+                raise civet_exceptions.ParseError(msg)
             if t == 'step' or t == 'foreach':
                 pending.append(child)
             elif t == 'version':
@@ -449,11 +451,14 @@ class Pipeline(object):
 
     def parse_version_tag(self, tag):
         for attr in tag.attrib:
-            assert attr in self.valid_version_attributes, (
-                'Illegal version attribute: "' + attr + '"')
+            if attr not in self.valid_version_attributes:
+                msg = "{}: Illegal version attribute '{}'\n\n{}".format(os.path.basename(self.xmlfile), attr, ET.tostring(tag))
+                raise civet_exceptions.ParseError(msg)
             if attr == 'directory':
                 version = int(tag.attrib[attr])
-                assert version in self.valid_directory_versions
+                if version not in self.valid_directory_versions:
+                    msg = "{}: Invalid directory version '{}'\n\n{}".format(os.path.basename(self.xmlfile), version, ET.tostring(tag))
+                    raise civet_exceptions.ParseError(msg)
                 self.directory_version = version
 
 
