@@ -57,6 +57,8 @@ def main():
     verbose = args.verbose
     quiet = args.quiet
 
+    job_manager = status.PipelineStatus.get_job_manager()
+
     if args.print_version:
         version.print_version_string_and_exit()
     
@@ -107,7 +109,7 @@ def main():
     
 
         try:
-            dir_status = status.PipelineStatus(log_dir)
+            dir_status = status.PipelineStatus(log_dir, job_manager)
         except ValueError as e:
             print(e.message, file=sys.stderr)
             continue

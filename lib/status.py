@@ -38,6 +38,11 @@ class Status(object):
         if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
             status = job_runner.common.get_status_from_file(log_dir, name)
 
+            # with old versions of Civet, it's possible for there it be an empty
+            # or incomplete -status.txt file if the job was canceled/qdel'd
+            # this will be the state if we can't determine otherwise
+            self.state = "DELETED"
+
             if 'canceled' in status or 'cancelled' in status:
                 self.state = "CANCELED"
                 self.state_at_cancel = format_state(status['state_at_cancel'])
@@ -105,7 +110,7 @@ class Status(object):
 
 class PipelineStatus(object):
 
-    def __init__(self, log_dir):
+    def __init__(self, log_dir, job_manager=batch_system.JobManager()):
         self.log_dir = log_dir
         self.jobs = []
         self.aborted = False
@@ -131,7 +136,7 @@ class PipelineStatus(object):
             self.status = "NO_SUB"
             return
 
-        jm = batch_system.JobManager()
+        jm = job_manager
 
         self.status = "UNKNOWN"
 
@@ -160,7 +165,6 @@ class PipelineStatus(object):
             job_status = Status(log_dir, job[1], job[0], job[2], jm,
                                 self.jobs_running_at_cancel)
             self.jobs.append(job_status)
-
 
             if job_status.state == "RUNNING":
                 self.running_jobs += 1
@@ -205,6 +209,10 @@ class PipelineStatus(object):
 
     def __str__(self):
         return str(self.__dict__)
+
+    @staticmethod
+    def get_job_manager():
+        return batch_system.JobManager()
 
 def main():
     """

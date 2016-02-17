@@ -92,8 +92,27 @@ class JobManager(object):
             otherwise it will return a JobStatus object.
 
             :param job_id: job id of job to query
-        """ 
-        job_status = self.pbsq.getjob(job_id)
+        """
+
+        # with some versions of Torque (Torque 4),  it is fairly common for
+        # Torque to fail to establish a connection when making lots of
+        # successive queries. If this happens,  wait and retry again
+        max_retry = 5
+        retry = 0
+        job_status = None
+
+        while job_status is None:
+            try:
+                job_status = self.pbsq.getjob(job_id)
+            except PBSQuery.PBSError as e:
+                if retry < max_retry:
+                    retry += 1
+                    time.sleep(2 * retry)
+                    continue
+                else:
+                    # TODO use custom exception rather than PBSQuery.PBSError
+                    raise e
+
         # check to see if the job existed.  this is kind of lame, but we can't
         # just do "if job_status:" because PBSQuery.getjob returns an empty 
         # dictionary if the job is not found, but it returns some other object
