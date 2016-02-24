@@ -1,5 +1,21 @@
-# Standard imports
+"""
+Copyright (C) 2016  The Jackson Laboratory
 
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+# Standard imports
 from __future__ import print_function
 
 import sys
@@ -588,7 +604,6 @@ class Option(object):
                                              self.name, ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
         tool.options[name] = self
-        
 
     def __repr__(self):
         return ' '.join(['Option:', 'n', self.name, 'c', self.command_text, 'v', self.value])
@@ -704,7 +719,7 @@ class Command(object):
             child_found = True
             t = child.tag
 
-            if t != 'version':
+            if t != 'version_command':
                 msg = "{}: unknown child tag '{}' in command:\n\n{}".format(os.path.basename(tool.xml_file), t, ET.tostring(e))
                 raise civet_exceptions.ParseError(msg)
             self.version_command = re.sub('\s+', ' ', child.text).strip()

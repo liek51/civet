@@ -1,10 +1,29 @@
+"""
+Copyright (C) 2016  The Jackson Laboratory
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import sys
 import os
 import tempfile
 import re
 import datetime
+import xml.etree.ElementTree as ET
 
 import utilities
+import civet_exceptions
 
 import pipeline_parse as PL
 
@@ -114,6 +133,8 @@ class PipelineFile(object):
         if self.id in files:
             # We've already seen this file ID.
             # Make sure they're compatible
+            # this will raise a civet_exception.ParseError if they are not
+            # compatible
             self.compatible(files[self.id])
         else:
             # Register this file in the files/options namespace
@@ -141,8 +162,9 @@ class PipelineFile(object):
         t = e.tag
         att = e.attrib
         # Make sure that we have the right kind of tag.
-        assert t in PipelineFile.validFileTags, ('Illegal pipeline file tag: "'
-                                                 + t + '"')
+        if t not in PipelineFile.validFileTags:
+            msg = "{}: Invalid tag '{}:'\n\n{}".format(os.path.basename(PL.xmlfile), t, ET.tostring(e))
+            raise civet_exceptions.ParseError(msg)
 
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
@@ -172,40 +194,51 @@ class PipelineFile(object):
         # make sure that the attributes make sense with the type of tag we are
         if is_file:
             for a in att:
-                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_file_attributes, (
-                    'Illegal pipeline file attribute: "' + a + '"')
+                if a not in PipelineFile.valid_common_attributes + PipelineFile.valid_file_attributes:
+                    msg = "Illegal pipeline file attribute: '{}'\n\n{}".format(a, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
+
         elif is_dir:
             for a in att:
-                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_dir_attributes, (
-                    'Illegal pipeline dir attribute: "' + a + '"')
+                if a not in PipelineFile.valid_common_attributes + PipelineFile.valid_dir_attributes:
+                    msg = "Illegal pipeline dir attribute: '{}'\n\n{}".format(a, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
 
             if 'default_output' in att:
                 default_output = att['default_output'].upper() == 'TRUE'
-                assert 'in_dir' not in att, ("Must not combine default_output and "
-                                             "in_dir attributes.")
+                if 'in_dir' in att:
+                    msg = ("Must not combine default_output and "
+                           "in_dir attributes.\n\n{}").format(ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
             if 'from_file' in att:
-                assert 'filespec' not in att, ("Must not combine 'from_file' and "
-                                               "'filespec'")
                 from_file = att['from_file']
+                if 'filespec' in att:
+                    msg = ("Must not combine 'from_file' and "
+                           "'filespec'\n\n{}").format(ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
 
-            if 'pipeline_root' in att:
-                assert 'filespec' not in att, ("Must not combine 'pipeline_root' "
-                                               "and 'filespec'")
+            if 'pipeline_root' in att and 'filespec' in att:
+                msg = ("Must not combine 'pipeline_root' and "
+                       "'filespec'\n\n{}").format(ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
 
-            valid_source = ['filespec', 'based_on', 'parameter', 'from_file', 'pipeline_root']
+            valid_source = ['filespec', 'based_on', 'parameter', 'from_file',
+                            'pipeline_root']
             if True not in [x in att for x in valid_source]:
-                print >> sys.stderr, "dir tag must contain one of:  {}".format(", ".join(valid_source))
-                print >> sys.stderr, "\tFound these attributes: ", e.attrib
-                sys.exit(1)
+                msg = ("dir tag must contain one of:  {}"
+                       "\n\n{}").format(", ".join(valid_source), ET.tostring(e))
+                raise civet_exceptions(msg)
 
         elif is_string:
             for a in att:
-                assert a in PipelineFile.valid_common_attributes or a in PipelineFile.valid_string_attributes, (
-                    'Illegal pipeline string attribute: "' + a + '"')
+                if a not in PipelineFile.valid_common_attributes + PipelineFile.valid_string_attributes:
+                    msg = "Illegal pipeline string attribute '{}'\n\n{}".format(a, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
         elif is_list:
             for a in att:
-                assert a in PipelineFile.valid_list_attributes, (
-                    'Illegal pipeline filelist attribute: "' + a + '"')
+                if a not in PipelineFile.valid_list_attributes:
+                    msg = "Illegal pipeline filelist attribute '{}'\n\n{}".format(a, ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
 
 
         # What kind of file?
@@ -243,10 +276,14 @@ class PipelineFile(object):
             path = att['value']
 
         if 'parameter' in att:
-            assert not path, ('Must not have both filespec'
-                              'and parameter attributes.')
-            assert not in_dir, ('Must not have both in_dir'
-                              'and parameter attributes.')
+            if path:
+                msg = ("Must not have both 'filespec' and 'parameter' "
+                       "attributes:\n\n{}").format(ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+            if in_dir:
+                msg = ("Must not have both 'in_dir' and 'parameter' "
+                       "attributes:\n\n{}").format(ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
             path = int(att['parameter'])
             is_parameter = True
 
@@ -256,24 +293,27 @@ class PipelineFile(object):
                 foreach_dep = att['foreach_id']
 
         if 'based_on' in att:
-            assert (not path and not from_file), (
-                'Must not have based_on and filespec, parameter, or from_file attributes.')
+            if path or from_file:
+                msg = ("Must not combined 'based_on' with 'filespec', "
+                       "'parameter', or 'from_file' "
+                       "attributes:\n\n{}").format(ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+
             based_on = att['based_on']
 
             if 'pattern' in att:
                 pattern = att['pattern']
                 if not 'replace' in att:
-                    print >> sys.stderrr, 'pattern specified without replace.'
-                    print >> sys.stderr, att
-                    sys.exit(1)
+                    msg = ("'pattern' attribute specified without 'replace' "
+                           "attribute:\n\n{}").format(ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
                 replace = att['replace']
 
             if 'datestamp_append' in att or 'datestamp_prepend' in att:
                 if pattern or replace:
-                    print >> sys.stderr, ('datestamp is incompatible with '
-                                          'pattern and replace.')
-                    print >> sys.stderr, att
-                    sys.exit(1)
+                    msg = ("'datestamp' attribute is incompatible with "
+                            "'replace' attribute:\n\n{}").format(ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
                 if 'datestamp_append' in att:
                     datestamp_append = att['datestamp_append']
                 if 'datestamp_prepend' in att:
@@ -281,19 +321,20 @@ class PipelineFile(object):
 
             if 'append' in att:
                 if pattern or replace or datestamp_append:
-                    print >> sys.stderr, ('append is incompatible with '
-                                          'datestamp, pattern and replace.')
-                    print >> sys.stderr, att
-                    sys.exit(1)
+                    msg = ("'append' attribute is incompatible with "
+                           "'datestamp', 'replace', and 'pattern' attributes:"
+                           "\n\n{}").format(ET.tostring(e))
+                    raise civet_exceptions.ParseError(msg)
                 append = att['append']
 
         if is_list and not ((pattern and in_dir) or is_parameter):
-            print >> sys.stderr, 'filelist requires in_dir and pattern or it must be passed as a parameter.'
-            print >> sys.stderr, att
-            sys.exit(1)
+            msg = ("'filelist' requires 'in_dir' and 'pattern' or it must be "
+                   "passed as a parameter\n\n{}".format(ET.tostring(e)))
+            raise civet_exceptions.ParseError(msg)
         if is_list and pattern and is_input:
-            sys.stderr.write('pattern based filelist may not be specified as input.\n')
-            sys.exit(1)
+            msg = ("pattern based filelist may not be specified as "
+                   "input:\n\n{}").format(ET.tostring(e))
+            raise civet_exceptions.ParseError(msg)
 
         #if is_temp and not path:
         #    print >> sys.stderr, "temp", id, "has no path"
@@ -310,9 +351,10 @@ class PipelineFile(object):
         
         # Second instance must not have a path, be a tempfile, or a
         # directory.
-        assert not self.path
-        assert not self.is_temp
-        assert not self._is_dir
+        if self.path or self.is_temp or self.is_dir:
+            raise civet_exceptions.ParseError("Incompatible redeclaration of "
+                                              "{}".format(self.id))
+
             
     def __repr__(self):
         return self.__str__()
