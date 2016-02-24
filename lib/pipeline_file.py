@@ -462,10 +462,8 @@ class PipelineFile(object):
                 self.path = ','.join(file_list)
         elif not self.is_string:
             path = self.path
-            if (os.path.split(path)[0] == '' and
-                (not self.is_input) and
-                self != PipelineFile.output_dir and
-                (PipelineFile.output_dir is None or PipelineFile.output_dir._is_fixed_up)):
+            if (not os.path.isabs(path) and not self.is_input and
+                self != PipelineFile.output_dir):
                 path = os.path.join(PipelineFile.get_output_dir(), path)
             self.path = os.path.abspath(path)
 

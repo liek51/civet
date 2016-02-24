@@ -89,7 +89,7 @@ class Pipeline(object):
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
-        self.master_XML_dir = os.path.dirname(xmlfile)
+        self.master_XML_dir = os.path.abspath(os.path.dirname(xmlfile))
 
         # Save some that we only need for reporting use, later.
         self.xmlfile = xmlfile
