@@ -53,6 +53,9 @@ def parse_delay_string(delay):
 
 def cleanup_command_line():
 
+    if not sys.stdin.encoding or sys.stdin.encoding == 'ascii':
+        return
+
     conversion_pairs = {
         'EN DASH': '-',
         'EM DASH': '--',
