@@ -198,7 +198,14 @@ class Pipeline(object):
         # Time to fix up various aspects of files that need to have
         # all files done first.
 
-        PipelineFile.fix_up_files(self._files)
+        try:
+            PipelineFile.fix_up_files(self._files)
+        except civet_exceptions.ParseError as e:
+            # fix_up_files can throw a civet_exceptions.ParseError, however
+            # it doesn't know what file it is in at the time,  so we catch it
+            # here, add the filename to the message, and raise an exception
+            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e.message)
+            raise civet_exceptions.ParseError(msg)
 
         # Now that our files are all processed and fixed up, we can
         # process the rest of the XML involved with this pipeline.

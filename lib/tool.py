@@ -94,7 +94,8 @@ class Tool(object):
         # as the pipeline XML
         self.xml_file = self.search_for_xml(xml_file)
         if not self.xml_file:
-            sys.exit("ERROR: Could not find tool XML file: {0}\nExiting...".format(xml_file))
+            msg = "Could not find tool XML file: {0}".format(xml_file)
+            raise civet_exceptions.ParseError(msg)
 
         bad_inputs = []
         bad_outputs = []
@@ -113,13 +114,14 @@ class Tool(object):
             except KeyError as e:
                 bad_outputs.append(outs[n])
 
+        msg = ["{}: Tool input error".format(self.name_from_pipeline)]
         for f in bad_inputs:
-            print("{}: Tool input error, unknown file ID: {}".format(self.name_from_pipeline, f), file=sys.stderr)
+            msg.append("\tunknown file ID: {}".format(f))
         for f in bad_outputs:
-            print("{}: Tool output error, unknown file ID: {}".format(self.name_from_pipeline, f), file=sys.stderr)
+            msg.append("\tunknown file ID: {}".format(f))
 
         if bad_inputs or bad_outputs:
-            sys.exit(1)
+            raise civet_exceptions.ParseError("\n".join(msg))
 
 
 
@@ -253,7 +255,14 @@ class Tool(object):
                 pending.append(child)
 
         # Now we can fix up our files.
-        PipelineFile.fix_up_files(self.tool_files)
+        try:
+            PipelineFile.fix_up_files(self.tool_files)
+        except civet_exceptions.ParseError as e:
+            # fix_up_files can throw a civet_exceptions.ParseError, however
+            # it doesn't know what file it is in at the time,  so we catch it
+            # here, add the filename to the message, and raise an exception
+            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e.message)
+            raise civet_exceptions.ParseError(msg)
         
         # Now we can process self.exit_if_exists
         if self.exit_if_exists:
@@ -285,10 +294,8 @@ class Tool(object):
                     try:
                         name = self.tool_files[a['id']].path
                     except KeyError:
-                        print('When parsing {0}: The file ID "{1}" appears to '
-                              'not be valid'.format(self.xml_file, a['id']),
-                              file=sys.stderr)
-                        sys.exit(1)
+                        msg = "{}: Unknown file ID '{}'\n\n{}".format(os.path.basename(self.xml_file), a['id'], ET.tostring(child))
+                        raise civet_exceptions.ParseError(msg)
                     # If not key error; let the exception escape.
                 else:
                     name = child.text

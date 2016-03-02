@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import print_function
+
 import sys
 import os
 import tempfile
@@ -352,7 +354,7 @@ class PipelineFile(object):
         
         # Second instance must not have a path, be a tempfile, or a
         # directory.
-        if self.path or self.is_temp or self.is_dir:
+        if self.path or self.is_temp or self._is_dir:
             raise civet_exceptions.ParseError("Incompatible redeclaration of "
                                               "{}".format(self.id))
 
@@ -376,9 +378,7 @@ class PipelineFile(object):
 
     @staticmethod
     def get_output_dir():
-        if not PipelineFile.output_dir._is_fixed_up:
-            raise Exception( "Using output_dir before fixed up...")
-            sys.exit(1)
+        assert PipelineFile.output_dir._is_fixed_up, "Using output_dir before fixed up..."
         return PipelineFile.output_dir.path
 
     @staticmethod
@@ -398,9 +398,10 @@ class PipelineFile(object):
             # create a default one in our current working directory
             PipelineFile.output_dir = PipelineFile('default_output', ".", False,
                                                    False, False, True, files,
-                                                   True, False, None, None, None, None,
-                                                   None, None, None, False,
-                                                   False, None, create=True,
+                                                   True, False, None, None,
+                                                   None, None, None, None, None,
+                                                   False, False, None,
+                                                   create=True,
                                                    default_output=True,
                                                    foreach_dep=None)
 
@@ -419,15 +420,15 @@ class PipelineFile(object):
 
         if self._is_fixed_up:
             return
+
         # detect dependency cycles
         if self in circularity:
-            print >> sys.stderr, '\nFile dependency cycle detected.'
+            msg = "File dependency cycle detected processing '{}' ".format(self.id)
             for f in circularity:
-                print >> sys.stderr, f
-            print >> sys.stderr, self
-            sys.exit(1)
+                msg = msg + "\n" + str(f)
+            msg = msg + "\n\n" + str(self)
+            raise civet_exceptions.ParseError(msg)
 
-        #print >> sys.stderr, ('  ' * len(circularity)) + 'Fixing up' + str(self)
         circularity.append(self)
 
         self.parameter_to_path()
@@ -440,8 +441,8 @@ class PipelineFile(object):
                 self.path = os.path.join(self.path, stamp_dir)
             utilities.make_sure_path_exists(self.path)
         else:
+            # might raise civet_exception.ParseError, to be handled at a higher level
             self.apply_in_dir_and_create_temp(files, circularity)
-
 
         # Turn all the paths into an absolute path, so changes in
         # working directory throughout the pipeline lifetime don't
@@ -477,11 +478,9 @@ class PipelineFile(object):
         check = circularity.pop()
 
         if check != self:
-            print >> sys.stderr, 'circularity.pop() failed!\ncheck:', check
-            print >> sys.stderr, ' self:', self
+            print("circularity.pop() failed!\ncheck:{}".format(check), file=sys.stderr)
+            print(" self:{}".format(self), file=sys.stderr)
             sys.exit(1)
-
-        #print >> sys.stderr, ('  ' * len(circularity)) + 'Done with' + str(self)
 
 
     def parameter_to_path(self):
@@ -489,10 +488,12 @@ class PipelineFile(object):
             idx = self.path - 1
             params = PipelineFile.params
             if idx >= len(params):
-                print >> sys.stderr, ('Too few parameters...\n'
-                    '    len(params): ' +
-                    str(len(params)) + '\n    File: ' + self.id + 
-                    '\n    referenced parameter: ' + str(self.path))
+                print("Too few parameters...\n"
+                      "    len(params): {}\n"
+                      "    File: {}\n"
+                      "    referenced parameter: {}"
+                      "".format(len(params), self.id, self.path),
+                                  file=sys.stderr)
                 sys.exit(1)
             self.path = params[idx]
             self.is_path = True
@@ -549,10 +550,9 @@ class PipelineFile(object):
         utilities.make_sure_path_exists(dir)
         if ind:
             if ind not in files:
-                print >> sys.stderr, ('ERROR: while processing ' 
-                                      'file with id: ' + self.id +
-                                      ', in_dir is unknown file: ' + ind)
-                sys.exit(1)
+                msg = ("ERROR: while processing file with id: '{}', "
+                       "in_dir is unknown file: '{}'".format(self.id, ind))
+                raise civet_exceptions.ParseError(msg)
             indf = files[ind]
             indf.fix_up_file(files, circularity)
             dir = indf.path
