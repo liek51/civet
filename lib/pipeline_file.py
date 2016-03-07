@@ -575,6 +575,9 @@ class PipelineFile(object):
             if ind:
                 self.in_dir = None
         elif ind:
+            if os.path.abspath(self.path):
+                raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
+
             # Apply the containing directory to the path...
             fn = os.path.split(self.path)[1]
             self.path = os.path.join(dir, fn)
