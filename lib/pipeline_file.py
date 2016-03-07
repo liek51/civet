@@ -575,13 +575,9 @@ class PipelineFile(object):
             if ind:
                 self.in_dir = None
         elif ind:
-            # XXX this doesn't work with at least one CGA pipeline
-            # a "based-on" file has the full path to the file
-            # its name is based on,  but we want to put it in the in_dir so we need to
-            # take just the basename and stick it in in_dir
-            # TODO: based_on files should only take the filename so this isn't a problem
-            #if os.path.abspath(self.path):
-            #    raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
+            if os.path.isabs(self.path):
+                raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
+
 
             # Apply the containing directory to the path...
             fn = os.path.split(self.path)[1]
