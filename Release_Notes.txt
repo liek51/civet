@@ -10,6 +10,8 @@ Bug fixes
  - filespec for output files with relative paths are assumed to be in the
    default output directory, just like filespecs that only contain a filename
  - fix exception in cleanup_command_line() when sys.stdin.encoding is None
+ - civet_status retries failed PbsQuery.getjob calls,  we see failures on
+   Torque 4 when making large numbers of queries
 
 Features
  - pulled core functionality out of civet_status script and put it into a
