@@ -37,6 +37,7 @@ from job_runner.torque import *
 from job_runner.batch_job import *
 import utilities
 import civet_exceptions
+import config
 
 
 class Pipeline(object):
@@ -155,7 +156,7 @@ class Pipeline(object):
             try:
                 hours, minutes = utilities.parse_delay_string(self.delay)
             except ValueError as e:
-                message = "Error parsing delay parameter '{}'. {}".format(self.delay, e.message)
+                message = "Error parsing delay parameter '{}'. {}".format(self.delay, e)
                 sys.exit(message)
             self.delay_timestamp = datetime.datetime.now() + datetime.timedelta(hours=hours, minutes=minutes)
 
@@ -204,7 +205,7 @@ class Pipeline(object):
             # fix_up_files can throw a civet_exceptions.ParseError, however
             # it doesn't know what file it is in at the time,  so we catch it
             # here, add the filename to the message, and raise an exception
-            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e.message)
+            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
             raise civet_exceptions.ParseError(msg)
 
         # Now that our files are all processed and fixed up, we can
@@ -381,10 +382,14 @@ class Pipeline(object):
             cmd.append("true")
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
         cmd = '\n'.join(cmd)
+
+        # do we need to load any modulefiles
+        mod_files = [x for x in config.get_param('civet_job_python_module') if x is not None]
+
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
                              name='Consolidate_log_files',
-                             modules=['python/2.7.3'],
+                             modules=mod_files,
                              mail_option='a',
                              email_list=self.error_email_address)
         try:
@@ -425,12 +430,12 @@ class Pipeline(object):
     def job_runner(self):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
-            self._job_runner =  TorqueJobRunner(self.log_dir, 
-                                                validation_cmd="validate -m "
-                                                + self.validation_file,
-                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
-                                                queue=self.queue, submit=self.submit_jobs,
-                                                pipeline_path=self.path)
+            self._job_runner = TorqueJobRunner(self.log_dir,
+                                               validation_cmd="validate -m "
+                                               + self.validation_file,
+                                               pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
+                                               queue=self.queue, submit=self.submit_jobs,
+                                               pipeline_path=self.path)
         return self._job_runner
 
     def collect_files_to_validate(self):

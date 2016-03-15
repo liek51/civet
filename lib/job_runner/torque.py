@@ -47,6 +47,7 @@ if __name__ == "__main__":
     
 import utilities
 import version
+import config
 
 #TODO: make dependency type settable per job
 _DEFAULT_DEPEND_TYPE = "afterok"
@@ -284,11 +285,7 @@ class TorqueJobRunner(object):
         echo "EXECUTION HOST DETAILS:" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         uname -a >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
-
-        # first unload any loaded modulefiles, these may be loaded automatically
-        # in a user's startup scripts, but they could conflict with modulefiles
-        # specified by the Civet tool
-        module purge
+        $MODULE_PURGE
         
         # then load modulefiles, if any, specified by the tool xml
         $MODULE_LOAD_CMDS
@@ -405,9 +402,7 @@ class TorqueJobRunner(object):
                 echo "requested_walltime=$$WALLTIME_REQUESTED" >> $LOG_DIR/$${PBS_JOBNAME}-status.txt
             fi
 
-            # sleep to overcome any lag with NFS file attribute cacheing
-            # This ensures that downstream jobs will see all output files written by this job
-            sleep 60
+            $SLEEP
 
             echo "Run finished on $$(date)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
         fi
@@ -720,6 +715,15 @@ class TorqueJobRunner(object):
             tokens['TOOL_PATH'] = batch_job.tool_path + ":"
         else:
             tokens['TOOL_PATH'] = ''
+
+        if config.get_param('purge_user_modulefiles'):
+            tokens['MODULE_PURGE'] = (
+                "# first unload any loaded modulefiles, these may be loaded automatically\n"
+                "# in a user's startup scripts, but they could conflict with modulefiles\n"
+                "# specified by the Civet tool\n"
+                "module purge")
+        else:
+            tokens['MODULE_PURGE'] = ""
         
         return string.Template(self.script_template).substitute(tokens)
 
@@ -738,6 +742,15 @@ class TorqueJobRunner(object):
             tokens['EMAIL_LIST'] = email_list
         else:
             tokens['EMAIL_LIST'] = "${USER}"
+
+        if config.get_config('io_sync_sleep'):
+            tokens['SLEEP'] = (
+                            "# sleep to overcome any lag with NFS file attribute cacheing\n"
+                            "# This ensures that downstream jobs will see all output files written by this job\n"
+                            "sleep {}".format(config.get_config('io_sync_sleep'))
+            )
+        else:
+            tokens['SLEEP'] = ""
 
         return string.Template(self.epilogue_template).substitute(tokens)
 
@@ -813,7 +826,7 @@ class TorqueJobRunner(object):
         # the ID of a single job or a list of job ID strings
         if not batch_job.depends_on:
             return ""
-        elif isinstance(batch_job.depends_on, basestring):  #basestring = str in Python3
+        elif isinstance(batch_job.depends_on, utilities.string_types):
             #handle string case
             return "{0}:{1}".format(_DEFAULT_DEPEND_TYPE, batch_job.depends_on)
         else:
@@ -863,7 +876,7 @@ class TorqueJobRunner(object):
 
         if not batch_job.files_to_test:
             bash_code = ""
-        elif isinstance(batch_job.files_to_test, basestring):  #python 2.x specific, type is str in Python3
+        elif isinstance(batch_job.files_to_test, utilities.string_types):
             bash_code = header + 'if [ -e {0} ]; then file_test_exit {1} {2}; fi'.format(batch_job.files_to_test, self.log_dir, walltime)
         else:
             tests = []
@@ -911,8 +924,11 @@ def main():
     job_runner = TorqueJobRunner()
     jm = JobManager()
 
+
+    modules = [x for x in config.get_param('civet_job_python_module') if x is not None]
+
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
-                   modules=["python"], mail_option="be")
+                   modules=modules, mail_option="be")
 
     print("submitting job with the following script:")
     print("---------------------------------------------------")

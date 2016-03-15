@@ -127,7 +127,7 @@ def main():
         try:
             dir_status = status.PipelineStatus(log_dir, job_manager)
         except ValueError as e:
-            print(e.message, file=sys.stderr)
+            print(e, file=sys.stderr)
             continue
 
         if dir_status.status == "SUBMIT_ERROR":

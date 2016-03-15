@@ -26,6 +26,8 @@
 #  4. Validate a list of files against the master.
 #
 
+from __future__ import print_function
+
 import argparse
 import sys
 import os
@@ -39,6 +41,8 @@ if lib_folder not in sys.path:
 
 import validity
 import version
+import utilities
+
 
 def process_options():
 
@@ -64,22 +68,15 @@ def process_options():
     if args.gen and (args.add or args.update):
         args.add = False
         arts.update = False
-        print >> sys.stderr, ('--generate is incompatible with --add and --update.\n'
-                              'using --generate')
+        print('--generate is incompatible with --add and --update.\n'
+              'using --generate', file=sys.stderr)
     if args.add and args.update:
         arts.update = False
-        print >> sys.stderr, ('--add is incompatible with --update.\n'
-                              'using --add')
+        print('--add is incompatible with --update.\n'
+              'using --add', file=sys.stderr)
 
     return args
 
-def ensure_directory_exists(dir):
-    try:
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-    except:
-        print >> sys.stderr, 'Could not create directory', dir, '\nExiting...'
-        sys.exit(1)
     
 def main():
     version.parse_options()
@@ -96,16 +93,21 @@ def main():
         dir = os.path.split(args.master_list)[0]
         # If the master list path is just a file, directory is empty.
         if dir:
-            ensure_directory_exists(dir)
+            try:
+                utilities.make_sure_path_exists(dir)
+            except:
+                print("Could not create directory " + dir +
+                      "\nExiting...", file=sys.stderr)
+                sys.exit(1)
         files.to_JSON_file(args.master_list)
     else:
         # We're going to do something requiring us to read the master list.
         # Go ahead and do it.
         if not os.path.exists(args.master_list):
             if not (args.add or args.update):
-                print >> sys.stderr, 'Validation failure:',
-            print >> sys.stderr, ('master file list ' +
-                args.master_list + ' does not exist.')
+                print('Validation failure:\n'
+                      'master file list ' + args.master_list +
+                      ' does not exist.', file=sys.stderr)
             sys.exit(2)
 
         m = validity.FileCollection()
@@ -119,7 +121,7 @@ def main():
             # Validate files.
             validation_failures = files.validate(m)
             if validation_failures:
-                print >> sys.stderr, validation_failures
+                print(validation_failures, file=sys.stderr)
                 sys.exit(1)
     sys.exit(0)
 

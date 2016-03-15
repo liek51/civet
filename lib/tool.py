@@ -26,11 +26,11 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # pipeline components
-import utilities
 from job_runner.batch_job import *
 import pipeline_parse as PL
 import civet_exceptions
 from pipeline_file import *
+import config
 
 
 class Tool(object):
@@ -261,7 +261,7 @@ class Tool(object):
             # fix_up_files can throw a civet_exceptions.ParseError, however
             # it doesn't know what file it is in at the time,  so we catch it
             # here, add the filename to the message, and raise an exception
-            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e.message)
+            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
             raise civet_exceptions.ParseError(msg)
         
         # Now we can process self.exit_if_exists
@@ -462,7 +462,9 @@ class Tool(object):
                 if m.startswith('python'):
                     need_python = False
             if need_python:
-                self.modules.append('python/civet')
+                python_module = config.get_param('civet_job_python_module')
+                if python_module:
+                    self.modules.append('python/civet')
                 verify_file_list.append('python')
 
         if PL.delay:

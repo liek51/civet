@@ -26,6 +26,16 @@ import sys
 import unicodedata
 
 
+# in a couple cases we need to differentiate between a string and some other
+# iterable type.  We use isinstance to see if it is a string.
+# this is slightly different between python 2 and 3
+# we define this to use as the type argument for isinstance
+if sys.version_info[0] == 3:
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 def make_sure_path_exists(path, mode=None):
     try:
         os.makedirs(path)
@@ -74,3 +84,4 @@ def cleanup_command_line():
             decoded = unicode.replace(decoded, unicodedata.lookup(key), val)
         # Should we be doing 'strict' here instead of 'replace'?
         sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')
+

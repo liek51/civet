@@ -74,7 +74,7 @@ def main():
                      error_email_address=args.error_email_address,
                      walltime_multiplier=args.walltime_multiplier)
     except civet_exceptions.ParseError as e:
-        print("\nError parsing XML:  " + e.message, file=sys.stderr)
+        print("\nError parsing XML:  {}".format(e), file=sys.stderr)
         sys.exit(1)
     PL.submit()
 
