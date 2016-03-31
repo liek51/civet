@@ -65,7 +65,6 @@ class JobTimes(object):
         self.max_requested = 0
         self._long_node = 'Unknown'
 
-
     def register_time(self, used_timestr, requested_timestr):
         secs = JobTimes.to_seconds(used_timestr)
         req_secs = JobTimes.to_seconds(requested_timestr)
@@ -98,14 +97,12 @@ class JobTimes(object):
              self.job, self.req, max, self.long_node,
              avg, min, self.count)
 
-
     @staticmethod
     def header(collect_nodes):
         head = 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
         if collect_nodes:
             head += '\tNodes list'
         return head
-
 
     @staticmethod
     def to_seconds(timestr):
@@ -121,7 +118,6 @@ class JobTimes(object):
         seconds = int(parts[2])
         secs += hours*3600 + minutes*60 + seconds
         return secs
-
 
     @staticmethod
     def from_seconds(insecs):
