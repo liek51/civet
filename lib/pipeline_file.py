@@ -230,7 +230,7 @@ class PipelineFile(object):
             if True not in [x in att for x in valid_source]:
                 msg = ("dir tag must contain one of:  {}"
                        "\n\n{}").format(", ".join(valid_source), ET.tostring(e))
-                raise civet_exceptions(msg)
+                raise civet_exceptions.ParseError(msg)
 
         elif is_string:
             for a in att:
@@ -372,8 +372,8 @@ class PipelineFile(object):
     def set_output_dir(self):
         # Register at most one output directory
         if PipelineFile.output_dir:
-            sys.stderr.write('ERROR: only one directory can be marked as the default output directory\n')
-            sys.exit(1)
+            raise civet_exceptions.ParseError("ERROR: only one directory can "
+                                               "be marked as the default output directory")
         PipelineFile.output_dir = self
 
     @staticmethod
@@ -506,7 +506,7 @@ class PipelineFile(object):
             return
             
         if self.from_file not in files:
-            sys.exit("ERROR: 'from_file' specifies unknown file id: {0}".format(ff))
+            sys.exit("ERROR: 'from_file' specifies unknown file id: {0}".format(self.from_file))
         ff = files[self.from_file]
         ff.fix_up_file(files, circularity)
         
