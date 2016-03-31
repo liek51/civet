@@ -383,15 +383,19 @@ class Pipeline(object):
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
         cmd = '\n'.join(cmd)
 
-        # do we need to load any modulefiles
-        mod_files = [x for x in config.get_param('civet_job_python_module') if x is not None]
+        # do we need to load a modulefile to execute the Python consolidate log
+        # script ?
+        if config.civet_job_python_module:
+            mod_files = [config.civet_job_python_module]
+        else:
+            mod_files = []
 
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
-                             name='Consolidate_log_files',
-                             modules=mod_files,
-                             mail_option='a',
-                             email_list=self.error_email_address)
+                             name="Consolidate_log_files",
+                             modules=mod_files, mail_option='a',
+                             email_list=self.error_email_address,
+                             walltime="00:10:00")
         try:
             self.job_runner.queue_job(batch_job)
         except Exception as e:

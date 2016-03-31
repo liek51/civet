@@ -462,9 +462,8 @@ class Tool(object):
                 if m.startswith('python'):
                     need_python = False
             if need_python:
-                python_module = config.get_param('civet_job_python_module')
-                if python_module:
-                    self.modules.append('python/civet')
+                if config.civet_job_python_module:
+                    self.modules.append(config.civet_job_python_module)
                 verify_file_list.append('python')
 
         if PL.delay:

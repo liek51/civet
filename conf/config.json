@@ -22,6 +22,7 @@
     // cause a Civet job to purge all loaded modulefiles before loading those
     // specified by the tool's configuration.  Turn this off if you don't use
     // environment modules.
+    // valid values: true or false
     // Default is false
     "purge_user_modulefiles": true
 }

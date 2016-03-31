@@ -716,7 +716,7 @@ class TorqueJobRunner(object):
         else:
             tokens['TOOL_PATH'] = ''
 
-        if config.get_param('purge_user_modulefiles'):
+        if config.purge_user_modulefiles:
             tokens['MODULE_PURGE'] = (
                 "# first unload any loaded modulefiles, these may be loaded automatically\n"
                 "# in a user's startup scripts, but they could conflict with modulefiles\n"
@@ -743,11 +743,11 @@ class TorqueJobRunner(object):
         else:
             tokens['EMAIL_LIST'] = "${USER}"
 
-        if config.get_config('io_sync_sleep'):
+        if config.io_sync_sleep:
             tokens['SLEEP'] = (
                             "# sleep to overcome any lag with NFS file attribute cacheing\n"
                             "# This ensures that downstream jobs will see all output files written by this job\n"
-                            "sleep {}".format(config.get_config('io_sync_sleep'))
+                            "sleep {}".format(config.io_sync_sleep)
             )
         else:
             tokens['SLEEP'] = ""
