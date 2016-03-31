@@ -7,12 +7,14 @@
     // The 'validate' and 'consolidate_logs.py' scripts require Python 2.7
     // if your system requires a modulefile, for example - to load a compatible
     // Python, specify that here.
+    // Default is not to load any module files for the validate or consolidate_logs.py scripts
     "civet_job_python_module": "python/2.7.3",
 
     // this option causes jobs to sleep for the specified number of seconds
     // after they execute their command(s). This allows other nodes' NFS file
     // attribute caches to become aware of the existence/size of files created
-    // by a job
+    // by a job.
+    // Default is 0.
     "io_sync_sleep": 60,
 
     // some users might load modulefiles in their .bashrc or other shell startup file
@@ -20,5 +22,6 @@
     // cause a Civet job to purge all loaded modulefiles before loading those
     // specified by the tool's configuration.  Turn this off if you don't use
     // environment modules.
+    // Default is false
     "purge_user_modulefiles": true
 }
