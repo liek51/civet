@@ -21,6 +21,8 @@
 # pipeline_parse.py
 # Process the XML file describing the overall pipeline.
 
+from __future__ import print_function
+
 import sys
 import datetime
 import os
@@ -259,7 +261,7 @@ class Pipeline(object):
         Submit a constructed pipeline to the batch system for execution
         :return:
         """
-        print 'Executing pipeline', self.name
+        print('Executing pipeline ' + self.name)
 
         # Capture the CWD and the command line that invoked us.
         of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
@@ -313,9 +315,8 @@ class Pipeline(object):
         # Check that all files marked "input" exist.
         missing = self.check_files_exist()
         if missing:
-            print >> sys.stderr, ('The following required files are '
-                                  'missing:')
-            print >> sys.stderr, '    ' + '\n    '.join(missing)
+            print("The following required files are missing:\n    "
+                  + "\n    ".join(missing), file=sys.stderr)
             sys.exit(1)
 
         invocation = 0
@@ -409,7 +410,7 @@ class Pipeline(object):
             self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
-        print 'Log directory: ', self.log_dir
+        print('Log directory:  ' + self.log_dir)
 
     def abort_submit(self, message, status=1):
         """
@@ -427,8 +428,6 @@ class Pipeline(object):
         sys.stderr.write("Aborting pipeline submission\n"
                          "\t{0}\n".format(message))
         sys.exit(status)
-
-
 
     @property
     def job_runner(self):
@@ -481,7 +480,6 @@ class Pipeline(object):
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
-
 
     def parse_version_tag(self, tag):
         for attr in tag.attrib:
