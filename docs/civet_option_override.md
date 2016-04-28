@@ -2,7 +2,7 @@
 
 ##Background
 
-Civet tool description files contain tool options and parameters.  For 
+Civet tool description files contain tool options and parameters. For 
 tool XML reusability between pipelines and to facilitate research use by
 allowing experimentation with tool parameters, it is important for the 
 Civet framework to provide a mechanism for both pipeline developers and
@@ -18,7 +18,7 @@ definition XML. That is, they _override_ the value contained in the XML
 tool definition. 
 
 A pipeline may have its own option override file contained in the same 
-directory as the pipeline description XML file.  This override file is 
+directory as the pipeline description XML file. This override file is 
 has the same filename as the pipeline definition file, except the 
 extension is “.options” instead of “.xml”. This facilitates tool reuse 
 by allowing a pipeline developer to specify different options for a 
@@ -36,7 +36,7 @@ value is used.
 
 ###Tool Options
 The Civet XML spec defines an `<option>` tag that can be used in a tool 
-description.  Command line parameters that are specified as an 
+description. Command line parameters that are specified as an 
 `<option>` can have their value pulled from a file, from a value given 
 in the XML, or from an override file.
 
@@ -50,7 +50,7 @@ only the `value` or `threads` attribute of an option can be overridden.
 The `binary` attribute is combined with the `value` attribute and 
 indicates that the value can be True or False. If the value is true, 
 the `command_text` will be used to substitute for the option in the 
-command line.  If the value is false then an empty string will be 
+command line. If the value is false then an empty string will be 
 substituted for the option in the command line.
 
 If a `threads="True"` option is overridden, then this may override the 
@@ -72,9 +72,9 @@ would substitute `-f 10` for `{foo}` in the generated command line.
 Since each tool has its own namespace for file IDs and option names, we 
 need a way to prevent collisions with option names in the pipeline’s 
 option override file (since multiple tools in the pipeline may have 
-options with the same name).  The solution is to introduce a prefix 
+options with the same name). The solution is to introduce a prefix 
 used for naming the options in the option override file. A tool 
-definition has a `tool_config_prefix` attribute.   This prefix will be 
+definition has a `tool_config_prefix` attribute.  This prefix will be 
 used for specifying the namespace the option belongs to in the file. 
 Here is an example of `tool_config_prefix`:
 
@@ -86,12 +86,12 @@ Here is an example of `tool_config_prefix`:
 
         <option name="threads" threads="True" />
 
-        ...  
+        ... 
 
     </tool>
 
 The file consists of one option per line, in the format 
-`tool_config_prefix.option_name=value`.  Lines beginning with the `#` 
+`tool_config_prefix.option_name=value`. Lines beginning with the `#` 
 character will be ignored.
 
 Here is an example options file that will override the number of 
