@@ -5,7 +5,6 @@ This document describes the XML files used to define a Civet pipeline.
 Each pipeline will be controlled by an XML description file. The outer 
 tag is `<pipeline>`.
 
-
 ###pipeline
 
     <pipeline name="..." tool_search_path="..." path="...">
@@ -35,7 +34,9 @@ transformation options are available.
 
     <file id="..." input="..." temp="..." in_dir="..." filespec="..." />
     <file id="..." input="..." temp="..." in_dir="..." parameter="..." />
-    <file id="..." input="..." temp="..." in_dir="..." based_on="..." pattern="..." replace="..." append="..." datestamp_append="..." datestamp_prepend="..." />
+    <file id="..." input="..." temp="..." in_dir="..." based_on="..."  
+        pattern="..." replace="..." append="..."  
+        datestamp_append="..." datestamp_prepend="..." />
 
 
 The `input` attribute is optional, and can have the values True or 
@@ -88,7 +89,8 @@ Python’s `datetime.strftime`. An example is
 
     datestamp_append="_%Y_%m_%d"
 
-would append _YYYY_MM_DD to the based_on filename.
+would append the date in the form _YYYY_MM_DD to the filename of the 
+`based_on` file to create the new filename.
 
 If the `pattern` and `replace` attributes are used, the file spec for 
 this file will be generated as if by using the Python `re.subs()` 
@@ -187,7 +189,8 @@ pipeline parameter.
 
     <string id="..." value="..." />
     <string id="..." parameter="..." />
-    <string id="..." based_on="..." pattern="..." replace="..." append="..." datestamp_append="..." datestamp_prepend="..." />
+    <string id="..." based_on="..." pattern="..." replace="..."  
+        append="..." datestamp_append="..." datestamp_prepend="..." />
 
 A string `parameter`, `based_on`, `pattern`, `replace`, `append`, 
 `datestamp_append`, and `datestamp_prepend` are analogous to their 
@@ -447,7 +450,8 @@ described in a separate document.
 
 The information in the `<option>` tag is used in the `<command>` tag.
 
-    <option name="..." from_file="..." command_text="..." binary="..." threads="..." value="..." />
+    <option name="..." from_file="..." command_text="..." binary="..."  
+        threads="..." value="..." />
 
 The `<option>` tag must contain the `name` attribute and one of the 
 `from_file`, `value`, or `threads` attributes. The `command_text` 
@@ -492,8 +496,9 @@ is in a separate document.
 The `<command>` tag specifies how to construct the command line that 
 will be executed.
 
-    <command program="..." delimiters="..." stdout_id="..." stderr_id="..."  
-      if_exists="..." if_not_exists="..." if_exists_logic="...">
+    <command program="..." delimiters="..." stdout_id="..." 
+      stderr_id="..." if_exists="..." if_not_exists="..." 
+      if_exists_logic="...">
         ...
     </command>
 
@@ -586,7 +591,9 @@ The following fragment demonstrates use of the delimiters attribute. It
 assumes that the pipeline’s outputdir is named "myoutput" and its id 
 was passed as id out_3. The fragment:
 
-    <command delimiters="%%" program="find">%out_3% -name "*.tmp" –exec rm {} \+</command>
+    <command delimiters="%%" program="find">
+        %out_3% -name "*.tmp" –exec rm {} \+
+    </command>
 
 would result in this command being executed:
 
