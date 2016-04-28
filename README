@@ -1,7 +1,26 @@
-The civet software implements the pipeline driver for XML-defined pipelines. 
-Originally implemented for, and as part of, the cga project, this pipeline 
-software was split off so that it could be used in more projects.
+Civet is a framework for developing command line analysis pipelines that
+execute through a batch system common on High Performance Computing (HPC)
+systems.  Currently only the TORQUE resource manager is supported, but others
+may be supported in the future.
 
-This file will eventually tell us more about the Civet software
+A Civet pipeline is defined by an XML file that describes the files operated on
+by the pipeline (the files can be input from the user, produced by a step in
+the pipeline, or may be hard coded reference files) and the steps that act on
+the files. Each tool that may be invoked by the pipeline is defined by its own
+XML file. These tool definitions may be shared between pipelines, allowing
+multiple pipelines to make use of a common set of tools.
 
-Signed: The Management
+Civet operates entirely in the user space, and can be installed without
+administrator permissions. It leverages the batch system's job dependency
+features to control pipeline execution. Pipeline flow is fixed at submission
+time; conditional branching is not supported.
+
+See the documentation in the docs subdirectory for more information about the
+framework.
+
+AUTHORS
+Glen Beane, The Jackson Laboratory
+glen.beane@jax.org
+
+Al Simons, The Jackson Laboratory
+al.simons@jax.org
