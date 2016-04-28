@@ -4,6 +4,14 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.8.1
+-------------
+Bug fixes
+
+Features
+ - switched to Markdown documentation
+ - adopted Apache 2 license prior to public release
+
 Version 1.8.0
 -------------
 Bug fixes
