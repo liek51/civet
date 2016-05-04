@@ -24,6 +24,7 @@ import sys
 import os
 import re
 
+
 def usage():
     if len(sys.argv) < 2:
         print >> sys.stderr, 'usage:', sys.argv[0], 'top-of-directory-tree ...'
