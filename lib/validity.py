@@ -20,8 +20,9 @@ import sys
 import hashlib
 import binascii
 import os
-import commands
+import subprocess
 import json
+
 
 # A class to track interesting information about files.
 class FileInfo(object):
@@ -69,14 +70,14 @@ class FileInfo(object):
         self.gid = dct['gid']
         self.mode_string = dct['mode_string']
         self.size = dct['size']
-        
+
     @staticmethod
     def expandName(fn):
         # Many of the files we'll be testing are executables, and therefore
         # looked up on the path.  Try to look it up there (use the shell).
         # Note: This uses a deprecated interface, but boy is it handy.
         # If the returned status is non-zero, the lookup did not succeed.
-        (status, result) = commands.getstatusoutput('which ' + fn)
+        (status, result) = subprocess.getstatusoutput('which ' + fn)
         if status == 0:
             fn = result
 
@@ -127,7 +128,7 @@ class FileInfo(object):
             return []
         # Uses the system's ldd command to get all the supporting libraries.
         # Note: This uses a deprecated interface, but boy is it handy.
-        (status, result) = commands.getstatusoutput('ldd ' + self.name)
+        (status, result) = subprocess.getstatusoutput('ldd ' + self.name)
         if status != 0:
             return []
         
@@ -157,32 +158,14 @@ class FileInfo(object):
             msg, val1, val2)
 
     def __eq__(self, other):
-        #print >> sys.stderr, type(self), type(other), "REENABLE THROW"
         if not isinstance(other, FileInfo):
             raise Exception('Other instance must be a FileInfo!')
         if self.sha1 != other.sha1:
             self.update_compare_failures('sha1', other.sha1, self.sha1)
-        #if self.uid != other.uid:
-        #    self.update_compare_failures('uid', other.uid, self.uid)
-        #if self.name != other.name:
-        #    self.update_compare_failures('name', other.name, self.name)
-        #    self.compare_failures += (
-        #        '        (This indicates a logic failure in the program. '
-        #        'Please report it.)\n')
-        #if self.gid != other.gid:
-        #    self.update_compare_failures('gid', other.gid, self.gid)
-        #if self.mode != other.mode:
-        #    self.update_compare_failures('mode', other.mode, self.mode)
 
         # Special check: If either file doesn't exist, we fail.
         if self.mode == 'No such file.':
             self.update_compare_failures('mode', other.mode, self.mode)
-
-        #if self.mode_string != other.mode_string:
-        #    self.update_compare_failures('mode_string', other.mode_string, 
-        #                                 self.mode_string)
-        #if self.size != other.size:
-        #    self.update_compare_failures('size', other.size, self.size)
 
         # Equal if no failures
         return self.compare_failures is None
