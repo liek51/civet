@@ -17,10 +17,10 @@ from __future__ import print_function
 
 import sys
 import os
+import glob
 
 import job_runner.torque as batch_system
 import job_runner.common
-import glob
 
 
 def format_state(state):
