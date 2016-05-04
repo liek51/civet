@@ -27,7 +27,11 @@ execution, and it must be run on one of the cluster's execution
 nodes, i.e., it must be run as part of a qsub'd job.
 """
 
-import os, sys, inspect
+import os
+import sys
+import inspect
+
+
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
                               inspect.getfile( inspect.currentframe() ))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
@@ -37,6 +41,7 @@ if lib_folder not in sys.path:
 import pipeline_parse as PL
 import validity
 import version
+
 
 def main():
     version.parse_options()
