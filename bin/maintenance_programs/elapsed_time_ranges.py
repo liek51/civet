@@ -23,7 +23,7 @@
 
 import sys
 import os
-import re
+
 
 def usage():
     if len(sys.argv) < 2:
