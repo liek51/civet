@@ -20,7 +20,7 @@ import sys
 import hashlib
 import binascii
 import os
-import commands
+import subprocess
 import json
 
 # A class to track interesting information about files.
@@ -76,7 +76,7 @@ class FileInfo(object):
         # looked up on the path.  Try to look it up there (use the shell).
         # Note: This uses a deprecated interface, but boy is it handy.
         # If the returned status is non-zero, the lookup did not succeed.
-        (status, result) = commands.getstatusoutput('which ' + fn)
+        (status, result) = subprocess.getstatusoutput('which ' + fn)
         if status == 0:
             fn = result
 
@@ -127,7 +127,7 @@ class FileInfo(object):
             return []
         # Uses the system's ldd command to get all the supporting libraries.
         # Note: This uses a deprecated interface, but boy is it handy.
-        (status, result) = commands.getstatusoutput('ldd ' + self.name)
+        (status, result) = subprocess.getstatusoutput('ldd ' + self.name)
         if status != 0:
             return []
         
