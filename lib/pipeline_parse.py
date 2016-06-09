@@ -172,11 +172,15 @@ class Pipeline(object):
         else:
             self.path = None
 
-        
         # And track the major components of the pipeline
         self._steps = []
         self._files = {}
         self.foreach_barriers = {}
+
+        # create some implicitly defined file IDs
+        PipelineFile.add_simple_dir("PIPELINE_ROOT", self.master_XML_dir,
+                                    self._files)
+
 
         # Walk the child tags.
         for child in pipe:
@@ -467,8 +471,13 @@ class Pipeline(object):
         with open(file) as f:
             for line in f:
                 line = line.strip()
+
+                # skip comment lines
                 if len(line) == 0 or line[0] == '#':
                     continue
+
+                # trim off in line comments
+                # TODO swith to a regex that will match space or tabs before the #
                 line = line.split(' #')[0]
                 prefix = line.split('.', 1)[0]
                 opt, val = line.split('.', 1)[1].split('=')

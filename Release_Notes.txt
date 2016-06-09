@@ -7,6 +7,9 @@ redmine:/var/git/civet.git
 Version 1.8.1
 -------------
 Bug fixes
+ - Don't strip off relative paths when applying in_dir
+ - Allow 'pattern/replace' to be combined with 'append', 'datestamp_append',
+   and 'datestamp_prepend' for the <file> tag.
 
 Features
  - switched to Markdown documentation

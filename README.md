@@ -51,7 +51,7 @@ incompatibilities. We have slowly been making the code more Python 3
 friendly and plan to officially support Python 3 in the future.
 
 Civet uses one Python module that is not part of a standard Python 2.7
-installation: `pbs__python`. This module can be obtained from 
+installation: `pbs_python`. This module can be obtained from 
 https://oss.trac.surfsara.nl/pbs_python and must be installed before 
 you can use Civet.
 

@@ -69,7 +69,6 @@ class PipelineFile(object):
         'filespec',
         'default_output',
         'from_file',
-        'pipeline_root'
     ]
 
     # attributes that only make sense for a string
@@ -93,8 +92,8 @@ class PipelineFile(object):
     # And the parameters to the pipeline
     params = None
 
-    def __init__(self, id, path, is_file, is_temp, is_input, is_dir, 
-                 files, is_path, is_string, based_on, pattern, replace, append,
+    def __init__(self, id, path, files, is_file, is_temp, is_input, is_dir,
+                 is_string, based_on, pattern, replace, append,
                  datestamp_prepend, datestamp_append, in_dir,
                  is_parameter, is_list, from_file, create=True, default_output=False,
                  foreach_dep=None):
@@ -104,7 +103,6 @@ class PipelineFile(object):
         self.is_temp = is_temp
         self.is_input = is_input
         self._is_dir = is_dir
-        self.is_path = is_path
         self.is_string = is_string
         self.based_on = based_on
         self.pattern = pattern
@@ -153,6 +151,12 @@ class PipelineFile(object):
     def add_consumer_job(self, j):
         self.consumer_jobs.append(j)
 
+    @staticmethod
+    def add_simple_dir(id, path, files):
+        PipelineFile(id, path, files, False, False, True, True,
+                     None, None, None, None, None, None, None, False, False,
+                     None)
+
     @staticmethod        
     def parse_XML(e, files):
 
@@ -176,7 +180,6 @@ class PipelineFile(object):
         is_string = t == 'string'
 
         # Init some variables.
-        path_is_path = False
         path = None
         based_on = None
         pattern = None
@@ -216,13 +219,7 @@ class PipelineFile(object):
                            "'filespec'\n\n{}").format(ET.tostring(e))
                     raise civet_exceptions.ParseError(msg)
 
-            if 'pipeline_root' in att and 'filespec' in att:
-                msg = ("Must not combine 'pipeline_root' and "
-                       "'filespec'\n\n{}").format(ET.tostring(e))
-                raise civet_exceptions.ParseError(msg)
-
-            valid_source = ['filespec', 'based_on', 'parameter', 'from_file',
-                            'pipeline_root']
+            valid_source = ['filespec', 'based_on', 'parameter', 'from_file']
             if True not in [x in att for x in valid_source]:
                 msg = ("dir tag must contain one of:  {}"
                        "\n\n{}").format(", ".join(valid_source), ET.tostring(e))
@@ -265,11 +262,6 @@ class PipelineFile(object):
 
         if 'filespec' in att:
             path = att['filespec']
-            path_is_path = True
-
-        if 'pipeline_root' in att and att['pipeline_root'].upper() == "TRUE":
-            path = PL.master_XML_dir
-            path_is_path = True
 
         if 'value' in att:
             path = att['value']
@@ -308,15 +300,11 @@ class PipelineFile(object):
                     raise civet_exceptions.ParseError(msg)
                 replace = att['replace']
 
-            if 'datestamp_append' in att or 'datestamp_prepend' in att:
-                if pattern or replace:
-                    msg = ("'datestamp' attribute is incompatible with "
-                            "'replace' attribute:\n\n{}").format(ET.tostring(e))
-                    raise civet_exceptions.ParseError(msg)
-                if 'datestamp_append' in att:
-                    datestamp_append = att['datestamp_append']
-                if 'datestamp_prepend' in att:
-                    datestamp_prepend = att['datestamp_prepend']
+
+            if 'datestamp_append' in att:
+                datestamp_append = att['datestamp_append']
+            if 'datestamp_prepend' in att:
+                datestamp_prepend = att['datestamp_prepend']
 
             if 'append' in att:
                 if pattern or replace or datestamp_append:
@@ -335,14 +323,12 @@ class PipelineFile(object):
                    "input:\n\n{}").format(ET.tostring(e))
             raise civet_exceptions.ParseError(msg)
 
-        #if is_temp and not path:
-        #    print >> sys.stderr, "temp", id, "has no path"
-
         PipelineFile(
-            id, path, is_file, is_temp, is_input, is_dir, files,
-            path_is_path, is_string, based_on, pattern, replace, append,
+            id, path, files, is_file, is_temp, is_input, is_dir,
+            is_string, based_on, pattern, replace, append,
             datestamp_prepend, datestamp_append, in_dir,
-            is_parameter, is_list, from_file, create, default_output, foreach_dep)
+            is_parameter, is_list, from_file, create, default_output,
+            foreach_dep)
 
     def compatible(self, o):
         # We have a file whose ID we've already seen. 
@@ -359,8 +345,8 @@ class PipelineFile(object):
         return self.__str__()
 
     def __str__(self):
-        return 'File:{0} p:{1} iP:{2} iI:{3} it:{4} iD:{5} BO:{6} Rep:{7} Pat:{8} Ap:{9} DS:{10} DSA:{11} inD:{12}'.format(
-            self.id, self.path, self.is_path, self.is_input,
+        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DS:{} DSA:{} inD:{}'.format(
+            self.id, self.path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
             self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
             self.in_dir)
@@ -383,7 +369,6 @@ class PipelineFile(object):
 
     @staticmethod
     def fix_up_files(files):
-        #print >> sys.stderr, '\n\nFixing up files. params: ', PipelineFile.params
 
         circularity = []
 
@@ -392,8 +377,8 @@ class PipelineFile(object):
         if not PipelineFile.output_dir:
             # there is no output_dir
             # create a default one in our current working directory
-            PipelineFile.output_dir = PipelineFile('default_output', ".", False,
-                                                   False, False, True, files,
+            PipelineFile.output_dir = PipelineFile('default_output', ".", files,
+                                                   False, False, False, True,
                                                    True, False, None, None,
                                                    None, None, None, None, None,
                                                    False, False, None,
@@ -462,7 +447,8 @@ class PipelineFile(object):
             if (os.path.split(path)[0] == '' and
                 (not self.is_input) and
                 self != PipelineFile.output_dir and
-                (PipelineFile.output_dir is None or PipelineFile.output_dir._is_fixed_up)):
+                (PipelineFile.output_dir is None or
+                     PipelineFile.output_dir._is_fixed_up)):
                 path = os.path.join(PipelineFile.get_output_dir(), path)
             self.path = os.path.abspath(path)
 
@@ -476,10 +462,10 @@ class PipelineFile(object):
         check = circularity.pop()
 
         if check != self:
-            print("circularity.pop() failed!\ncheck:{}".format(check), file=sys.stderr)
+            print("circularity.pop() failed!\ncheck:{}".format(check),
+                  file=sys.stderr)
             print(" self:{}".format(self), file=sys.stderr)
             sys.exit(1)
-
 
     def parameter_to_path(self):
         if self.is_parameter:
@@ -494,7 +480,6 @@ class PipelineFile(object):
                                   file=sys.stderr)
                 sys.exit(1)
             self.path = params[idx]
-            self.is_path = True
             self.is_parameter = False
 
     def apply_from_file(self, files, circularity):
@@ -506,7 +491,8 @@ class PipelineFile(object):
         ff = files[self.from_file]
         ff.fix_up_file(files, circularity)
         
-        # get the directory from ff, strip any trailing slashes so os.path.dirname does what we want
+        # get the directory from ff, strip any trailing slashes so
+        # os.path.dirname does what we want
         self.path = os.path.dirname(ff.path.rstrip(os.path.sep))
 
     def apply_based_on(self, files, circularity):
@@ -528,16 +514,19 @@ class PipelineFile(object):
         temp_path = os.path.basename(bof.path)
         now = datetime.datetime.now()
 
+        # do the replace first,  so there is no chance other based_on
+        # actions could affect the pattern matching
+        if self.replace:
+            temp_path = re.sub(self.pattern, self.replace, temp_path)
+
         if self.append:
             temp_path = temp_path + self.append
         if self.datestamp_append:
-            temp_path = temp_path + now.strftime(self.datestamp_append)
+            temp_path += now.strftime(self.datestamp_append)
         if self.datestamp_prepend:
             temp_path = now.strftime(self.datestamp_prepend) + temp_path
-        if self.replace:
-            temp_path = re.sub(self.pattern, self.replace, temp_path)
-        self.path = temp_path
 
+        self.path = temp_path
 
     def apply_in_dir_and_create_temp(self, files, circularity):
         ind = self.in_dir
@@ -567,15 +556,14 @@ class PipelineFile(object):
                 name = t.name
                 t.close()
                 self.path = name
-                self.is_path = True
             if ind:
                 self.in_dir = None
         elif ind:
             if os.path.isabs(self.path):
                 raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
 
-
             # Apply the containing directory to the path...
-            fn = os.path.split(self.path)[1]
-            self.path = os.path.join(dir, fn)
+            self.path = os.path.join(dir, self.path)
+
+            # in_dir has been applied, clear it.
             self.in_dir = None

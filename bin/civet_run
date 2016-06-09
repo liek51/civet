@@ -41,18 +41,34 @@ def main():
     version.parse_options()
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-q', '--queue', default=None, help="submission queue [default = TORQUE default]")
-    parser.add_argument('-n', '--no-submit', dest='submit', action='store_false', help="Generate batch scripts but don't submit them")
-    parser.add_argument('-o', '--option-file', dest='option_file', default=None, help="option override file")
-    parser.add_argument('-t', '--keep-temp', dest='keep_temp', action='store_true', help="Don't delete temporary pipeline files")
-    parser.add_argument('--hold', dest='release_jobs', action='store_false', help="Jobs will be held after pipeline submission")
-    parser.add_argument('-f', '--force-conditional', dest='force_conditional', action='store_true', help="Force conditional steps to run")
-    parser.add_argument('-d', '--delay', dest='delay', default=None, help="job delay")
-    parser.add_argument('-e', '--email-address', dest='email_address', default=None, help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
-    parser.add_argument('--error-email-address', dest='error_email_address', default=None, help="email address for error emails, defaults to '--email-address' value")
-    parser.add_argument('--walltime-multiplier', dest='walltime_multiplier', type=float, default=None, help="optional walltime multiplier to be applied to every job's walltime")
+    parser.add_argument('-q', '--queue', default=None,
+                        help="submission queue [default = TORQUE default]")
+    parser.add_argument('-n', '--no-submit', dest='submit',
+                        action='store_false',
+                        help="Generate batch scripts but don't submit them")
+    parser.add_argument('-o', '--option-file', dest='option_file',
+                        default=None, help="option override file")
+    parser.add_argument('-t', '--keep-temp', dest='keep_temp',
+                        action='store_true',
+                        help="Don't delete temporary pipeline files")
+    parser.add_argument('--hold', dest='release_jobs', action='store_false',
+                        help="Jobs will be held after pipeline submission")
+    parser.add_argument('-f', '--force-conditional', dest='force_conditional',
+                        action='store_true',
+                        help="Force conditional steps to run")
+    parser.add_argument('-d', '--delay', dest='delay', default=None,
+                        help="job delay")
+    parser.add_argument('-e', '--email-address', dest='email_address',
+                        default=None,
+                        help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
+    parser.add_argument('--error-email-address', dest='error_email_address',
+                        default=None, help="email address for error emails, defaults to '--email-address' value")
+    parser.add_argument('--walltime-multiplier', dest='walltime_multiplier',
+                        type=float, default=None,
+                        help="optional walltime multiplier to be applied to every job's walltime")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
-    parser.add_argument('pipeline_args', help="pipeline arguments", nargs=argparse.REMAINDER)
+    parser.add_argument('pipeline_args', help="pipeline arguments",
+                        nargs=argparse.REMAINDER)
     parser.set_defaults(submit=True)
     parser.set_defaults(keep_temp=False)
     parser.set_defaults(release_jobs=True)

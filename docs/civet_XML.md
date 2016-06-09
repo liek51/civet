@@ -65,7 +65,7 @@ positional argument’s number (1-based) from the command line invoking
 the pipeline.
 
 It is possible to create files where the filename is created by 
-manipulating the basename of another file, by using the based_on 
+manipulating the basename of another file, by using the `based_on` 
 attribute. If the `based_on` form is used, the `parameter` and 
 `filespec` attributes cannot be used. The `based_on` attribute 
 specifies a previously declared file id. This is used in conjunction 
@@ -73,12 +73,7 @@ with either the `append`, `datestamp_append`, or `datestamp_prepend`
 attributes, or the combination of `pattern` and `replace` attributes. 
 If used, the `pattern` and `replace` attributes must both be specified. 
 The `append` and `datestamp_append` attributes are mutually 
-incompatible with each other, and with the combination of `pattern` and 
-`replace`. The `datestamp_prepend` attribute is also incompatible with 
-`pattern` and `replace`. Note: when using `based_on` only the basename 
-of the source file is used; the pipeline developer must use the 
-`in_dir` attribute if they want the file to be placed anywhere other 
-than the default output directory.
+incompatible with each other. 
 
 If the `append` attribute used, its value is simply appended to the 
 basename of the file specified in the `based_on` attribute.
@@ -98,6 +93,14 @@ operation applying the values of `pattern` and `replace` to the
 basename of the file specified in the `based_on` attribute. This 
 capability is needed, for instance, using samtools, where some commands 
 need the trailing ".bam" stripped off of a file name.
+
+**Note:** when the `replace` attribute is combined with other attributes, 
+such as `append` or `datestamp_prepend`,bthe `replace` will be applied 
+first. 
+
+**Note:** when using `based_on` only the basename of the source file is 
+used; the pipeline developer must use the  `in_dir` attribute if they 
+want the file to be placed anywhere other than the default output directory.
 
 ***
 
@@ -147,6 +150,16 @@ The `based_on`, `pattern`, `replace`, `append`, `datestamp_append` and
 `datestamp_prepend` attributes are as documented for the `<file>` tag.
 
 ***
+
+
+### Implicitly Defined Files/Directories
+
+Civet defines the following file IDs automatically:
+
+PIPELINE_ROOT: This directory ID contains the path to the directory 
+containing the pipeline XML file. Pipeline developers can use this to 
+reference any supplemental files contained within the pipeline XML 
+directory.
 
 ###filelist
 

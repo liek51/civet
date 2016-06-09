@@ -124,8 +124,8 @@ class ForEach(object):
             iteration_ids = []
             #TODO this is impossible to make sense of, create a static method in
             #PipelineFile that only takes the id, path, file list, and directory
-            PipelineFile(self.file.id, fn, True, False, True, False,
-                         self.pipelineFiles, True, False, None, None, None, None,
+            PipelineFile(self.file.id, fn, self.pipelineFiles, True, False,
+                         True, False, False, None, None, None, None,
                          None, None, self.dir, False, False, None)
             cleanups.append(self.file.id)
 
@@ -143,8 +143,8 @@ class ForEach(object):
                     #write it to the default output directory
                     directory = None
                 #TODO see comments for PipelineFile above. this is wicked ugly
-                PipelineFile(rel.id, rfn, True, False, rel.is_input, False,
-                             self.pipelineFiles, True, False, None, None, None,
+                PipelineFile(rel.id, rfn, self.pipelineFiles,  True, False,
+                             rel.is_input, False, False, None, None, None,
                              None, None, None, directory, False, False, None)
                 cleanups.append(rel.id)
                 if rel.is_temp:
