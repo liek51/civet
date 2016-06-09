@@ -307,9 +307,9 @@ class PipelineFile(object):
                 datestamp_prepend = att['datestamp_prepend']
 
             if 'append' in att:
-                if pattern or replace or datestamp_append:
+                if datestamp_append:
                     msg = ("'append' attribute is incompatible with "
-                           "'datestamp', 'replace', and 'pattern' attributes:"
+                           "'datestamp_append' attribute:"
                            "\n\n{}").format(ET.tostring(e))
                     raise civet_exceptions.ParseError(msg)
                 append = att['append']
