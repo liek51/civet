@@ -918,9 +918,12 @@ def main():
 
     job_runner = TorqueJobRunner()
     jm = JobManager()
+    modules = []
 
-
-    modules = [x for x in config.get_param('civet_job_python_module') if x is not None]
+    # python module isn't really needed for this test job, but this just makes
+    # sure that modulefiles are correctly included in the batch script
+    if config.civet_job_python_module:
+        modules = [config.civet_job_python_module]
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
                    modules=modules, mail_option="be")
