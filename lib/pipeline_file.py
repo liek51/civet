@@ -153,7 +153,7 @@ class PipelineFile(object):
 
     @staticmethod
     def add_simple_dir(id, path, files):
-        PipelineFile(id, path, files, False, False, True, True,
+        PipelineFile(id, path, files, False, False, True, True, False,
                      None, None, None, None, None, None, None, False, False,
                      None)
 
