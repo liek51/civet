@@ -10,6 +10,8 @@ Bug fixes
  - Don't strip off relative paths when applying in_dir
  - Allow 'pattern/replace' to be combined with 'append', 'datestamp_append',
    and 'datestamp_prepend' for the <file> tag.
+ - civet_cancel -r was terminating if it found a complete pipeline rather than
+   continuing on to process the next pipeline directory
 
 Features
  - switched to Markdown documentation

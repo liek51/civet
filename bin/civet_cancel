@@ -107,7 +107,7 @@ def main():
     
         if len(unfinished_jobs) == 0:
             print "\tAll jobs are complete, no jobs to cancel."
-            return 0
+            continue
     
         # len(unfinished_jobs) > 0, so not all jobs have -status.txt files, need to 
         # check the queues and send batch delete requests for them

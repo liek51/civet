@@ -50,7 +50,6 @@ def format_state(state):
 
 def main():
 
-
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument('-r', '--recursive', dest='recursive',
                         action='store_true', help="Run in recursive mode")
@@ -63,7 +62,9 @@ def main():
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
     parser.set_defaults(quiet=False)
     parser.set_defaults(verbose=False)
-    # change default behavior to recursive, keep option to preserve backwards compatibility
+
+    # change default behavior to recursive, keep option to preserve backwards
+    # compatibility
     parser.set_defaults(recursive=True)
     args = parser.parse_args()
 
@@ -96,9 +97,10 @@ def main():
                 if job_runner.common.BATCH_ID_LOG in files:
                     log_dirs.append(root)
 
-                # make sure we don't follow any symlinks that point to a dir we've already processed
+                # make sure we don't follow any symlinks that point to a dir
+                # we've already processed
                 for dir in dirs:
-                    if os.path.realpath(os.path.join(root,dir)) in followed_dirs:
+                    if os.path.realpath(os.path.join(root, dir)) in followed_dirs:
                         dirs.remove(dir)
 
             log_dirs.sort()
