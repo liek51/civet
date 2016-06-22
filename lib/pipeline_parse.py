@@ -28,7 +28,6 @@ from foreach import *
 from pipeline_file import *
 from step import *
 from tool import *
-from tool_logger import *
 
 from job_runner.torque import *
 from job_runner.batch_job import *
