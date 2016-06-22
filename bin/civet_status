@@ -60,8 +60,8 @@ def main():
     parser.add_argument('-f', '--fast', dest='fast', action='store_true',
                         help="Use 'fast' recursive mode (when recursively "
                              "looking for log directories, if we encounter a "
-                             "subdirectory called 'logs' only decend into that "
-                             "directory and ignore the others")
+                             "subdirectory called 'logs' only descend into "
+                             "that directory and ignore the others")
     parser.add_argument('-v', '--version', dest='print_version', action='store_true',
                         help='Print Civet version and exit')
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
