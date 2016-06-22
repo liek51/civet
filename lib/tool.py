@@ -423,8 +423,9 @@ class Tool(object):
             # Use rm -f because if a command is executed conditionally
             # due to if_exists and if_not_exists, a temp file may not
             # exist.  Without -f the rm command would fail, causing
-            # the entire pipeline to fail.
-            rm_cmd = 'rm -f ' + ' '.join(self.tempfile_ids)
+            # the entire pipeline to fail. We also need -r to take care of
+            # <dir> tags declared temp
+            rm_cmd = 'rm -rf ' + ' '.join(self.tempfile_ids)
             multi_command_list.append(rm_cmd)
 
         multi_command = '  && \\\n'.join(multi_command_list)

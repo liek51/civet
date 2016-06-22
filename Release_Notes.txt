@@ -12,6 +12,7 @@ Bug fixes
    and 'datestamp_prepend' for the <file> tag.
  - civet_cancel -r was terminating if it found a complete pipeline rather than
    continuing on to process the next pipeline directory
+ - <dir> files can now be declared temp in a tool XML
 
 Features
  - switched to Markdown documentation

@@ -188,7 +188,6 @@ def main():
                 if job.state == 'H':
                     print("\tDepends on {}".format(job.dependencies))
 
-
         if verbose:
             print("\nSummary:")
         elif not quiet or dir_status.status == 'FAILED' or dir_status.status == 'CANCELED' or 'TERMINATED' in dir_status.status:
@@ -211,6 +210,16 @@ def main():
                 #probably deleted (qdel), other possibility is there was a
                 #node crash that took out the job
                 print("\t\tDeleted Jobs: {0}".format(dir_status.deleted_jobs))
+
+            if dir_status.complete_jobs_failure:
+                print_header = True
+                for job in dir_status.jobs:
+                    if job.exit_status != '0' and job.exit_status != '271':
+                        if print_header:
+                            print("\tFailed Jobs:")
+                            print_header = False
+                        print("\t\t{} ({}): exit_status={}".format(job.name, job.id, job.exit_status))
+
         if verbose:
             print("\n\n")
 
