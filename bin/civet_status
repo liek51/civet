@@ -214,7 +214,7 @@ def main():
             if dir_status.complete_jobs_failure:
                 print_header = True
                 for job in dir_status.jobs:
-                    if job.exit_status != '0' and job.exit_status != '271':
+                    if job.exit_status != 0 and job.exit_status != 271:
                         if print_header:
                             print("\tFailed Jobs:")
                             print_header = False
