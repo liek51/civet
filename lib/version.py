@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import print_function
+
 import os
 import sys
 import subprocess
 import inspect
+
 
 def version_from_git():
     cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( 
@@ -30,8 +33,9 @@ def version_from_git():
         err = True
     # Mask any errors, for instance not running in a git working directory.
     if err:
-	    out = '(undetermined)'
+        out = '(undetermined)'
     return 'V' + out.strip()
+
 
 def parse_options():
     #
@@ -51,10 +55,11 @@ def parse_options():
         if sys.argv[1] in options:
             print_version_string_and_exit()
 
+
 def print_version_string_and_exit():
     path = os.path.abspath(sys.argv[0])
     script = os.path.split(path)[1]
-    print script, version_from_git(), path
+    print('{} {} {}'.format(script, version_from_git(), path))
     sys.exit(0)
 
 if __name__ == '__main__':
