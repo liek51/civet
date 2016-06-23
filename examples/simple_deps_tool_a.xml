@@ -1,0 +1,6 @@
+<tool name="a">
+    <command program="echo"
+             stdout_id="out_1">
+        This is file a.
+    </command>
+</tool>

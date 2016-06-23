@@ -1,0 +1,22 @@
+<pipeline name="simple_dependencies">
+    <dir  id="d"
+          filespec="."
+          default_output="true" />
+    <file id="a"
+          filespec="afile.txt"
+          indir="d" />
+    <file id="b"
+          filespec="bfile.txt"
+          indir="d"/>
+    <step name="organizational_device">
+        <tool name="a_tool"
+              output="a"
+              description="simple_deps_tool_a.xml" />
+        <tool name="b_tool"
+              output="b"
+              description="simple_deps_tool_b.xml" />
+        <tool name="c_tool"
+              input="a, b"
+              description="simple_deps_tool_c.xml" />
+    </step>
+</pipeline>
