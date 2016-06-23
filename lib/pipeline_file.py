@@ -378,7 +378,7 @@ class PipelineFile(object):
             # create a default one in our current working directory
             PipelineFile.output_dir = PipelineFile('default_output', ".", files,
                                                    False, False, False, True,
-                                                   True, False, None, None,
+                                                   False, None, None,
                                                    None, None, None, None, None,
                                                    False, False, None,
                                                    create=True,
