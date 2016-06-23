@@ -4,10 +4,10 @@
           default_output="true" />
     <file id="a"
           filespec="afile.txt"
-          indir="d" />
+          in_dir="d" />
     <file id="b"
           filespec="bfile.txt"
-          indir="d"/>
+          in_dir="d"/>
     <step name="organizational_device">
         <tool name="a_tool"
               output="a"
