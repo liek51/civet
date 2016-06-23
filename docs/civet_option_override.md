@@ -6,7 +6,7 @@ Civet tool description files contain tool options and parameters. For
 tool XML reusability between pipelines and to facilitate research use by
 allowing experimentation with tool parameters, it is important for the 
 Civet framework to provide a mechanism for both pipeline developers and
-research users to be able to override an option’s default value.
+research users to be able to override an option's default value.
 
 ##High-level design
 
@@ -29,7 +29,7 @@ For research use a Civet user may pass his or her own option override
 file to the `civet_run` command using the `—option-file (-o)` command 
 line switch. User-specified option overrides take precedence over 
 pipeline-level option overrides, so if the same option is overridden 
-by the pipeline developer and by the pipeline user the pipeline user’s 
+by the pipeline developer and by the pipeline user the pipeline user's
 value is used.
 
 ##Design Details
@@ -54,7 +54,7 @@ command line. If the value is false then an empty string will be
 substituted for the option in the command line.
 
 If a `threads="True"` option is overridden, then this may override the 
-Tool’s `threads` attribute when submitting the job. The maximum value 
+Tool's `threads` attribute when submitting the job. The maximum value
 for any thread option will be used as the `ppn` value during job 
 submission.
 
@@ -70,7 +70,7 @@ would substitute `-f 10` for `{foo}` in the generated command line.
 ###Option File Format
 
 Since each tool has its own namespace for file IDs and option names, we 
-need a way to prevent collisions with option names in the pipeline’s 
+need a way to prevent collisions with option names in the pipeline's
 option override file (since multiple tools in the pipeline may have 
 options with the same name). The solution is to introduce a prefix 
 used for naming the options in the option override file. A tool 
