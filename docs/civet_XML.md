@@ -19,7 +19,7 @@ A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and
 contains a colon-delimited list of directories to search in when 
 looking for tool XML definition files. The search process is described 
 in more detail with the `<tool>` tag documentation. The optional path 
-attribute specifies path information to be prepended onto the user’s 
+attribute specifies path information to be prepended onto the user's
 PATH at runtime for each job submitted as part of the pipeline.
 
 ***
@@ -28,8 +28,8 @@ PATH at runtime for each job submitted as part of the pipeline.
 
 The `<file>` tag specifies a file that is to be used in the pipeline. 
 The `filespec` (complete or partial file path) may be hardcoded in the 
-tag, or refer to a positional command line parameter. A file’s path can 
-also be based on another file’s path; a number of different 
+tag, or refer to a positional command line parameter. A file's path can
+also be based on another file's path; a number of different
 transformation options are available.
 
     <file id="..." input="..." temp="..." in_dir="..." filespec="..." />
@@ -43,15 +43,15 @@ The `input` attribute is optional, and can have the values True or
 False (case-blind). If omitted, the attribute defaults to False. Input 
 files must exist at the start of the pipeline. A pipeline is free 
 (even encouraged) to check that all input files exist at the start of 
-the pipeline, to fail early rather than encounter a 'file not found’ 
+the pipeline, to fail early rather than encounter a 'file not found'
 error partially through the pipeline execution.
 
 The `temp` attribute is optional, and can have the values True or False 
 (case-blind). If omitted, it defaults to False. Temp files will be 
-deleted at the end of the pipeline’s execution. A `filespec` attribute 
+deleted at the end of the pipeline's execution. A `filespec` attribute
 may be specified on a temp file. If so, the file will have the name 
 provided, otherwise, it will have an arbitrary name generated, as if by 
-Python’s `tempfile.NamedTemporaryFile()`.
+Python's `tempfile.NamedTemporaryFile()`.
 
 The `in_dir` attribute is optional. If present, it specifies the 
 directory id of the directory in which the file or directory is located 
@@ -61,7 +61,7 @@ The `filespec` form could be used, for instance, for the path to a
 reference genome.
 
 If the `parameter` form is used, the value of the attribute is the 
-positional argument’s number (1-based) from the command line invoking 
+positional argument's number (1-based) from the command line invoking
 the pipeline.
 
 It is possible to create files where the filename is created by 
@@ -80,7 +80,7 @@ basename of the file specified in the `based_on` attribute.
 
 If the `datestamp_append` or `datestamp_prepend` attributes are used, 
 the attribute values are interpreted as if they are format strings for 
-Python’s `datetime.strftime`. An example is 
+Python's `datetime.strftime`. An example is
 
     datestamp_append="_%Y_%m_%d"
 
@@ -112,7 +112,7 @@ directory need not exist on startup.
 
     <dir id="..." input="..." filespec="..." in_dir="..." create="..."  
         based_on="..." pattern="..." replace="..." append="..."  
-        datestamp_prepend="...’ datestamp_append="..."  
+        datestamp_prepend="..." datestamp_append="..."
         default_output="..." from_file="..."/>
 
 A directory that is specified as an output directory and exists prior 
@@ -164,7 +164,7 @@ directory.
 ###filelist
 
 Occasionally, some phase of the processing may require a set of files 
-that can’t be specified at pipeline design time, for instance a set of 
+that can't be specified at pipeline design time, for instance a set of
 bam files to be merged. The `<filelist>` tag allows specifying a 
 regular expression pattern to be matched in a certain directory. At 
 execution time, all the files matching this pattern will be provided in 
@@ -175,7 +175,7 @@ when a `filelist` is the result of files generated in a `<foreach>` tag.
 
     <filelist id="..." in_dir="..." pattern="..." foreach_id="..."/>
 
-The pattern will be processed as if by Python’s `re.match()` function, 
+The pattern will be processed as if by Python's `re.match()` function,
 against all files in the specified directory.
 
 A `<filelist>` can also be passed as a parameter:
@@ -247,7 +247,7 @@ end alignment.
 
 **IMPORTANT NOTE:** Since Civet submits all of the jobs of a pipeline 
 up front, the files matched by a <foreach> tag must exist at pipeline 
-submission time. These could be 'stub’ files that get overwritten by 
+submission time. These could be 'stub' files that get overwritten by
 one or more steps of a pipeline, but the filenames need to at least 
 exist at submission time so Civet knows how many jobs to submit for the 
 `<foreach>`.
@@ -264,11 +264,11 @@ processed is unspecified; in a cluster environment, they may be
 processed in parallel. The `id` attribute is used to specify a 
 `<filelist>` dependency on this `<foreach>` tag.
 
-The `<file>` tag’s pattern attribute specifies the Python regex pattern 
+The `<file>` tag's pattern attribute specifies the Python regex pattern
 that will be used to select files for processing; it will be applied to 
-each filename in the directory as if by using Python’s `re.match()` 
+each filename in the directory as if by using Python's `re.match()`
 function. There must be exactly one `<file>` tag in a `<foreach>` 
-construct. Any filenames that match will be processed. The tag’s `id` 
+construct. Any filenames that match will be processed. The tag's `id`
 attribute specifies the id this file will be referenced by in foreach 
 block. Since the files identified by this tag must exist to be pattern 
 matched, they are inherently classed as input files.
@@ -276,14 +276,14 @@ matched, they are inherently classed as input files.
 The `<related>` tag specifies another file, either an existing input 
 file or a file to be created. The `id` attribute specifies the id by 
 which this file will be referenced in the foreach block. The `input` 
-attribute’s value shall be either True or False. Related files that 
+attribute's value shall be either True or False. Related files that
 are specified as input files will have a default directory of the 
 foreach directory, but this may be overridden by specifying the `indir` 
 attribute of the `<related>` file. Output related files will default 
 to the pipeline output directory unless overridden with the `indir` 
 attribute. The `pattern` and `replace` attributes specify Python regex 
 patterns which are used to modify the controlling filename into the 
-desired filename as if by Python’s `re.sub()` function.
+desired filename as if by Python's `re.sub()` function.
 
 The operations specified by the `<step>` tag(s) will be executed for 
 each set of files identified.
@@ -349,7 +349,7 @@ to search. The search order is as follows 1) `CIVET_PATH`, 2) pipeline
 production pipelines do not use `civet_run`, rather they have their own 
 pipeline driver script that calls `parse_XML()` directly. This gives us 
 tighter control and allows us to simplify the interface (for example, 
-in that case we can place the driver script in the user’s path and 
+in that case we can place the driver script in the user's path and
 unlike with `civet_run` the user does not need to know the path to the 
 XML defining the pipeline). If a pipeline has its own driver script 
 then it is up to the developer to determine if they want to implement 
@@ -364,20 +364,20 @@ have a global id assignment registry.
 
 The ids listed in the input or output attributes are in the pipeline / 
 step id space. The order in the list determines the id they will have 
-in the tool’s description file. The first id in the list in this tag 
+in the tool's description file. The first id in the list in this tag
 will receive the id "in_1" or "out_1", as appropriate, in the tool 
 description XML file. Input and output lists use separate indexes, so 
 the first file in each list will be _1, the second in each list will 
 be _2, etc.
 
 The `walltime` attribute is optional, and is used to override the 
-walltime specified in the Tool’s XML definition file.
+walltime specified in the Tool's XML definition file.
 
 ##Tool XML Description
 
 A tool XML description file is separate from a pipeline description 
 file. This allows utilizing a tool description in multiple pipelines, 
-and also conveniently tweaking a tool’s configuration without editing 
+and also conveniently tweaking a tool's configuration without editing
 a whole pipeline file.
 
 The outer tag is `<tool>`.
@@ -397,10 +397,10 @@ The outer tag is `<tool>`.
 
 The `tool_config_prefix`, `path`, `threads`, `mem`, and `walltime` 
 attributes are optional. The optional `path` attribute specifies path 
-information to be prepended onto the user’s PATH at runtime for the job 
+information to be prepended onto the user's PATH at runtime for the job
 submitted to run this tool. This is prepended after any modulefiles are 
 loaded. Any relative path is relative to the directory containing the 
-tool’s XML definition file. If not present, `threads` defaults to one 
+tool's XML definition file. If not present, `threads` defaults to one
 `walltime` defaults to one hour, and `mem` defaults to the batch system 
 default (typically unlimited). The `mem` attribute specifies the amount 
 of physical memory to request for the job; it is specified in gigabyes 
@@ -427,7 +427,7 @@ threads, consider splitting it into multiple tools within one step, so
 that each tool can specify the number of threads appropriate to its 
 command(s).
 
-**IMPORTANT NOTE:** Civet currently only supports 'single node’ jobs. 
+**IMPORTANT NOTE:** Civet currently only supports 'single node' jobs.
 With TORQUE, Civet will request `nodes=1:ppn=num_threads` for jobs 
 submitted to execute this tool (where num_threads is the value of the 
 `threads` attribute). Future version may allow multi-node requests (for 
@@ -435,7 +435,7 @@ example, to allow tools that make use of MPI to distribute computing
 across multiple cluster nodes).
 
 The `error_strings` attribute allows specifying a comma-separated list 
-of strings. If specified and the tool’s stderr output contains any of 
+of strings. If specified and the tool's stderr output contains any of
 the strings, the tool is deemed to have failed, even if its last 
 command returns a zero exit status.
 
@@ -478,26 +478,26 @@ in the command line.
 
 Option names are in the same name space as the tool file ids, but 
 separate from the name space of the invoking pipeline. All names in 
-the tool’s option name / file id name space must be unique.
+the tool's option name / file id name space must be unique.
 
 Occasionally, the value associated with an option is complex and is 
 derived from the processing being done in the pipeline. An example is 
 specifying read group information during BWA alignment. In this case, 
 the `from_file` attribute specifies the id of a file containing a 
-single line which is used as the option’s value instead of what would 
+single line which is used as the option's value instead of what would
 have been specified in the `command_text` and value attributes.
 
-The `threads` attribute, if set to "True", will use the tool’s 
+The `threads` attribute, if set to "True", will use the tool's
 `threads` attribute as the option value. This allows you to specify the 
 number of threads in the command without having to enter the number of 
-threads in multiple places (the tool’s `threads` attribute and in the 
+threads in multiple places (the tool's `threads` attribute and in the
 `<commmand>`). It also allows the number of threads to be overridden. 
 
 For each option specified, if the `tool_config_prefix` attribute is 
 specified in the `<tool>` tag, option processing will search for an 
 configuration file in the directory containing the pipeline XML file, 
 or specified on the `civet_run` command line. If the configuration 
-file exists and the option’s name is listed with a matching prefix, the 
+file exists and the option's name is listed with a matching prefix, the
 value from the configuration file will be used instead of the value 
 specified in this tag. A full description of configuration processing 
 is in a separate document.
@@ -551,7 +551,7 @@ value (case insensitive).
 
 When a brace-enclosed option name is encountered, the value of the 
 `command_text` attribute will be inserted, if present. Then the value 
-of the 'value’ attribute if specified, and finally the filename 
+of the 'value' attribute if specified, and finally the filename
 represented by the id attribute, if specified. But see the 
 specification of tool configuration files for processing that overrides 
 the values specified in the XML file.
@@ -561,12 +561,12 @@ corresponding `<option>` tag uses the `command_text` / `value` form,
 Civet will insert it its place the value of the `command_text` 
 attribute followed by a space, followed by the value of the `value` 
 attribute into the command line. If the value of the `command_text` 
-attribute ends with an equals ('=’) or colon (':’), the space will be 
+attribute ends with an equals ('=') or colon (':'), the space will be
 omitted. If the corresponding `<option>` tag uses the `from_file` form, 
 then the contents of the specified file will replace the brace-enclosed 
 option name in the command line. When a brace-enclosed file id is 
 encountered, the path of the corresponding `<file>` tag is inserted in 
-it’s place into the command line.
+it's place into the command line.
 
 All of the text within the `<command> </command>` tags will be 
 reconstructed as a single line, with any line breaks treated as spaces 
@@ -601,7 +601,7 @@ would result in the following being emitted:
 ####Example 3
 
 The following fragment demonstrates use of the delimiters attribute. It 
-assumes that the pipeline’s outputdir is named "myoutput" and its id 
+assumes that the pipeline's outputdir is named "myoutput" and its id
 was passed as id out_3. The fragment:
 
     <command delimiters="%%" program="find">
@@ -620,7 +620,7 @@ The `<validate>` tag allows us to specify a file for validation, that
 it has not been altered since the pipeline was initially validated. 
 This does not need to be specified for the command program names; they 
 are automatically added to the list. However, for java jar files, etc., 
-that aren’t the initial word in a command, we can check them this way. 
+that aren't the initial word in a command, we can check them this way.
 The tag has two forms:
     
     <validate>filepath</validate>  
@@ -647,7 +647,7 @@ The value of the `output` attribute shall be either "stdout" or
 command is printed.  If not specified, defaults to "stdout".
 
 If this tag is specified, the version information for the tool will be 
-recorded in a version log file, which is written to the pipeline’s log 
+recorded in a version log file, which is written to the pipeline's log
 directory.
 
 Example:
@@ -675,4 +675,4 @@ A tool definition `<file>` tag is analogous to the pipeline definition
 `<tool>` tag. See the description above. When specified in the context 
 of a tool definition file, the parameter form is not allowed. If a 
 temporary file is declared in the context of a tool, that temporary 
-file is deleted at the end of the tool’s execution.
+file is deleted at the end of the tool's execution.
