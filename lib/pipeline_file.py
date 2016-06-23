@@ -339,7 +339,6 @@ class PipelineFile(object):
         if self.path or self.is_temp or self._is_dir:
             raise civet_exceptions.ParseError("Incompatible redeclaration of "
                                               "{}".format(self.id))
-
             
     def __repr__(self):
         return self.__str__()

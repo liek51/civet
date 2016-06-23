@@ -376,12 +376,6 @@ class Tool(object):
         # Get the current symbols in the pipeline...
         import pipeline_parse as PL
 
-        """
-        print >> sys.stderr, "dumping tool files"
-        for fid in self.tool_files:
-            f = self.tool_files[fid]
-            print >> sys.stderr, fid, f.path
-        """
 
         # 
         # Now it is time to fix up the commands and write the script file.
@@ -517,6 +511,7 @@ class Tool(object):
                 elif not os.path.exists(f.path):
                     missing.append(f.path)
         return missing
+
 
 class Option(object):
     def __init__(self, e, tool):

@@ -20,6 +20,8 @@
 # the max, min and average walltime for each cluster job
 # in the pipeline.
 
+from __future__ import print_function
+
 import sys
 import os
 import re
@@ -27,8 +29,9 @@ import re
 
 def usage():
     if len(sys.argv) < 2:
-        print >> sys.stderr, 'usage:', sys.argv[0], 'top-of-directory-tree ...'
+        print('usage: {} top-of-directory-tree ...'.format(sys.argv[0]), file=sys.stderr)
         sys.exit(1)
+
 
 class JobTimes(object):
     def __init__(self, job):
@@ -39,7 +42,6 @@ class JobTimes(object):
         self.count = 0
         self.requested = 0
         self.max_requested = 0
-
 
     def register_time(self, used_timestr, requested_timestr):
         secs = JobTimes.to_seconds(used_timestr)
@@ -58,7 +60,6 @@ class JobTimes(object):
         day_secs = 24 * 60 * 60
         return (secs > day_secs, secs)
 
-
     def __str__(self):
         max = JobTimes.from_seconds(self.max)
         min = JobTimes.from_seconds(self.min)
@@ -66,11 +67,9 @@ class JobTimes(object):
         return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}'.format(
              self.job, self.req, max, avg, min, self.count)
 
-
     @staticmethod
     def header():
         return 'Name\tRequested\tMax\tAverage\tMin\tCount'
-
 
     @staticmethod
     def to_seconds(timestr):
@@ -87,7 +86,6 @@ class JobTimes(object):
         secs += hours*3600 + minutes*60 + seconds
         return secs
 
-
     @staticmethod
     def from_seconds(insecs):
         days = insecs/(24*3600)
@@ -102,6 +100,7 @@ class JobTimes(object):
         else:
             return '{0:02d}:{1:02d}:{2:02d}'.format(hours, minutes,
                                                  seconds)
+
 
 def process_file(dir, fn, jobs, longjobs):
     path = os.path.join(dir, fn)
@@ -128,18 +127,19 @@ def get_files(start_dir, jobs, longjobs):
             if fn.endswith('-status.txt'):
                 process_file(dirpath, fn, jobs, longjobs)
 
+
 def main():
     usage()
     jobs = {}
     longjobs = []
     for dir in sys.argv[1:]:
         get_files(dir, jobs, longjobs)
-    print JobTimes.header()
+    print(JobTimes.header())
     for job in sorted(jobs.iterkeys()):
-        print jobs[job]
+        print(jobs[job])
     if longjobs:
-        print '\nLong running jobs (> 1 day)'
+        print('\nLong running jobs (> 1 day)')
         for lj in longjobs:
-            print lj
+            print(lj)
 
 main()

@@ -1,4 +1,7 @@
 #! /usr/bin/env python
+
+from __future__ import print_function
+
 import sys
 import re
 
@@ -13,7 +16,7 @@ deps = {}
 names = {}
 
 if len(sys.argv) == 1:
-    print >> sys.stderr, "You must specify a civet pipeline list file"
+    print("You must specify a civet pipeline list file", file=sys.stderr)
     sys.exit(1)
 
 pipename = None
@@ -41,10 +44,10 @@ for line in open(sys.argv[1]):
 
 ofn = '{0}_flow_diagram.dot'.format(pipename)
 of = open(ofn, 'w')
-print >> of, "digraph {0} {{".format(pipename)
+print("digraph {0} {{".format(pipename), file=of)
 for n in names:
-    print >> of, '  {0} [label="{1}"]'.format(n, names[n])
+    print('  {0} [label="{1}"]'.format(n, names[n]), file=of)
 for j in deps:
-    print >> of, '  {0} -> {1}'.format(j, ', '.join(deps[j]))
-print >> of, "}"
-print 'Created: {0}'.format(ofn)
+    print('  {0} -> {1}'.format(j, ', '.join(deps[j])), file=of)
+print("}", file=of)
+print('Created: {0}'.format(ofn))

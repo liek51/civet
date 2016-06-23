@@ -6,6 +6,8 @@ import argparse
 A quick program to scan a directory tree for cluster job numbers in a tree of
 pipeline run directories.
 """
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--all', action='store_true',
@@ -14,6 +16,7 @@ def parse_args():
     parser.add_argument('tree', nargs='?', default=os.getcwd(),
                         help="Root of the directory tree of runs to search [CWD]")
     return parser.parse_args()
+
 
 def main():
     args = parse_args()

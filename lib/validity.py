@@ -16,6 +16,9 @@
 # validity.py: A library of routines to test the "validity" of files that are
 # supposed to be locked down.
 #
+
+from __future__ import print_function
+
 import sys
 import hashlib
 import binascii
@@ -294,14 +297,14 @@ def main():
     a.add_file('ruby')
     a.add_file(sys.argv[0])
 
-    print 'Data as parsed.'
-    print a.to_JSON()
+    print('Data as parsed.')
+    print(a.to_JSON())
     a.to_JSON_file('junk.json')
     
     b = FileCollection()
     b.from_JSON_file('junk.json')
-    print "\n\nAfter processing through JSON file..."
-    print b.to_JSON()
+    print("\n\nAfter processing through JSON file...")
+    print(b.to_JSON())
     
     
 if __name__ == '__main__':

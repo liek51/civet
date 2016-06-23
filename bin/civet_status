@@ -57,11 +57,17 @@ def main():
                         help="More verbose output")
     parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
                         help="Only produce output for failed runs")
+    parser.add_argument('-f', '--fast', dest='fast', action='store_true',
+                        help="Use 'fast' recursive mode (when recursively "
+                             "looking for log directories, if we encounter a "
+                             "subdirectory called 'logs' only descend into "
+                             "that directory and ignore the others")
     parser.add_argument('-v', '--version', dest='print_version', action='store_true',
                         help='Print Civet version and exit')
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
     parser.set_defaults(quiet=False)
     parser.set_defaults(verbose=False)
+    parser.set_defaults(fast=False)
 
     # change default behavior to recursive, keep option to preserve backwards
     # compatibility
@@ -93,6 +99,12 @@ def main():
         for d in dir_list_arg:
             log_dirs = []
             for root, dirs, files in os.walk(d, topdown=True, followlinks=True):
+
+                # in fast mode we short circuit the directory walk if we find
+                # a directory called 'logs' and we only decend into that dir
+                if args.fast and 'logs' in dirs:
+                    dirs[:] = ['logs']
+
                 followed_dirs.add(os.path.realpath(root))
                 if job_runner.common.BATCH_ID_LOG in files:
                     log_dirs.append(root)
@@ -121,7 +133,6 @@ def main():
         if verbose:
             print("\n\nGetting status for pipeline with log directory at:")
             print("\t{0}".format(log_dir))
-    
 
         try:
             dir_status = status.PipelineStatus(log_dir, job_manager)
@@ -145,8 +156,6 @@ def main():
             run_canceled = True
             if verbose and dir_status.cancel_message:
                 print(dir_status.cancel_message)
-
-
 
         for job in dir_status.jobs:
             if verbose:
@@ -214,7 +223,7 @@ def main():
             if dir_status.complete_jobs_failure:
                 print_header = True
                 for job in dir_status.jobs:
-                    if job.exit_status != '0' and job.exit_status != '271':
+                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD'] and job.exit_status != 0 and job.exit_status != 271:
                         if print_header:
                             print("\tFailed Jobs:")
                             print_header = False
