@@ -1,0 +1,8 @@
+<tool name="c">
+    <command program="echo">
+        running tool c
+    </command>
+    <command program="cat">
+        {in_1} {in_2}
+    </command>
+</tool>
