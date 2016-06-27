@@ -68,8 +68,8 @@ environment for Civet.
 
 
 ## Authors
-Glen Beane, The Jackson Laboratory  
+Glen Beane, The Jackson Laboratory
 glen.beane@jax.org
 
-Al Simons, The Jackson Laboratory  
+Al Simons, The Jackson Laboratory
 al.simons@jax.org
