@@ -144,7 +144,7 @@ def main():
     for job in sorted(jobs.iterkeys()):
         print(jobs[job])
     if longjobs:
-        print('\nLong running jobs (> {} hours)'.format(args.walltime))
+        print('\nLong running jobs (>= {} hours)'.format(args.walltime))
         for lj in longjobs:
             print(lj)
 
