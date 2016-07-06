@@ -4,17 +4,37 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.8.2
+-------------
+Bug Fixes
+
+Features
+ - wall_time_ranges_list_long_jobs.py utility now lets user specify the
+   minimum walltime to use to classify a job as 'long running'
+
+
 Version 1.8.1
 -------------
 Bug fixes
  - Don't strip off relative paths when applying in_dir
  - Allow 'pattern/replace' to be combined with 'append', 'datestamp_append',
-   and 'datestamp_prepend' for the <file> tag.
+   and 'datestamp_prepend' for the <file>, <dir>, and <string> tags.
  - civet_cancel -r was terminating if it found a complete pipeline rather than
    continuing on to process the next pipeline directory
  - <dir> files can now be declared temp in a tool XML
 
 Features
+ - New implicitly defined directory ID "PIPELINE_ROOT", contains the path to the
+   directory containing the pipeline XML. Can be used to reference supporting
+   files installed with the pipeline.
+ - Added 'fast recursive' mode to civet_status, when exploring a directory tree
+   if a 'logs' directory is found, descend into it and ignore its siblings
+ - Added several utility script to extract CPU and memory consumption from a
+   Civet log directory for a previously executed pipeline
+ - Added script to generate a Graphviz .dot file showing a directed acyclic
+   graph of job dependencies from a pipeline's log directory
+ - Civet status will now print a list of batch job IDs and their exit status for
+   jobs that failed.
  - switched to Markdown documentation
  - adopted Apache 2 license prior to public release
 

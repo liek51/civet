@@ -25,12 +25,8 @@ from __future__ import print_function
 import sys
 import os
 import re
+import argparse
 
-
-def usage():
-    if len(sys.argv) < 2:
-        print('usage: {} top-of-directory-tree ...'.format(sys.argv[0]), file=sys.stderr)
-        sys.exit(1)
 
 
 class JobTimes(object):
@@ -43,7 +39,7 @@ class JobTimes(object):
         self.requested = 0
         self.max_requested = 0
 
-    def register_time(self, used_timestr, requested_timestr):
+    def register_time(self, used_timestr, requested_timestr, min_walltime):
         secs = JobTimes.to_seconds(used_timestr)
         req_secs = JobTimes.to_seconds(requested_timestr)
         if req_secs > self.max_requested:
@@ -56,9 +52,8 @@ class JobTimes(object):
         self.total += secs
         self.count += 1
         
-        # Was it longer than a day?
-        day_secs = 24 * 60 * 60
-        return (secs > day_secs, secs)
+        # Was it longer enough to report?
+        return (secs >= min_walltime, secs)
 
     def __str__(self):
         max = JobTimes.from_seconds(self.max)
@@ -102,7 +97,7 @@ class JobTimes(object):
                                                  seconds)
 
 
-def process_file(dir, fn, jobs, longjobs):
+def process_file(dir, fn, jobs, longjobs, min_walltime):
     path = os.path.join(dir, fn)
     for line in open(path):
         if 'requested_walltime' in line:
@@ -113,32 +108,43 @@ def process_file(dir, fn, jobs, longjobs):
     job = re.sub('(.*)-status.txt', r'\1', fn)
     if job not in jobs:
         jobs[job] = JobTimes(job)
-    lj = jobs[job].register_time(used, req)
+    lj = jobs[job].register_time(used, req, min_walltime)
     if lj[0]:
         longjobs.append('{0}\t{1}\t{2}'.
                         format(dir, job, JobTimes.from_seconds(lj[1])))
 
 
-def get_files(start_dir, jobs, longjobs):
+def get_files(start_dir, jobs, longjobs, min_walltime):
     for (dirpath, dirnames, filenames) in os.walk(start_dir):
         if 'log' not in dirpath:
             continue
         for fn in filenames:
             if fn.endswith('-status.txt'):
-                process_file(dirpath, fn, jobs, longjobs)
+                process_file(dirpath, fn, jobs, longjobs, min_walltime)
 
 
 def main():
-    usage()
+
+    parser = argparse.ArgumentParser(description="Find long running jobs in a Civet run")
+
+    parser.add_argument('--walltime', '-w', dest='walltime', action='store',
+                        type=float, default=24,
+                        help='Minimum walltime to report as a long running job (unit=hours, type=float, default=24)')
+    parser.add_argument('directory', help="Path to Civet log directories", nargs='+')
+
+    args = parser.parse_args(sys.argv[1:])
+
+    walltime_sec = args.walltime * 24 * 60
+
     jobs = {}
     longjobs = []
-    for dir in sys.argv[1:]:
-        get_files(dir, jobs, longjobs)
+    for dir in args.directory:
+        get_files(dir, jobs, longjobs, walltime_sec)
     print(JobTimes.header())
     for job in sorted(jobs.iterkeys()):
         print(jobs[job])
     if longjobs:
-        print('\nLong running jobs (> 1 day)')
+        print('\nLong running jobs (> {} hours)'.format(args.walltime))
         for lj in longjobs:
             print(lj)
 
