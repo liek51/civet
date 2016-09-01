@@ -115,7 +115,8 @@ class ForEach(object):
         total_jobs *= len(matched_files)
 
         if total_jobs > ForEach.MAX_JOBS:
-            PL.abort_submit("error submitting foreach: {} jobs exceed limit (max = {})\n".format(total_jobs, ForEach.MAX_JOBS))
+            PL.abort_submit("error submitting foreach: {} jobs exceed limit "
+                            "(max = {})\n".format(total_jobs, ForEach.MAX_JOBS))
 
         for fn in matched_files:
             iteration += 1

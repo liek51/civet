@@ -92,11 +92,12 @@ class PipelineFile(object):
     # And the parameters to the pipeline
     params = None
 
-    def __init__(self, id, path, files, is_file, is_temp, is_input, is_dir,
-                 is_string, based_on, pattern, replace, append,
-                 datestamp_prepend, datestamp_append, in_dir,
-                 is_parameter, is_list, from_file, create=True, default_output=False,
-                 foreach_dep=None):
+    def __init__(self, id, path, files, is_file=False, is_temp=False,
+                 is_input=False, is_dir=False, is_string=False, based_on=None,
+                 pattern=None, replace=None, append=None,
+                 datestamp_prepend=None, datestamp_append=None, in_dir=None,
+                 is_parameter=False, is_list=False, from_file=None, create=True,
+                 default_output=False, foreach_dep=None):
         self.id = id
         self.path = path
         self._is_file = is_file
