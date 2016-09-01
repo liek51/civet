@@ -49,6 +49,7 @@ class Tool(object):
         'file',
         'validate',
         'module',
+        'string',
         ]
 
     validAtts = [
@@ -243,7 +244,7 @@ class Tool(object):
                 msg = "'{}': Unknown tag {}\n\n{}".format(os.path.basename(self.xml_file), t, ET.tostring(child))
                 raise civet_exceptions.ParseError(msg)
 
-            if t == 'file' or t == 'dir':
+            if t == 'file' or t == 'dir' or t == 'string':
                 # Register the file in the tool's file dictionary
                 self.file(child)
             else:
