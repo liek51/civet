@@ -325,8 +325,9 @@ class Pipeline(object):
             for j in job_id:
                 self.all_batch_jobs.append(j)
 
-        # Submit two last bookkeepingjobs
+        # Submit last cleanup / bookkeeping job
 
+        cmd = []
         # 1. deletes all the temp files.
         if not self.keep_temp:
             tmps = []
@@ -348,26 +349,16 @@ class Pipeline(object):
                     if f.creator_job:
                         if f.creator_job not in depends:
                             depends.append(f.creator_job)
-            # Use rm -f because if a command is executed conditionally
-            # due to if_exists and if_not_exists, a temp file may not
-            # exist.  Without -f the rm command would fail, causing
-            # the entire pipeline to fail.
-            # must be recursive because some temp files are actually directories
-            cmd = 'rm -rf ' + ' '.join(tmps)
             if len(tmps):
-                batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
-                                     depends_on=depends,
-                                     name='Remove_temp_files',
-                                     email_list=self.error_email_address)
-                try:
-                    job_id = self.job_runner.queue_job(batch_job)
-                except Exception as e:
-                    sys.stderr.write(str(e) + '\n')
-                    sys.exit(self.BATCH_ERROR)
-                self.all_batch_jobs.append(job_id)
+                # Use rm -f because if a command is executed conditionally
+                # due to if_exists and if_not_exists, a temp file may not
+                # exist.  Without -f the rm command would fail, causing
+                # the entire pipeline to fail.
+                # must be recursive because some temp files are actually
+                # directories
+                cmd.append('rm -rf ' + ' '.join(tmps))
 
         # 2. Consolidate all the log files.
-        cmd = []
         cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
         cmd.append('CONSOLIDATE_STATUS=$?')
         
@@ -391,7 +382,7 @@ class Pipeline(object):
 
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs, 
-                             name="Consolidate_log_files",
+                             name="rm_temps_consolidate_logs",
                              modules=mod_files, mail_option='a',
                              email_list=self.error_email_address,
                              walltime="00:10:00")
