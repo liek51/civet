@@ -7,10 +7,14 @@ redmine:/var/git/civet.git
 Version 1.8.2
 -------------
 Bug Fixes
+ - <string> tags can now be used in tool xml files
+ - epilogue path is set correctly if log_dir and execution_log_dir differ
+
 
 Features
  - wall_time_ranges_list_long_jobs.py utility now lets user specify the
    minimum walltime to use to classify a job as 'long running'
+ - remove temp and consolidate log jobs merged
 
 
 Version 1.8.1
