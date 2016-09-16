@@ -45,7 +45,7 @@ def get_file_names(dir):
     pattern = re.compile(r'^.*\.e$')
 
     for f in os.listdir(dir):
-        if f.startswith("Consolidate"):
+        if f.startswith("rm_temps_consolidate_logs"):
             continue
         elif pattern.match(f):
             batch_stderr.append(f)

@@ -368,8 +368,6 @@ class Pipeline(object):
                        PipelineFile.get_output_dir() +
                        "\nhas completed.'" +
                        " | mailx -s 'Pipeline completed' " + self.email_address)
-            # Mask any potential mail failures.
-            cmd.append("true")
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
         cmd = '\n'.join(cmd)
 

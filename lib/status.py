@@ -208,6 +208,9 @@ class PipelineStatus(object):
         elif self.complete_jobs_failure:
             self.status = "FAILED"
 
+        elif self.deleted_jobs:
+            self.status = "TERMINATED"
+
         elif self.complete_jobs_failure == 0:
             if self.running_jobs:
                 self.status = "RUNNING"
@@ -217,7 +220,7 @@ class PipelineStatus(object):
                 self.status = "QUEUED"
 
         else:
-            self.status = "TERMINATED"
+            self.status = "UNKNOWN"
 
 
     def __str__(self):
