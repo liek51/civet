@@ -96,6 +96,9 @@ class Tool(object):
         bad_inputs = []
         bad_outputs = []
 
+        # ADD PIPELINE_ROOT to tool_files
+        self.tool_files['PIPELINE_ROOT'] = pipeline_files['PIPELINE_ROOT']
+
         for n in range(len(ins)):
             try:
                 f = pipeline_files[ins[n]]
@@ -257,7 +260,7 @@ class Tool(object):
             # fix_up_files can throw a civet_exceptions.ParseError, however
             # it doesn't know what file it is in at the time,  so we catch it
             # here, add the filename to the message, and raise an exception
-            msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
+            msg = "{}:  {}".format(os.path.basename(self.xml_file), e)
             raise civet_exceptions.ParseError(msg)
         
         # Now we can process self.exit_if_exists
