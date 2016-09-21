@@ -130,7 +130,7 @@ class PipelineFile(object):
 
         if self.id in files:
             # We've already seen this file ID.
-            raise civet_exceptions.ParseError("File {} was already defined".format(self.id))
+            raise civet_exceptions.ParseError("File with ID '{}' was already defined".format(self.id))
         else:
             # Register this file in the files/options namespace
             files[self.id] = self
