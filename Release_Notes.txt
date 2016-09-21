@@ -9,6 +9,8 @@ Version 1.8.4
 Bug Fixes
  - fix AttributeError when referencing undefined file within a tool XML
  - allow use of "PIPELINE_ROOT" within tool XML
+ - raise a ParseError if a File ID is defined more than once
+
 
 Version 1.8.3
 -------------
@@ -22,7 +24,6 @@ Version 1.8.2
 Bug Fixes
  - <string> tags can now be used in tool xml files
  - epilogue path is set correctly if log_dir and execution_log_dir differ
-
 
 Features
  - wall_time_ranges_list_long_jobs.py utility now lets user specify the
@@ -54,6 +55,7 @@ Features
    jobs that failed.
  - switched to Markdown documentation
  - adopted Apache 2 license prior to public release
+
 
 Version 1.8.0
 -------------

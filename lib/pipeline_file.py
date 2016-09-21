@@ -130,10 +130,7 @@ class PipelineFile(object):
 
         if self.id in files:
             # We've already seen this file ID.
-            # Make sure they're compatible
-            # this will raise a civet_exception.ParseError if they are not
-            # compatible
-            self.compatible(files[self.id])
+            raise civet_exceptions.ParseError("File {} was already defined".format(self.id))
         else:
             # Register this file in the files/options namespace
             files[self.id] = self
@@ -331,16 +328,6 @@ class PipelineFile(object):
             is_parameter, is_list, from_file, create, default_output,
             foreach_dep)
 
-    def compatible(self, o):
-        # We have a file whose ID we've already seen. 
-        # Make sure they're compatible.
-        
-        # Second instance must not have a path, be a tempfile, or a
-        # directory.
-        if self.path or self.is_temp or self._is_dir:
-            raise civet_exceptions.ParseError("Incompatible redeclaration of "
-                                              "{}".format(self.id))
-            
     def __repr__(self):
         return self.__str__()
 
