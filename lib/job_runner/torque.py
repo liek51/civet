@@ -425,9 +425,8 @@ class TorqueJobRunner(object):
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
-            self.epilogue_filename = os.path.join(self.execution_log_dir, _SHELL_SCRIPT_DIR, "epilogue.sh")
-        else:
-            self.epilogue_filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "epilogue.sh")
+
+        self.epilogue_filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "epilogue.sh")
 
         utilities.make_sure_path_exists(self.log_dir)
           
