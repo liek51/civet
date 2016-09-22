@@ -1,7 +1,6 @@
 <tool name="BWA_MEM_Alignment"
     threads="7"
-    walltime="8:00:00"
-    tool_config_prefix="bwa_mem_align">
+    walltime="8:00:00">
     <description>
         Align a pair of fastq files.  Any quality checking and trimming
         must be done before this step.
