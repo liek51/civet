@@ -87,12 +87,12 @@ Python's `datetime.strftime`. An example is
 would append the date in the form _YYYY_MM_DD to the filename of the 
 `based_on` file to create the new filename.
 
-If the `pattern` and `replace` attributes are used, the file spec for 
-this file will be generated as if by using the Python `re.subs()` 
-operation applying the values of `pattern` and `replace` to the 
-basename of the file specified in the `based_on` attribute. This 
-capability is needed, for instance, using samtools, where some commands 
-need the trailing ".bam" stripped off of a file name.
+If the `pattern` and `replace` attributes are used, the filename will 
+be generated as if by using the Python `re.subs()` operation applying 
+the values of `pattern` and `replace` to the basename of the file 
+specified in the `based_on` attribute. This capability is needed, for 
+instance, using samtools, where some commands need the trailing ".bam" 
+stripped off of a file name.
 
 **Note:** when the `replace` attribute is combined with other attributes, 
 such as `append` or `datestamp_prepend`,bthe `replace` will be applied 
@@ -100,7 +100,8 @@ first.
 
 **Note:** when using `based_on` only the basename of the source file is 
 used; the pipeline developer must use the  `in_dir` attribute if they 
-want the file to be placed anywhere other than the default output directory.
+want the file to be placed anywhere other than the default output 
+directory.
 
 ***
 
@@ -666,7 +667,7 @@ the program version. Two more examples:
         echo -n "BWA "; bwa 2>&amp;1 | grep Version  
     </version_command>
 
-Note the use of the XML string “&amp;” to represent an ampersand!
+Note the use of the XML string `&amp;` to represent an ampersand!
 
 ***
 
