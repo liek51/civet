@@ -1,0 +1,47 @@
+<pipeline name="WholeExomeSingleSample.xml">
+    <!--
+        The files needed for the first step of the pipeline: Quality and
+        Statistics
+    -->
+    <file id="e1_fastq" input="True" parameter="1" />
+    <file id="e2_fastq" input="True" parameter="2" />
+
+    <!-- Output file names will be based on input files.
+    -->
+    <file id="sample_name" based_on="e1_fastq" pattern="(.*?)(_|\.)R1.*"
+          replace="\1" />
+
+     <!-- The pipeline's default output directory. -->
+    <dir id="outdir" based_on="sample_name" datestamp_prepend="%y%m%d-%H%M%S_" default_output="True" />
+
+    <dir id="filter" filespec="filter" in_dir="outdir" />
+
+    <file id="e1_trimmed"  temp="True" in_dir="filter"
+            based_on="e1_fastq" append="_filtered_trimmed" />
+    <file id="e2_trimmed"  temp="True" in_dir="filter"
+            based_on="e1_trimmed" pattern="(.*)(_|\.)R1(.*)" replace="\1\2R2\3" />
+
+    <file id="ref" input="True" 
+          filespec="/data/shared/bwa_indexes/genome.fa"/>
+    <file id="bwa7_idx_pfx" filespec="/data/shared/bwa_indexes"/>
+    <file id="read_group" temp="True" in_dir="outdir" filespec="read_group.txt" />
+
+    <step name="Qual_Stat">
+        <tool name="Quality_and_Statistics"
+            input="e1_fastq, e2_fastq, filter"
+            output="e1_trimmed, e2_trimmed"
+            description="qual_statistics_new.xml" />
+    </step>
+
+    <!-- Files for the bwa alignment (in addition to those above)... -->
+    <file id="sam" in_dir="outdir"
+        based_on="sample_name" append=".sam" />
+
+    <step name="Alignment">
+        <tool name="BWA_MEM_Alignment"
+            input="e1_trimmed,e2_trimmed,bwa7_idx_pfx,read_group"
+            output="sam"
+            description="bwa_mem.xml" />
+    </step>
+
+</pipeline>

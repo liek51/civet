@@ -1,0 +1,35 @@
+<tool name="BWA_MEM_Alignment"
+    threads="7"
+    walltime="8:00:00">
+    <description>
+        Align a pair of fastq files.  Any quality checking and trimming
+        must be done before this step.
+    </description>
+    <!-- Files:
+        Ins:
+          1: fastq_e1
+          2: fastq_e2
+          3: index prefix
+        Outs:
+          1: sam
+    -->
+    
+    <!-- Modules needed to run on the cluster -->
+    <module>bwa/0.7.9a</module>
+    
+    <file id="bwa7_idx_pfx" filespec="genome.fa" in_dir="in_3" />
+    <file id="read_group" temp="True" />
+
+    <!-- Create an option for the read group, from the contents of rg_info -->
+    <option name="rg" command_text="-R" from_file="read_group" />
+    <option name="threads" command_text="-t" threads="True" />
+
+    <command program="read_group_from_fastq.py">
+        <version_command>read_group_from_fastq.py --version</version_command>
+        {in_1} {read_group}
+    </command>
+    <command program="bwa" stdout_id="out_1">
+        <version_command>echo -n "BWA "; bwa 2>&amp;1 | grep Version</version_command>
+        mem -M -B 8 {threads} {rg} {in_3} {in_1} {in_2}
+    </command>
+</tool>
