@@ -74,10 +74,9 @@ def main():
     parser.set_defaults(release_jobs=True)
     parser.set_defaults(force_conditional=False)
     args = parser.parse_args()
-    
 
     try:
-        PL.parse_XML(args.pipeline[0], args.pipeline_args, skip_validation=True,
+        PL._parse_XML(args.pipeline[0], args.pipeline_args, skip_validation=True,
                      queue=args.queue, submit_jobs=args.submit,
                      search_path=os.environ.get('CIVET_PATH'),
                      user_override_file=args.option_file,

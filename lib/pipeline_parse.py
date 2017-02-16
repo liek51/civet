@@ -77,7 +77,23 @@ class Pipeline(object):
     def __init__(self):
         pass
 
-    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
+    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
+                  submit_jobs=True, completion_mail=True, search_path="",
+                  user_override_file=None, keep_temp=False, release_jobs=True,
+                  force_conditional_steps=False, delay=None, email_address=None,
+                  error_email_address=None, walltime_multiplier=1):
+
+        try:
+            self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
+                            completion_mail, search_path, user_override_file,
+                            keep_temp, release_jobs, force_conditional_steps,
+                            delay, email_address, error_email_address,
+                            walltime_multiplier)
+        except civet_exceptions.ParseError as e:
+            print("\nError parsing XML:  {}".format(e), file=sys.stderr)
+            sys.exit(1)
+
+    def _parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
