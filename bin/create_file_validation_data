@@ -27,6 +27,7 @@ execution, and it must be run on one of the cluster's execution
 nodes, i.e., it must be run as part of a qsub'd job.
 """
 
+import subprocess
 import os
 import sys
 import inspect
@@ -41,6 +42,24 @@ if lib_folder not in sys.path:
 import pipeline_parse as PL
 import validity
 import version
+import config
+
+
+def get_python_path():
+    path = None
+    if config.civet_job_python_module:
+        command = ("module unload python; "
+                   "module load {}; "
+                   "which python").format(config.civet_job_python_module)
+        p = subprocess.Popen(command,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             shell=True)
+        out = p.communicate()[0]
+        if p.returncode == 0:
+            path = out
+
+    return path
 
 
 def main():
@@ -58,8 +77,9 @@ def main():
     # In some cases, the civet infrastructure arbitrarily adds its own
     # version of python. This isn't reflected in any of the XML files
     # we just parsed, so we have to manually add it here.
-    
-    files.add_file('/opt/compsci/civet/python_do_not_update/bin/python2.7')
+    python_path = get_python_path()
+    if python_path:
+        files.add_file(python_path)
 
     # Figure out whether we're creating a new file or merging with an
     # an existing file.
