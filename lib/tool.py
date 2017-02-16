@@ -131,9 +131,8 @@ class Tool(object):
         try:
             tool = ET.parse(self.xml_file).getroot()
         except ET.ParseError as e:
-            print('Exception raised while parsing' + xml_file, file=sys.stderr)
-            print(e.msg, file=sys.stderr)
-            sys.exit(1)
+            raise civet_exceptions.ParseError("XML ParseError when parsing {}: {}".format(xml_file, e))
+
         atts = tool.attrib
 
         # Validate the attributes

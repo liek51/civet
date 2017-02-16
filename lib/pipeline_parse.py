@@ -89,7 +89,7 @@ class Pipeline(object):
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
                             walltime_multiplier)
-        except (civet_exceptions.ParseError, ET.ParseError) as e:
+        except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
 
@@ -98,7 +98,10 @@ class Pipeline(object):
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
                   error_email_address=None, walltime_multiplier=1):
-        pipe = ET.parse(xmlfile).getroot()
+        try:
+            pipe = ET.parse(xmlfile).getroot()
+        except ET.ParseError as e:
+            raise civet_exceptions.ParseError("XML ParseError when parsing {}: {}".format(xmlfile, e))
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
