@@ -89,7 +89,7 @@ class Pipeline(object):
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
                             walltime_multiplier)
-        except civet_exceptions.ParseError as e:
+        except (civet_exceptions.ParseError, ET.ParseError) as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
 
