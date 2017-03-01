@@ -95,7 +95,7 @@ instance, using samtools, where some commands need the trailing ".bam"
 stripped off of a file name.
 
 **Note:** when the `replace` attribute is combined with other attributes, 
-such as `append` or `datestamp_prepend`,bthe `replace` will be applied 
+such as `append` or `datestamp_prepend`, the `replace` will be applied 
 first. 
 
 **Note:** when using `based_on` only the basename of the source file is 
@@ -279,9 +279,9 @@ file or a file to be created. The `id` attribute specifies the id by
 which this file will be referenced in the foreach block. The `input` 
 attribute's value shall be either True or False. Related files that
 are specified as input files will have a default directory of the 
-foreach directory, but this may be overridden by specifying the `indir` 
+foreach directory, but this may be overridden by specifying the `in__dir` 
 attribute of the `<related>` file. Output related files will default 
-to the pipeline output directory unless overridden with the `indir` 
+to the pipeline output directory unless overridden with the `in__dir` 
 attribute. The `pattern` and `replace` attributes specify Python regex 
 patterns which are used to modify the controlling filename into the 
 desired filename as if by Python's `re.sub()` function.
@@ -308,7 +308,7 @@ alignment for each pair:
     <foreach dir="indir">  
         <file id="end1" pattern=".*_R1_.*fastq" />  
         <related id="end2" input="True" pattern="(.*)_R1_(.*fastq)" replace="\1_R2_\2" />  
-        <related id="sam" input="True" pattern="(.*)_R1_(.*)fastq" replace="\1_\2sam" />  
+        <related id="sam" input="False" pattern="(.*)_R1_(.*)fastq" replace="\1_\2sam" />  
         <step name="Alignment">  
             <tool name="bwa" description="run_bwa.xml" input="end1,end2" output="sam" />  
         </step>  
