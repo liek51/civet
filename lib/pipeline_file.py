@@ -404,9 +404,6 @@ class PipelineFile(object):
         self.apply_based_on(files, circularity)
 
         if self is PipelineFile.output_dir:
-            if PL.directory_version == 2:
-                stamp_dir = "{0}-{1}".format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S'), os.getpid())
-                self.path = os.path.join(self.path, stamp_dir)
             utilities.make_sure_path_exists(self.path)
         else:
             # might raise civet_exception.ParseError, to be handled at a higher level
@@ -488,7 +485,6 @@ class PipelineFile(object):
             return
         # the based_on attribute is the fid of another file
         # whose path we're going to mangle to create ours.
-        #print >> sys.stderr, 'processing based_on\n', self
         if bo not in files:
             sys.exit('ERROR: based on unknown file: {0}'.format(bo))
         bof = files[bo]
