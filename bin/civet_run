@@ -32,7 +32,6 @@ import version
 import utilities
 
 
-
 def main():
 
     utilities.cleanup_command_line()
@@ -75,18 +74,22 @@ def main():
     args = parser.parse_args()
 
     try:
-        PL._parse_XML(args.pipeline[0], args.pipeline_args, skip_validation=True,
-                     queue=args.queue, submit_jobs=args.submit,
-                     search_path=os.environ.get('CIVET_PATH'),
-                     user_override_file=args.option_file,
-                     keep_temp=args.keep_temp, release_jobs=args.release_jobs,
-                     force_conditional_steps=args.force_conditional,
-                     delay=args.delay, email_address=args.email_address,
-                     error_email_address=args.error_email_address,
-                     walltime_multiplier=args.walltime_multiplier)
+        PL._parse_XML(args.pipeline[0], args.pipeline_args,
+                      skip_validation=True,
+                      queue=args.queue, submit_jobs=args.submit,
+                      search_path=os.environ.get('CIVET_PATH'),
+                      user_override_file=args.option_file,
+                      keep_temp=args.keep_temp, release_jobs=args.release_jobs,
+                      force_conditional_steps=args.force_conditional,
+                      delay=args.delay, email_address=args.email_address,
+                      error_email_address=args.error_email_address,
+                      walltime_multiplier=args.walltime_multiplier)
     except civet_exceptions.ParseError as e:
-        print("\nError parsing XML:  {}".format(e), file=sys.stderr)
+        print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)
+    except civet_exceptions.MissingFile as e:
+        print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
+        sys.exit(2)
     PL.submit()
 
 if __name__ == "__main__":

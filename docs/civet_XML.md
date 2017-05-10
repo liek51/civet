@@ -123,7 +123,9 @@ The `<dir>` tag with the `default_output="True"` attribute specifies
 the default output directory for output files specified with a relative 
 path. It is also the location where various run logs are stored. If 
 no `<dir default_output="True" ...>` tags are specified, the current 
-working directory will be used.
+working directory will be used. Since the default output directory is 
+always processed first, the `default_output` attribute can not be
+combined with `in_dir`. 
 
 The `in_dir` attribute is optional. If present, it specifies the 
 directory id of the directory in which the file or directory exists or 
@@ -177,7 +179,10 @@ when a `filelist` is the result of files generated in a `<foreach>` tag.
     <filelist id="..." in_dir="..." pattern="..." foreach_id="..."/>
 
 The pattern will be processed as if by Python's `re.match()` function,
-against all files in the specified directory.
+against all files in the specified directory. NOTE: this pattern is not 
+a shell wildcard expression. For example, the pattern attribute to match
+all .txt files would not be `"*.txt"`, but instead would be 
+`".*\.txt$"`.
 
 A `<filelist>` can also be passed as a parameter:
 

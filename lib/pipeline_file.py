@@ -123,10 +123,7 @@ class PipelineFile(object):
 
         # need a separate variable for this because is_parameter gets reset to
         # False once the param number -> value conversion happens
-        if is_list and is_parameter:
-            self.list_from_param = True
-        else:
-            self.list_from_param = False
+        self.list_from_param = True if is_list and is_parameter else False
 
         if self.id in files:
             # We've already seen this file ID.
@@ -375,6 +372,12 @@ class PipelineFile(object):
 
         PipelineFile.output_dir.fix_up_file(files, circularity)
 
+        if PipelineFile.output_dir.is_input or not PipelineFile.output_dir.create:
+            if not os.path.exists(PipelineFile.output_dir.path):
+                raise civet_exceptions.MissingFile("default output directory flagged as input must exist at pipeline submission time")
+        else:
+            utilities.make_sure_path_exists(PipelineFile.output_dir.path)
+
         for fid in files:
             files[fid].fix_up_file(files, circularity)
 
@@ -384,7 +387,6 @@ class PipelineFile(object):
         in_dir and based_on, as well as files passed in as
         parameters.
         """
-        import pipeline_parse as PL
 
         if self._is_fixed_up:
             return
@@ -402,11 +404,9 @@ class PipelineFile(object):
         self.parameter_to_path()
         self.apply_from_file(files, circularity)
         self.apply_based_on(files, circularity)
-
-        if self is PipelineFile.output_dir:
-            utilities.make_sure_path_exists(self.path)
-        else:
-            # might raise civet_exception.ParseError, to be handled at a higher level
+        if not self.is_string:
+            # might raise civet_exception.ParseError
+            # to be handled at a higher level
             self.apply_in_dir_and_create_temp(files, circularity)
 
         # Turn all the paths into an absolute path, so changes in
@@ -416,11 +416,12 @@ class PipelineFile(object):
         # place it in the output directory.
         if self.is_list:
             if self.in_dir:
-                #filelist is comprised of a directory and pattern,
-                #convert the directory to an absolute path
+                # filelist is comprised of a directory and pattern,
+                # convert the directory to an absolute path
                 self.in_dir = os.path.abspath(files[self.in_dir].path)
             elif self.list_from_param:
-                # file list is passed as a parameter,  might be comma delimited
+                # file list is passed as a parameter represented as a comma
+                # delimited list.
                 # convert paths in list to absolute path
                 file_list = []
                 for f in self.path.split(','):
@@ -456,13 +457,15 @@ class PipelineFile(object):
             idx = self.path - 1
             params = PipelineFile.params
             if idx >= len(params):
-                print("Too few parameters...\n"
-                      "    len(params): {}\n"
-                      "    File: {}\n"
-                      "    referenced parameter: {}"
-                      "".format(len(params), self.id, self.path),
-                                  file=sys.stderr)
-                sys.exit(1)
+                #print("Too few parameters...\n"
+                #      "    len(params): {}\n"
+                #      "    File: {}\n"
+                #      "    referenced parameter: {}"
+                #      "".format(len(params), self.id, self.path),
+                #                  file=sys.stderr)
+                msg = "Parameter out of range, File: {} referenced parameter: {} (pipeline was passed {} parameters)".format(self.id, self.path, len(params))
+                raise civet_exceptions.ParseError(msg)
+                #sys.exit(1)
             self.path = params[idx]
             self.is_parameter = False
 
@@ -491,10 +494,14 @@ class PipelineFile(object):
         bof.fix_up_file(files, circularity)
 
         if bof.list_from_param:
-            sys.exit("ERROR: file can not be based on a list: {0} is based on {1}".format(self.id, bo))
+            # based on a filelist passed as a parameter,  use first file in the
+            # filelist
+            path = self.path.split(',')[0]
+        else:
+            path = bof.path
 
         # strip out any path - based_on only operates on filenames
-        temp_path = os.path.basename(bof.path)
+        temp_path = os.path.basename(path)
         now = datetime.datetime.now()
 
         # do the replace first,  so there is no chance other based_on
@@ -515,9 +522,7 @@ class PipelineFile(object):
         ind = self.in_dir
         if (not ind) and (not self.is_temp):
             return
-        dir = PipelineFile.get_output_dir()
 
-        utilities.make_sure_path_exists(dir)
         if ind:
             if ind not in files:
                 msg = ("ERROR: while processing file with id: '{}', "
@@ -525,7 +530,9 @@ class PipelineFile(object):
                 raise civet_exceptions.ParseError(msg)
             indf = files[ind]
             indf.fix_up_file(files, circularity)
-            dir = indf.path
+            my_dir = indf.path
+        else:
+            my_dir = PipelineFile.get_output_dir()
 
         if self.is_list:
             return
@@ -533,9 +540,9 @@ class PipelineFile(object):
             # If it is an anonymous temp, we'll create it in
             # the proper directory
             if self._is_dir:
-                self.path = tempfile.mkdtemp(dir=dir)
+                self.path = tempfile.mkdtemp(dir=my_dir)
             else:
-                t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
+                t = tempfile.NamedTemporaryFile(dir=my_dir, delete=False)
                 name = t.name
                 t.close()
                 self.path = name
@@ -546,7 +553,7 @@ class PipelineFile(object):
                 raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
 
             # Apply the containing directory to the path...
-            self.path = os.path.join(dir, self.path)
+            self.path = os.path.join(my_dir, self.path)
 
             # in_dir has been applied, clear it.
             self.in_dir = None

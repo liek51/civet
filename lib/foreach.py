@@ -27,7 +27,12 @@ class ForEach(object):
         'file',
         'related',
         'step',
-        'id' ]
+    ]
+
+    valid_attributes = [
+        'dir',
+        'id'
+    ]
 
     # to prevent a user from flooding the system we impose a limit on the
     # maximum number of jobs that can be created by one foreach instance

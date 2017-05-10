@@ -6,11 +6,18 @@ redmine:/var/git/civet.git
 
 Version 1.8.5
 -------------
+Bug Fixes
+ - If the default output directory was passed as a parameter and marked as
+   input, Civet would still create it if it does not exist. Now Civet correctly
+   exits after printing an appropriate error message.
 
 Features
  - create wrapped version of parse_XML() to catch parse errors and exit
    automatically (enhances existing wrapper scripts). Old behavior can be
    found by calling _parse_XML()
+ - a file can now be based on a filelist passed as input parameter. In this
+   case the first file in the filelist is used as the source for the based_on
+   file
 
 
 Version 1.8.4

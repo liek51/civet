@@ -20,7 +20,6 @@ import errno
 import sys
 import unicodedata
 
-
 # in a couple cases we need to differentiate between a string and some other
 # iterable type.  We use isinstance to see if it is a string.
 # this is slightly different between python 2 and 3
@@ -75,7 +74,7 @@ def cleanup_command_line():
         # create a unicode string with the decoded contents of the corresponding
         # sys.argv string
         decoded = unicode(sys.argv[i], sys.stdin.encoding)
-        for key,val in conversion_pairs.iteritems():
+        for key, val in conversion_pairs.iteritems():
             decoded = unicode.replace(decoded, unicodedata.lookup(key), val)
         # Should we be doing 'strict' here instead of 'replace'?
         sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')

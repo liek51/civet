@@ -85,6 +85,9 @@ class Pipeline(object):
         except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
+        except civet_exceptions.MissingFile as e:
+            print(e)
+            sys.exit(1)
 
     def _parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
                   submit_jobs=True, completion_mail=True, search_path="",
