@@ -496,7 +496,7 @@ class PipelineFile(object):
         if bof.list_from_param:
             # based on a filelist passed as a parameter,  use first file in the
             # filelist
-            path = self.path.split(',')[0]
+            path = bof.path.split(',')[0]
         else:
             path = bof.path
 
