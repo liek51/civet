@@ -489,7 +489,7 @@ class PipelineFile(object):
         # the based_on attribute is the fid of another file
         # whose path we're going to mangle to create ours.
         if bo not in files:
-            sys.exit('ERROR: based on unknown file: {0}'.format(bo))
+            sys.exit('ERROR: {} is based on unknown file: {}'.format(self.id, bo))
         bof = files[bo]
         bof.fix_up_file(files, circularity)
 
