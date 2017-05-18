@@ -246,13 +246,14 @@ class PipelineFile(object):
             is_input = att['input'].upper() == 'TRUE'
 
         # Create directory?
+        create = False
         if is_dir:
             if 'create' in att:
                 create = att['create'].upper() == 'TRUE'
-            else:
+            elif not is_input:
+                # if the directory is not flagged as an input (should exist at
+                # submit time) then we will make sure it exists.
                 create = True
-        else:
-            create = False
 
         in_dir = None
         if 'in_dir' in att:
