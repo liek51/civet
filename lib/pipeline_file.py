@@ -243,14 +243,13 @@ class PipelineFile(object):
             is_input = att['input'].upper() == 'TRUE'
 
         # Create directory?
+        create = False
         if is_dir:
             if 'create' in att:
                 create = att['create'].upper() == 'TRUE'
-            else:
+            elif not is_input:
                 create = True
-        else:
-            create = False
-
+        
         in_dir = None
         if 'in_dir' in att:
             in_dir = att['in_dir']
