@@ -248,7 +248,7 @@ class TorqueJobRunner(object):
                    submitted.  Useful for debugging pipelines.
     """
 
-    __MAX_RETRY = 3
+    __MAX_RETRY = 5
     
     # the template script, which will be customized for each job
     # $VAR will be substituted before job submission $$VAR will become $VAR
@@ -565,8 +565,8 @@ class TorqueJobRunner(object):
 
             # if pbs.pbs_submit failed, try again
             while not job_id and retry < self.__MAX_RETRY:
-                time.sleep(retry * 2)
                 retry += 1
+                time.sleep(retry ** 2)
                 job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                         self.queue, None)
 
