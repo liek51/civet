@@ -11,5 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class ParseError(Exception):
+
+class CivetException(Exception):
     pass
+
+
+class ParseError(CivetException):
+    pass
+
