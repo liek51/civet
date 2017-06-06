@@ -34,6 +34,7 @@ import PBSQuery
 
 from batch_job import *
 import common
+import civet_exceptions
 
 #make sure we look in the parent directory for modules when running as a script
 #so that we can find the utilities module
@@ -51,18 +52,25 @@ _SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
 _error_strings = None
 
-    
-def _connect_to_server(server):
+_MAX_RETRY = 4
+
+
+def _connect_to_server(server=None):
     """
         open a connection to a pbs_server at hostname server, if server is None 
         then connect to the default server.
         
         This function is shared between JobManager and TorqueJobRunner
     """
-    if server:
-        connection = pbs.pbs_connect(server)
-    else:
-        connection = pbs.pbs_connect(pbs.pbs_default())
+    server_name = server if server else pbs.pbs_default()
+
+    retry = 0
+    connection = pbs.pbs_connect(server_name)
+
+    while connection <= 0 and retry < _MAX_RETRY:
+        retry += 1
+        time.sleep(retry ** 2)
+        connection = pbs.pbs_connect(server_name)
         
     if connection <= 0:
         e, e_msg = pbs.error()
@@ -95,7 +103,22 @@ class JobManager(object):
     E_STATE = 15018
 
     def __init__(self, pbs_server=None):
-        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
+        self.pbsq = None
+        retry = 0
+        cached_exception = None
+        while not self.pbsq and retry < _MAX_RETRY:
+            try:
+                self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
+            except PBSQuery.PBSError as e:
+                cached_exception = e
+                retry += 1
+                time.sleep(retry ** 2)
+
+        if not self.pbsq:
+            if cached_exception:
+                raise civet_exceptions.CivetException(cached_exception.message)
+            else:
+                raise civet_exceptions.CivetException("Unable to instantiate PBSQuery instance, unknown error.")
         self.pbs_server = pbs_server
 
     def query_job(self, job_id):
@@ -111,7 +134,6 @@ class JobManager(object):
         # with some versions of Torque (Torque 4),  it is fairly common for
         # Torque to fail to establish a connection when making lots of
         # successive queries. If this happens,  wait and retry again
-        max_retry = 5
         retry = 0
         job_status = None
 
@@ -119,9 +141,10 @@ class JobManager(object):
             try:
                 job_status = self.pbsq.getjob(job_id)
             except PBSQuery.PBSError as e:
-                if retry < max_retry:
+                if retry < _MAX_RETRY:
                     retry += 1
-                    time.sleep(2 * retry)
+                    print("Retrying connection...", file=sys.stderr)
+                    time.sleep(retry ** 2)
                     continue
                 else:
                     # TODO use custom exception rather than PBSQuery.PBSError
@@ -248,8 +271,6 @@ class TorqueJobRunner(object):
                    submitted.  Useful for debugging pipelines.
     """
 
-    __MAX_RETRY = 3
-    
     # the template script, which will be customized for each job
     # $VAR will be substituted before job submission $$VAR will become $VAR
     # after substitution
@@ -484,7 +505,6 @@ class TorqueJobRunner(object):
             script_file.write(self.generate_script(batch_job))
         
         if self.submit:
-            
             # build up our torque job attributes and resources
             job_attributes = {}
             job_resources = {}
@@ -560,9 +580,10 @@ class TorqueJobRunner(object):
                                     self.queue, None)
 
             # if pbs.pbs_submit failed, try again
-            while not job_id and retry < self.__MAX_RETRY:
-                time.sleep(retry * 2)
+            while not job_id and retry < _MAX_RETRY:
                 retry += 1
+                print("Retrying connection...", file=sys.stderr)
+                time.sleep(retry ** 2)
                 job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                         self.queue, None)
 
@@ -594,6 +615,7 @@ class TorqueJobRunner(object):
             Release a user hold from a held batch job.
             
             :param job_id: job id to release (short form not allowed)
+            :param id: job id to release (short form not allowed)
             :param connection: optional connection to a pbs_server, if not
                   passed release_job will establish a new connection
         """
