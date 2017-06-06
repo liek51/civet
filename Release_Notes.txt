@@ -18,6 +18,7 @@ Features
  - a file can now be based on a filelist passed as input parameter. In this
    case the first file in the filelist is used as the source for the based_on
    file
+ - Enhanced recovery for Torque connection errors (unable to open socket errors)
 
 
 Version 1.8.4.1
