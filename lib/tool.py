@@ -254,14 +254,16 @@ class Tool(object):
 
         # Now we can fix up our files.
         try:
-            PipelineFile.fix_up_files(self.tool_files)
+            PipelineFile.finalize_file_paths(self.tool_files)
         except civet_exceptions.ParseError as e:
-            # fix_up_files can throw a civet_exceptions.ParseError, however
+            # finalize_file_paths can throw a civet_exceptions.ParseError, however
             # it doesn't know what file it is in at the time,  so we catch it
             # here, add the filename to the message, and raise an exception
             msg = "{}:  {}".format(os.path.basename(self.xml_file), e)
             raise civet_exceptions.ParseError(msg)
         
+        sumarize_files(self.tool_files, self.name_from_pipeline)
+
         # Now we can process self.exit_if_exists
         if self.exit_if_exists:
             files_to_test = []
@@ -340,7 +342,7 @@ class Tool(object):
             raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), self.id))
         
 
-        PipelineFile.parse_XML(e, self.tool_files)
+        pipeline_file.parse_xml(e, self.tool_files)
 
         # Track all the tool temporary files, so that we can
         # delete them at the end of the tool's execution.

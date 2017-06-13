@@ -155,7 +155,7 @@ class ForEach(object):
                 cleanups.append(rel.id)
                 if rel.is_temp:
                     files_to_delete.append(rel.id)
-            PipelineFile.fix_up_files(self.pipelineFiles)
+            PipelineFile.finalize_file_paths(self.pipelineFiles)
 
             step_iteration = 0
             for s in self.steps:
