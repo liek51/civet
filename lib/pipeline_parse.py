@@ -115,6 +115,10 @@ class Pipeline(object):
         
         # option overrides
         self.option_overrides = {}
+
+        # used while generating a summary of all file ids and their final path
+        # for logging
+        self.file_summary = {}
         
         override_file = os.path.splitext(xmlfile)[0] + '.options'
         if os.path.exists(override_file):
@@ -192,7 +196,7 @@ class Pipeline(object):
 
         # create some implicitly defined file IDs
         PipelineFile.add_simple_dir("PIPELINE_ROOT", self.master_XML_dir,
-                                    self._files)
+                                    self._files, input=True)
 
 
         # Walk the child tags.
@@ -206,20 +210,20 @@ class Pipeline(object):
                 pending.append(child)
             else:
                 # <file> <dir> <filelist> and <string> are all handled by PipelineFile
-                PipelineFile.parse_XML(child, self._files)
+                PipelineFile.parse_xml(child, self._files)
         
         # Here we have finished parsing the files in the pipeline XML.
         # Time to fix up various aspects of files that need to have
         # all files done first.
 
         try:
-            PipelineFile.fix_up_files(self._files)
+            PipelineFile.finalize_file_paths(self._files)
         except civet_exceptions.ParseError as e:
-            # fix_up_files can throw a civet_exceptions.ParseError, however
-            # it doesn't know what file it is in at the time,  so we catch it
-            # here, add the filename to the message, and raise an exception
+            # add the xml file path to the exception message
             msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
             raise civet_exceptions.ParseError(msg)
+
+        sumarize_files(self._files, 'pipeline_files')
 
         # Now that our files are all processed and fixed up, we can
         # process the rest of the XML involved with this pipeline.
