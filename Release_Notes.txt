@@ -5,6 +5,12 @@ first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
 
+Version 1.8.4.2
+---------------
+Bug Fixes
+ - revert change that prevented validity.py from working with Python 2.7
+
+
 Version 1.8.4.1
 ---------------
 Bug Fixes
