@@ -84,6 +84,8 @@ class Tool(object):
         self.tool_files = {}
         self.pipeline_files = pipeline_files
 
+        self.docker_image = None
+
         # check the search path for the XML file, otherwise fall back to
         # the same directory as the pipeline XML.  CLIA pipelines do not pass
         # in a search path, so the tool XML needs to be in the same directory
@@ -366,7 +368,7 @@ class Tool(object):
                     vcs.append(vc)
         return vcs
 
-    def submit(self, name_prefix):
+    def submit(self, name):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
@@ -402,7 +404,6 @@ class Tool(object):
 
         # actually run the tool; get the date/time at the start of every
         # command, and at the end of the run.
-        name = '{0}_{1}'.format(name_prefix, self.name_from_pipeline)
         multi_command_list = []
         for c in self.commands:
             # We're calling date too many times.
@@ -516,6 +517,45 @@ class Tool(object):
                 elif not os.path.exists(f.path):
                     missing.append(f.path)
         return missing
+
+    def create_task(self, task_name):
+        task = {}
+
+        for c in self.commands:
+            c.fixupOptionsFiles()
+
+        # build the command to run the tool
+        multi_command_list = [c.real_command for c in self.commands]
+        multi_command = '  && \\\n'.join(multi_command_list)
+
+        task['name'] = task_name
+        task['command'] = multi_command
+        task['docker_image'] = self.docker_image
+        task['mem'] = self.mem
+        task['walltime'] = self.walltime
+        task['cores'] = self.threads
+
+        task['input_files'] = []
+        task['output_files'] = []
+        task['dependencies'] = []
+        for input_name in self.ins:
+            inf = self.pipeline_files[input_name]
+            if inf.creator_job and inf.creator_job not in task['dependencies']:
+                task['dependencies'].append(inf.creator_job)
+
+            task['input_files'].append({'id': input_name, 'local': inf.path,
+                                        'cloud': inf.cloud_path})
+
+        for output_name in self.outs:
+            outf = self.pipeline_files[output_name]
+            # Any files that we created and that will be passed to other jobs
+            # need to be marked with our job id.  It is OK if we overwrite
+            # a previous job.
+            outf.set_creator_job(task_name)
+            task['output_files'].append({'id': output_name, 'local': outf.path,
+                                         'cloud': outf.cloud_path})
+
+        return task
 
 
 class Option(object):
