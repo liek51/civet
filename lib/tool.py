@@ -373,9 +373,7 @@ class Tool(object):
         Submit the commands that comprise the tool as a single cluster job.
 
 
-        :param name_prefix: a string, which when combined with this tool's
-                name attribute, will result in a unique (to the pipeline)
-                job name for the cluster.
+        :param name:  a unique (to the pipeline) job name.
         :return: job_id: a value which can be passed in as a depends_on list
                 element in a subsequent tool submission.
         """

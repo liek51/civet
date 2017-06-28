@@ -320,8 +320,7 @@ class Pipeline(object):
         # files, etc.  That one needs to run last.  So we track 
         # all the batch job ids that are related to this pipeline.
         self.all_batch_jobs = []
-        self.all_tasks = []
-        
+
         # Check that all files marked "input" exist.
         missing = self.check_files_exist()
         if missing:
