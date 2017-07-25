@@ -18,6 +18,14 @@ Features
  - a file can now be based on a filelist passed as input parameter. In this
    case the first file in the filelist is used as the source for the based_on
    file
+ - Enhanced recovery for Torque connection errors (unable to open socket errors)
+ - added --write-file-summary option to civet_run
+
+
+Version 1.8.4.2
+---------------
+Bug Fixes
+ - Revert change to validity.py that broke it on Python 2.7
 
 
 Version 1.8.4.1
