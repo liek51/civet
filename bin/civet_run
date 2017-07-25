@@ -64,6 +64,10 @@ def main():
     parser.add_argument('--walltime-multiplier', dest='walltime_multiplier',
                         type=float, default=None,
                         help="optional walltime multiplier to be applied to every job's walltime")
+    parser.add_argument('--write-file-summary', action='store_true',
+                        help="write a file containing information about Civet "
+                             "file objects used in this pipeline into the log "
+                             "directory")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
@@ -83,7 +87,8 @@ def main():
                       force_conditional_steps=args.force_conditional,
                       delay=args.delay, email_address=args.email_address,
                       error_email_address=args.error_email_address,
-                      walltime_multiplier=args.walltime_multiplier)
+                      walltime_multiplier=args.walltime_multiplier,
+                      write_pipeline_files=args.write_file_summary)
     except civet_exceptions.ParseError as e:
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)

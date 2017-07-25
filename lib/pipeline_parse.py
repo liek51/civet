@@ -23,6 +23,7 @@ import datetime
 import os
 import getpass
 import xml.etree.ElementTree as ET
+import json
 
 from foreach import *
 from pipeline_file import *
@@ -74,14 +75,15 @@ class Pipeline(object):
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None, walltime_multiplier=1):
+                  error_email_address=None, walltime_multiplier=1,
+                  write_pipeline_files=False):
 
         try:
             self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
                             completion_mail, search_path, user_override_file,
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
-                            walltime_multiplier)
+                            walltime_multiplier, write_pipeline_files=False)
         except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
@@ -93,7 +95,8 @@ class Pipeline(object):
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None, walltime_multiplier=1):
+                  error_email_address=None, walltime_multiplier=1,
+                  write_pipeline_files=False):
         try:
             pipe = ET.parse(xmlfile).getroot()
         except ET.ParseError as e:
@@ -223,7 +226,10 @@ class Pipeline(object):
             msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
             raise civet_exceptions.ParseError(msg)
 
-        sumarize_files(self._files, 'pipeline_files')
+        if write_pipeline_files:
+            sumarize_files(self._files, 'pipeline_files')
+            with open(os.path.join(self.log_dir, "pipeline_files.json"), 'w') as f:
+                f.write(json.dumps(self.file_summary, indent=4, sort_keys=True))
 
         # Now that our files are all processed and fixed up, we can
         # process the rest of the XML involved with this pipeline.
