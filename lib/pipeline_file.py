@@ -263,7 +263,7 @@ class PipelineFile(object):
             path = self.path
             if (os.path.split(path)[0] == '' and (not self.is_input) and
                 self != PipelineFile.output_dir and
-                PipelineFile.output_dir):
+                PipelineFile.output_dir and PipelineFile.output_dir.finalized):
                 path = os.path.join(PipelineFile.get_output_dir(), path)
             self.path = os.path.abspath(path)
 
