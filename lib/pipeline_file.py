@@ -558,6 +558,4 @@ def sumarize_files(files, group):
         PL.file_summary[group][f] = {'local path': files[f].path}
         if files[f].creator_job:
             PL.file_summary[group][f]['producer job'] = files[f].creator_job
-        else:
-            PL.file_summary[group][f]['producer job'] = None
 
