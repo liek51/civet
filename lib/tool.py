@@ -342,7 +342,7 @@ class Tool(object):
             raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), self.id))
         
 
-        pipeline_file.parse_xml(e, self.tool_files)
+        parse_xml(e, self.tool_files)
 
         # Track all the tool temporary files, so that we can
         # delete them at the end of the tool's execution.
