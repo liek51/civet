@@ -100,6 +100,7 @@ class PipelineFile(object):
                  default_output=False, foreach_dep=None):
         self.id = id
         self.path = path
+        self.cloud_path = None
         self._is_file = is_file
         self.is_temp = is_temp
         self.is_input = is_input
