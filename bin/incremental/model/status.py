@@ -24,4 +24,4 @@ class Status(Base):
         self.name = name
 
     def __repr__(self):
-        return 'ID: {0}  Name: {1}'.format(self.id, self.name)
+        return '<Status: ID={0} Name={1}>'.format(self.id, self.name)

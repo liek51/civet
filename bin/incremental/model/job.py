@@ -40,8 +40,8 @@ class Job(Base):
         self.dependencies = dependencies
 
     def __repr__(self):
-        return 'ID: {0} Status ID: {1} Script path: {2}  Torque ID: {3}  ' \
-               'Dependencies: {3}'.format(
+        return '<Job: ID={0} StatusID={1} ScriptPath={2} TorqueID={3} ' \
+               'Dependencies={4}>'.format(
                 self.id, self.status_id, self.script_path, self.torque_id,
                 self.dependencies)
 
