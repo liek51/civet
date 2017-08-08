@@ -1,67 +1,17 @@
 #! /usr/bin/env python
 from __future__ import print_function
 
+import logging
 import time
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import relationship, backref, sessionmaker
+from model.job import Job
+from model.pipeline import Pipeline
+from model.session import Session
+from model.status import Status
 
-from base import Base
-
-
-from job import Job
-from status import Status
-
-
-def mark_submitted(job, torque_id):
-    # Fake submitting a job:
-    submitted_status_id = get_status_id('Submitted')
-
-    print('\nSubmitting:', job)
-    job.status_id = submitted_status_id
-    job.torque_id = torque_id
-    print('Now in submitted state:', job)
-    session.commit()
-
-
-def mark_complete_and_release_dependencies(torque_id):
-    # Now let's complete that job.
-    print('\nNow completing torque_id:', torque_id)
-
-    # Get the status ID for complete jobs, so we can mark it.
-    complete_status_id = get_status_id('Complete')
-
-    completed_job = session.query(Job).filter(Job.torque_id == torque_id).one()
-    completed_job.status_id = complete_status_id
-    print('\nThe now-completed job is:', completed_job)
-
-    # Find all the jobs depending on the completed job.
-    dependent_jobs = session.query(Job).filter(
-        Job.dependencies.any(Job.torque_id == torque_id))
-    for j in dependent_jobs:
-        print('\nFound dependent job', j)
-        print('Dependencies:', j.dependencies)
-        j.dependencies.remove(completed_job)
-        print("New dependency list:", j.dependencies)
-    session.commit()
-
-
-def scan_for_runnable_jobs():
-    """
-    Cans the database for jobs that are eligible to run; in other words,
-    those with an empty dependency list and the status "Not Submitted".
-    :return: A list of runnable jobs.
-    """
-    unsubmitted_status_id = get_status_id('Not Submitted')
-    print('\nFinding runnable jobs')
-    ready_jobs = session.query(Job).filter(~Job.dependencies.any()). \
-        filter_by(status_id=unsubmitted_status_id).all()
-    print('The jobs that are ready to execute are:')
-    if not ready_jobs:
-        print('No jobs are ready to execute')
-    for j in ready_jobs:
-        print('   ', j)
-    return ready_jobs
+from controller.utilities import get_all_jobs, initialize_model, \
+    init_statuses, mark_complete_and_release_dependencies, mark_submitted, \
+    scan_for_runnable_jobs
 
 
 def scan_for_complete():
@@ -71,89 +21,79 @@ def scan_for_complete():
     For this demo, we simply mark all the submitted jobs as complete.
     :return: A list of complete jobs.
     """
-    submitted_status_id = get_status_id('Submitted')
-    complete_status_id = get_status_id('Complete')
-    submitted_jobs = session.query(Job).filter_by(
+    submitted_status_id = Status.get_id('Submitted')
+    complete_status_id = Status.get_id('Complete')
+    submitted_jobs = Session.query(Job).filter_by(
         status_id=submitted_status_id).all()
-    print('\nSubmitted jobs which have just completed:')
+    logging.debug('Submitted jobs which have just completed:')
     for job in submitted_jobs:
         job.status_id = complete_status_id
-        print('   ', job)
-    session.commit()
+        logging.debug('    {0}'.format(job))
+    Session.commit()
     return submitted_jobs
-
-
-def init_statuses():
-    """
-    Create database records for the statuses we need to track.  This is real
-    code that can probably go into the final solution.
-    :return: None
-    """
-    # Create the statuses
-    statuses = ['Not Submitted', 'Submitted', 'Complete', 'Failed']
-    print("Creating four statuses.  They are:", statuses)
-
-    for status in statuses:
-        session.add(Status(status))
-    session.commit()
-
-
-def get_status_id(name):
-    """
-    Throughout, we need to set and query on various statuses.  We need the ID
-    associated with a status name.
-    :param name: The name of the status.
-    :return: The id associated with the name
-    """
-    id = session.query(Status.id).filter(Status.name == name).one()[0]
-    return id
 
 
 def create_demo_jobs():
     """
-    Create four demonstration job records.  This is for demo purposes only.
+    Create a pipeline and four demonstration job records.
+    This is for demo purposes only.
+
+    Job constructor is:
+        def __init__(self, pipeline, job_name, threads, stdout_path,
+                 stderr_path, script_path, epilog_path, mem,
+                 email_list, mail_options, env, depends_on):
+
     :return: None
     """
+    # Create the pipeline
+    pipeline = Pipeline('My pipeline', 'Path to log dir')
+    logging.debug('Created new pipeline: {0}'.format(pipeline))
+
     # Two "start" jobs with no dependencies
-    unsubmitted_status_id = \
-        session.query(Status.id).filter(Status.name == 'Not Submitted').one()[0]
-    print('\nNow creating four jobs.  Job 3 depends on jobs 1 and 2, and job 4 depends on job 1 and job 3.')
-    j1 = Job('Path to script 1', unsubmitted_status_id, [])
-    j2 = Job('Path to script 2', unsubmitted_status_id, [])
+    logging.debug('\nNow creating four jobs.  Job 3 depends on jobs 1 and 2, '
+                  'and job 4 depends on job 1 and job 3.')
+    j1 = Job(pipeline, 'Job_1', 1, 'Stdout path 1',
+             'Stderr path 1', 'Path to script 1', 'Epilog_path 1', 64,
+             'Email addr 1', 'Mail opts 1', 'Env 1', [])
+    j2 = Job(pipeline, 'Job_2', 2, 'Stdout path 2',
+             'Stderr path 2', 'Path to script 2', 'Epilog_path 2', 128,
+             'Email addr 2', 'Mail opts 2', 'Env 2', [])
 
     # Have to put these into the session and commit them to get their IDs.
-    session.add(j1)
-    session.add(j2)
-    session.commit()
+    Session.add(j1)
+    Session.add(j2)
+    Session.commit()
 
     # Now two dependent jobs
-    j3 = Job('Path to script 3', unsubmitted_status_id, [j1, j2])
-    session.add(j3)
-    session.commit()
+    j3 = Job(pipeline, 'Job_3', 4, 'Stdout path 3',
+             'Stderr path 3', 'Path to script 3', 'Epilog_path 3', 128,
+             'Email addr 3', 'Mail opts 3', 'Env 3', [j1, j2])
+    Session.add(j3)
+    Session.commit()
 
-    j4 = Job('Path to script 4', unsubmitted_status_id, [j1, j3])
+    j4 = Job(pipeline, 'Job_4', 8, 'Stdout path 4',
+             'Stderr path 4', 'Path to script 4', 'Epilog_path 4', 256,
+             'Email addr 4', 'Mail opts 4', 'Env 4', [j1, j3])
 
-    session.add(j4)
-    session.commit()
+    Session.add(j4)
+    Session.commit()
 
-    session.commit()
+    logging.debug('Pipeline status: {0}'.format(pipeline))
+    logging.debug('Done creating pipeline and jobs.')
 
-
-def get_all_jobs():
-    jobs = session.query(Job).all()
-    return jobs
-
-def all_complete():
-    print('TODO: MUST IMPLEMENT all_complete()')
-    return True
-
+    # Demonstrate getting a log directory from a Job.
+    logging.debug('Job 1\'s log directory is "{0}"'.format(
+        j1.pipeline.log_directory
+    ))
 
 def main_loop():
+    pipeline = Session.query(Pipeline).one()
     while True:
-        runnable = scan_for_runnable_jobs()
-        if not runnable and all_complete():
-            # We're done!
+        if pipeline.is_complete():
+            logging.debug('Final status of the pipeline is:{0}'.format(pipeline))
             break
+        logging.debug('The status of the pipeline is:{0}'.format(pipeline))
+        runnable = scan_for_runnable_jobs()
         for job in runnable:
             mark_submitted(job, demo_job_prefix + str(job.id))
 
@@ -165,39 +105,35 @@ def main_loop():
                 demo_job_prefix + str(job.id))
 
         all_jobs = get_all_jobs()
-        print("The current status of all jobs is:")
+        logging.debug("The current status of all jobs is:")
         for job in all_jobs:
-            print(job)
+            logging.debug(job)
+
+demo_job_prefix = 'cadillac:'
 
 def main():
-    print("Creating status records")
+    logging.basicConfig(level=logging.DEBUG)
+    logging.debug("Initializing the model.")
+    Session.session = initialize_model('civet.db')
+    logging.debug("Creating status records")
     init_statuses()
-    print("Retrieving statuses from DB")
+    logging.debug("Retrieving statuses from DB")
     # Now get the statuses back out of the DB.
-    result = session.query(Status)
+    result = Session.query(Status)
     for row in result:
-        print(row)
-    print()
+        logging.debug(row)
 
-    print("\nCreating demo jobs")
+    logging.debug("\nCreating demo jobs")
     create_demo_jobs()
     all_jobs = get_all_jobs()
 
     for j in all_jobs:
-        print(j)
+        logging.debug(j)
 
-    print('\nEntering main_loop')
+    logging.debug('\nEntering main_loop')
     main_loop()
-    print("Done!")
+    logging.debug("Done!")
 
 
 if __name__ == '__main__':
-    # Start things up
-    # For this early experimentation we don't use a file.
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine, checkfirst=True)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    demo_job_prefix = 'cadillac:'
-
     main()

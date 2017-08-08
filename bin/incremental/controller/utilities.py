@@ -1,0 +1,113 @@
+from __future__ import print_function
+
+import logging
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from model.base import Base
+from model.job import Job
+from model.status import Status
+
+from model.session import Session
+
+
+def initialize_model(db_path, echo_sql=False):
+    """
+    Create a connection to a new database.
+    Record the session in the Session object.
+    :param db_path: The full path to the database to be created.  For testing,
+        you can specify :memory:
+    :param echo_sql: If true, the SQL will be written to stdout (?err?) as it
+        is executed.
+    :return: The inintialized session
+
+    NOTE: For some reason I haven't figured out, just setting the
+    Session.session seems to set it only for this module and leave it None for
+    the rest of the modules.  So we return it, and it is up to our caller to
+    set it in the Session class.
+    """
+    engine = create_engine('sqlite:///{0}'.format(db_path))
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine, checkfirst=True)
+    session_func = sessionmaker(bind=engine)
+    session = session_func()
+    engine.echo = echo_sql
+
+    logging.debug("Model initialization is complete.")
+    logging.info("Using database {0}".format(
+        db_path
+    ))
+    return session
+
+def mark_submitted(job, torque_id):
+    # Fake submitting a job:
+    logging.debug('Submitting: {0}'.format(job))
+    job.set_status('Submitted')
+    job.torque_id = torque_id
+    logging.debug('Now in submitted state: {0}'.format(job))
+    Session.session.commit()
+
+
+def mark_complete_and_release_dependencies(torque_id):
+    # Now let's complete that job.
+    logging.debug('Now completing torque_id: {0}'.format(torque_id))
+
+    completed_job = Session.session.query(Job).filter(Job.torque_id == torque_id).one()
+    completed_job.set_status('Complete')
+    logging.debug('The now-completed job is: {0}'.format(completed_job))
+
+    # Find all the jobs depending on the completed job.
+    dependent_jobs = Session.session.query(Job).filter(
+        Job.depends_on.any(Job.torque_id == torque_id))
+    for j in dependent_jobs:
+        logging.debug('Found dependent job: {0}'.format(j))
+        j.depends_on.remove(completed_job)
+        logging.debug("New state with completed job removed: {0}".format(j))
+    Session.session.commit()
+
+
+def scan_for_runnable_jobs():
+    """
+    Cans the database for jobs that are eligible to run; in other words,
+    those with an empty dependency list and the status "Not Submitted".
+    :return: A list of runnable jobs.
+    """
+    unsubmitted_status_id = Status.get_id('Not Submitted')
+    logging.debug('Finding runnable jobs')
+    ready_jobs = Session.query(Job).filter(~Job.depends_on.any()). \
+        filter_by(status_id=unsubmitted_status_id).all()
+    if not ready_jobs:
+        logging.debug('No jobs are ready to execute')
+    else:
+        logging.debug('The jobs that are ready to execute are:')
+        for j in ready_jobs:
+            logging.debug('    {0}'.format(j))
+    return ready_jobs
+
+
+def init_statuses():
+    """
+    Create database records for the statuses we need to track.  This is real
+    code that can probably go into the final solution.
+    :return: None
+    """
+    # Delete any previous records; we're initializing from scratch.
+
+    logging.debug("In init_statuses(), session={0}".format(Session.session))
+    # Create the statuses
+    statuses = ['Not Submitted', 'Submitted', 'Complete', 'Failed', 'Deleted']
+    logging.debug("Creating {0} statuses.  They are: {1}".format(
+        len(statuses), statuses))
+
+    for status in statuses:
+        Session.add(Status(status))
+    Session.commit()
+    pass
+
+
+def get_all_jobs():
+    jobs = Session.query(Job).all()
+    return jobs
+
+
