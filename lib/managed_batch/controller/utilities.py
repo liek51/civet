@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import logging
-import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from managed_batch.model.base import Base
 from managed_batch.model.job import Job
 from managed_batch.model.status import Status
+from managed_batch.model.pipeline import Pipeline
 
 from managed_batch.model.session import Session
 
