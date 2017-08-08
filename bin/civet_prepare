@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+# Copyright 2016 The Jackson Laboratory
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#civet pipeline driver program
+
+from __future__ import print_function
+
+import argparse
+import sys
+import inspect
+import os
+import json
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+    sys.path.insert(0, lib_folder)
+import civet_exceptions
+import pipeline_parse as PL
+import version
+import utilities
+
+
+def main():
+
+    utilities.cleanup_command_line()
+
+    version.parse_options()
+    
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-o', '--option-file', dest='option_file',
+                        default=None, help="option override file")
+    parser.add_argument('-t', '--keep-temp', dest='keep_temp',
+                        action='store_true',
+                        help="Don't delete temporary pipeline files")
+
+    parser.add_argument('-f', '--force-conditional', dest='force_conditional',
+                        action='store_true',
+                        help="Force conditional steps to run")
+
+    parser.add_argument('-e', '--email-address', dest='email_address',
+                        default=None,
+                        help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
+    parser.add_argument('--error-email-address', dest='error_email_address',
+                        default=None, help="email address for error emails, defaults to '--email-address' value")
+    parser.add_argument('--walltime-multiplier', dest='walltime_multiplier',
+                        type=float, default=None,
+                        help="optional walltime multiplier to be applied to every job's walltime")
+    parser.add_argument('--write-file-summary', action='store_true',
+                        help="write a file containing information about Civet "
+                             "file objects used in this pipeline into the log "
+                             "directory")
+    parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
+    parser.add_argument('pipeline_args', help="pipeline arguments",
+                        nargs=argparse.REMAINDER)
+    parser.set_defaults(keep_temp=False)
+    parser.set_defaults(force_conditional=False)
+    args = parser.parse_args()
+
+    try:
+        PL._parse_XML(args.pipeline[0], args.pipeline_args,
+                      skip_validation=True,
+                      search_path=os.environ.get('CIVET_PATH'),
+                      user_override_file=args.option_file,
+                      keep_temp=args.keep_temp,
+                      force_conditional_steps=args.force_conditional,
+                      email_address=args.email_address,
+                      error_email_address=args.error_email_address,
+                      walltime_multiplier=args.walltime_multiplier,
+                      write_pipeline_files=args.write_file_summary)
+    except civet_exceptions.ParseError as e:
+        print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
+        sys.exit(1)
+    except civet_exceptions.MissingFile as e:
+        print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
+        sys.exit(2)
+
+    task_list = PL.prepare_managed_tasks()
+
+    # XXX this is temporary for testing during feature development
+    print(json.dumps(task_list, indent=4, sort_keys=True))
+
+if __name__ == "__main__":
+    main()
