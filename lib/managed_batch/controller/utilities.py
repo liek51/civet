@@ -28,14 +28,10 @@ def initialize_model(db_path, echo_sql=False):
     the rest of the modules.  So we return it, and it is up to our caller to
     set it in the Session class.
     """
-    print(db_path)
-    db_exists = os.path.exists(db_path)
-
     engine = create_engine('sqlite:///{0}'.format(db_path))
 
     #Base.metadata.drop_all(engine)
-    if not db_exists:
-        Base.metadata.create_all(engine, checkfirst=True)
+    Base.metadata.create_all(engine, checkfirst=True)
     session_func = sessionmaker(bind=engine)
     session = session_func()
     engine.echo = echo_sql
