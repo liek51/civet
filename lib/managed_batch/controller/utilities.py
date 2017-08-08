@@ -1,15 +1,16 @@
 from __future__ import print_function
 
 import logging
+import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from model.base import Base
-from model.job import Job
-from model.status import Status
+from managed_batch.model.base import Base
+from managed_batch.model.job import Job
+from managed_batch.model.status import Status
 
-from model.session import Session
+from managed_batch.model.session import Session
 
 
 def initialize_model(db_path, echo_sql=False):
@@ -27,9 +28,14 @@ def initialize_model(db_path, echo_sql=False):
     the rest of the modules.  So we return it, and it is up to our caller to
     set it in the Session class.
     """
+    print(db_path)
+    db_exists = os.path.exists(db_path)
+
     engine = create_engine('sqlite:///{0}'.format(db_path))
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine, checkfirst=True)
+
+    #Base.metadata.drop_all(engine)
+    if not db_exists:
+        Base.metadata.create_all(engine, checkfirst=True)
     session_func = sessionmaker(bind=engine)
     session = session_func()
     engine.echo = echo_sql
@@ -39,6 +45,7 @@ def initialize_model(db_path, echo_sql=False):
         db_path
     ))
     return session
+
 
 def mark_submitted(job, torque_id):
     # Fake submitting a job:

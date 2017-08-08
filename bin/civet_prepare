@@ -32,6 +32,10 @@ import pipeline_parse as PL
 import version
 import utilities
 
+from managed_batch.model.session import Session
+
+from managed_batch.controller.utilities import initialize_model, init_statuses
+
 
 def main():
 
@@ -63,6 +67,10 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
+    parser.add_argument('task_list',
+                        help='filename where civet_prepare will store the task '
+                             'list. If the file exists, civet_prepare will '
+                             'append new tasks to the file')
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
@@ -85,10 +93,14 @@ def main():
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)
     except civet_exceptions.MissingFile as e:
-        print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
+        print("\nPipeline Error: ", e, "\n", file=sys.stderr)
         sys.exit(2)
 
     task_list = PL.prepare_managed_tasks()
+
+    Session.session = initialize_model(args.task_list)
+    init_statuses()
+
 
     # XXX this is temporary for testing during feature development
     print(json.dumps(task_list, indent=4, sort_keys=True))
