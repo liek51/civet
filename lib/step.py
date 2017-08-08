@@ -50,13 +50,13 @@ class Step(object):
             job_ids.append(job_id)
         return job_ids
 
-    def create_tasks(self, name_prefix, managed_batch=False):
+    def create_tasks(self, name_prefix, execution_mode):
         invocation = 0
         tasks = []
         for tool in self.tools:
             invocation += 1
             name = self.generate_name(name_prefix, invocation, tool.tool.name_from_pipeline)
-            tasks.append(tool.create_task(name, managed_batch))
+            tasks.append(tool.create_task(name, execution_mode))
         return tasks
 
     def collect_files_to_validate(self):

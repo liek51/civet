@@ -37,12 +37,6 @@ import civet_exceptions
 import config
 
 
-class ExecModes(object):
-    BATCH_STANDARD = 1
-    BATCH_MANAGED = 2
-    CLOUD = 3
-
-
 class Pipeline(object):
     """
     A singleton module for information about the overall pipeline.
@@ -137,7 +131,7 @@ class Pipeline(object):
         if user_override_file and os.path.exists(user_override_file):
             self.parse_override_file(user_override_file, "user")
 
-        self.execution_mode = ExecModes.BATCH_STANDARD
+        self.execution_mode = ToolExecModes.BATCH_STANDARD
             
            
         # Register the parameters that may be file paths
@@ -298,7 +292,7 @@ class Pipeline(object):
             of.write('  skip_validation: {0}\n'.format(
                 self.skip_validation))
             of.write('  queue: {0}\n'.format(self.queue))
-            if self.execution_mode == ExecModes.BATCH_STANDARD:
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
                 of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
             of.write('  completion_mail: {0}\n'.format(
                 self.completion_mail))
@@ -306,11 +300,11 @@ class Pipeline(object):
             of.write('  user_override_file: {0}\n'.format(
                 self.user_override_file))
             of.write('  keep_temp: {0}\n'.format(self.keep_temp))
-            if self.execution_mode == ExecModes.BATCH_STANDARD:
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
                 of.write('  release_jobs: {0}\n'.format(self.release_jobs))
             of.write('  force_conditional_steps: {0}\n'.format(
                 self.force_conditional_steps))
-            if self.execution_mode == ExecModes.BATCH_STANDARD:
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
                 of.write('  delay: {0}\n'.format(self.delay))
             of.write('  email_address: {0}\n'.format(self.email_address))
             of.write('  error_email_address: {0}\n'.format(
@@ -386,13 +380,13 @@ class Pipeline(object):
                          "\t{0}\n".format(message))
         sys.exit(status)
 
-    def create_task_list(self, managed_batch=False):
+    def create_task_list(self):
         invocation = 0
         all_tasks = []
         for step in self._steps:
             invocation += 1
             name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
-            step_tasks = step.create_tasks(name_prefix, managed_batch)
+            step_tasks = step.create_tasks(name_prefix, self.execution_mode)
             all_tasks.extend(step_tasks)
 
         all_tasks.append(self._create_cleanup_task(all_tasks))
@@ -400,13 +394,13 @@ class Pipeline(object):
 
     def prepare_managed_tasks(self):
 
-        self.execution_mode = ExecModes.BATCH_MANAGED
+        self.execution_mode = ToolExecModes.BATCH_MANAGED
 
         print('Preparing pipeline ' + self.name)
 
         self.write_command_info()
 
-        tasks = self.create_task_list(managed_batch=True)
+        tasks = self.create_task_list()
 
         return tasks
 

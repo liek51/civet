@@ -48,8 +48,8 @@ class PipelineTool(object):
     def submit(self, name_prefix):
         return self.tool.submit(name_prefix)
 
-    def create_task(self, task_id, managed_batch=False):
-        return self.tool.create_task(task_id, managed_batch=managed_batch)
+    def create_task(self, task_id, execution_mode):
+        return self.tool.create_task(task_id, execution_mode)
 
     def collect_version_commands(self):
         return self.tool.collect_version_commands()

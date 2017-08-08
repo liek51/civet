@@ -28,6 +28,12 @@ from pipeline_file import *
 import config
 
 
+class ToolExecModes(object):
+    BATCH_STANDARD = 1
+    BATCH_MANAGED = 2
+    CLOUD = 3
+
+
 class Tool(object):
     # This script parses all of a tool definition.  Tools may be invoked
     # by the pipeline.
@@ -512,7 +518,11 @@ class Tool(object):
                     missing.append(f.path)
         return missing
 
-    def create_task(self, task_name, managed_batch=False):
+    def create_task(self, task_name, execution_mode):
+
+        # Get the current symbols in the pipeline...
+        import pipeline_parse as PL
+
         task = {}
 
         for c in self.commands:
@@ -523,39 +533,44 @@ class Tool(object):
 
         task['name'] = task_name
         task['command'] = multi_command
-        task['docker_image'] = self.docker_image
         task['mem'] = self.mem
         task['walltime'] = self.walltime
         task['cores'] = self.thread_option_max if self.thread_option_max else self.default_threads
 
-        task['input_files'] = []
-        task['output_files'] = []
-        task['dependencies'] = []
-        for input_name in self.ins:
-            inf = self.pipeline_files[input_name]
-            if inf.creator_job and inf.creator_job not in task['dependencies']:
-                task['dependencies'].append(inf.creator_job)
+        if execution_mode == ToolExecModes.CLOUD:
+            task['docker_image'] = self.docker_image
+            task['input_files'] = []
+            task['output_files'] = []
 
-            task['input_files'].append({'id': input_name, 'local': inf.path,
-                                        'cloud': inf.cloud_path})
+            task['dependencies'] = []
+            for input_name in self.ins:
+                inf = self.pipeline_files[input_name]
+                if inf.creator_job and inf.creator_job not in task['dependencies']:
+                    task['dependencies'].append(inf.creator_job)
 
-        for output_name in self.outs:
-            outf = self.pipeline_files[output_name]
-            # Any files that we created and that will be passed to other jobs
-            # need to be marked with our job id.  It is OK if we overwrite
-            # a previous job.
-            outf.set_creator_job(task_name)
-            task['output_files'].append({'id': output_name, 'local': outf.path,
-                                         'cloud': outf.cloud_path})
+                task['input_files'].append({'id': input_name, 'local': inf.path,
+                                            'cloud': inf.cloud_path})
 
-        if managed_batch:
+            for output_name in self.outs:
+                outf = self.pipeline_files[output_name]
+                # Any files that we created and that will be passed to other jobs
+                # need to be marked with our job id.  It is OK if we overwrite
+                # a previous job.
+                outf.set_creator_job(task_name)
+                task['output_files'].append({'id': output_name, 'local': outf.path,
+                                             'cloud': outf.cloud_path})
 
-            # Get the current symbols in the pipeline...
-            import pipeline_parse as PL
+        elif execution_mode == ToolExecModes.BATCH_MANAGED:
 
             # Do the actual batch job submission
             submit_threads = task['cores']
             verify_file_list = self._build_veryify_file_list()
+
+            task['dependencies'] = []
+            for input_name in self.ins:
+                inf = self.pipeline_files[input_name]
+                if inf.creator_job and inf.creator_job not in task['dependencies']:
+                    task['dependencies'].append(inf.creator_job)
 
             batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
