@@ -37,6 +37,12 @@ import civet_exceptions
 import config
 
 
+class ExecModes(object):
+    BATCH_STANDARD = 1
+    BATCH_MANAGED = 2
+    CLOUD = 3
+
+
 class Pipeline(object):
     """
     A singleton module for information about the overall pipeline.
@@ -67,6 +73,7 @@ class Pipeline(object):
         'tool_search_path',
         'path'
     ]
+
 
     def __init__(self):
         pass
@@ -129,6 +136,8 @@ class Pipeline(object):
             
         if user_override_file and os.path.exists(user_override_file):
             self.parse_override_file(user_override_file, "user")
+
+        self.execution_mode = ExecModes.BATCH_STANDARD
             
            
         # Register the parameters that may be file paths
@@ -274,14 +283,8 @@ class Pipeline(object):
             utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
-    def submit(self):
-        """
-        Submit a constructed pipeline to the batch system for execution
-        :return:
-        """
-        print('Executing pipeline ' + self.name)
-
-        # Capture the CWD and the command line that invoked us.
+    def write_command_info(self):
+         # Capture the CWD and the command line that invoked us.
         with open(os.path.join(self.log_dir, 'command_line.txt'), 'w') as of:
             of.write('User:\n')
             of.write(getpass.getuser() + '\n\n')
@@ -295,23 +298,25 @@ class Pipeline(object):
             of.write('  skip_validation: {0}\n'.format(
                 self.skip_validation))
             of.write('  queue: {0}\n'.format(self.queue))
-            of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
+            if self.execution_mode == ExecModes.BATCH_STANDARD:
+                of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
             of.write('  completion_mail: {0}\n'.format(
                 self.completion_mail))
             of.write('  search_path: {0}\n'.format(self.search_path))
             of.write('  user_override_file: {0}\n'.format(
                 self.user_override_file))
             of.write('  keep_temp: {0}\n'.format(self.keep_temp))
-            of.write('  release_jobs: {0}\n'.format(self.release_jobs))
+            if self.execution_mode == ExecModes.BATCH_STANDARD:
+                of.write('  release_jobs: {0}\n'.format(self.release_jobs))
             of.write('  force_conditional_steps: {0}\n'.format(
                 self.force_conditional_steps))
-            of.write('  delay: {0}\n'.format(self.delay))
+            if self.execution_mode == ExecModes.BATCH_STANDARD:
+                of.write('  delay: {0}\n'.format(self.delay))
             of.write('  email_address: {0}\n'.format(self.email_address))
             of.write('  error_email_address: {0}\n'.format(
                 self.error_email_address))
             of.write('  walltime_multiplier: {0}\n'.format(
                 self.walltime_multiplier))
-
 
         #capture the overrides loaded into a log file:
         with open(os.path.join(self.log_dir, 'option_overrides.txt'), 'w') as of:
@@ -319,6 +324,15 @@ class Pipeline(object):
                 for opt, (val,source) in overrides.iteritems():
                     of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt,
                                                           val, source))
+
+    def submit(self):
+        """
+        Submit a constructed pipeline to the batch system for execution
+        :return:
+        """
+        print('Executing pipeline ' + self.name)
+
+        self.write_command_info()
 
         # Most of the dependencies are file-based; a job can run
         # as soon as the files it needs are ready.  However, we
@@ -372,16 +386,29 @@ class Pipeline(object):
                          "\t{0}\n".format(message))
         sys.exit(status)
 
-    def create_task_list(self):
+    def create_task_list(self, managed_batch=False):
         invocation = 0
         all_tasks = []
         for step in self._steps:
             invocation += 1
             name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
-            step_tasks = step.create_tasks(name_prefix)
+            step_tasks = step.create_tasks(name_prefix, managed_batch)
             all_tasks.extend(step_tasks)
+
+        all_tasks.append(self._create_cleanup_task(all_tasks))
         return all_tasks
 
+    def prepare_managed_tasks(self):
+
+        self.execution_mode = ExecModes.BATCH_MANAGED
+
+        print('Preparing pipeline ' + self.name)
+
+        self.write_command_info()
+
+        tasks = self.create_task_list(managed_batch=True)
+
+        return tasks
 
     @property
     def job_runner(self):
@@ -440,7 +467,7 @@ class Pipeline(object):
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
 
-    def submit_cleanup_job(self):
+    def _create_cleanup_cmd(self):
         cmd = []
         # 1. deletes all the temp files.
         if not self.keep_temp:
@@ -451,18 +478,10 @@ class Pipeline(object):
             # We can't just wait for the last job to complete, because it is
             # possible to construct pipelines where the last submitted job
             # completes before an earlier submitted job.
-            depends = []
             for fid in self._files:
                 f = self._files[fid]
                 if f.is_temp:
                     tmps.append(f.path)
-                    if f.consumer_jobs:
-                        for j in f.consumer_jobs:
-                            if j not in depends:
-                                depends.append(j)
-                    if f.creator_job:
-                        if f.creator_job not in depends:
-                            depends.append(f.creator_job)
             if len(tmps):
                 # Use rm -f because if a command is executed conditionally
                 # due to if_exists and if_not_exists, a temp file may not
@@ -476,6 +495,9 @@ class Pipeline(object):
         cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
         cmd.append('CONSOLIDATE_STATUS=$?')
 
+        # consolidate log job needs to run last -- make sure it depends on all
+        # of the child nodes in the dependency graph
+
         # 3. And (finally) send completion email
         if self.completion_mail:
             cmd.append("echo 'The pipeline running in:\n    " +
@@ -483,7 +505,11 @@ class Pipeline(object):
                        "\nhas completed.'" +
                        " | mailx -s 'Pipeline completed' " + self.email_address)
         cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
-        cmd = '\n'.join(cmd)
+        return '\n'.join(cmd)
+
+    def submit_cleanup_job(self):
+
+        cmd = self._create_cleanup_cmd()
 
         # do we need to load a modulefile to execute the Python consolidate log
         # script ?
@@ -503,6 +529,39 @@ class Pipeline(object):
         except Exception as e:
                 sys.stderr.write(str(e) + '\n')
                 sys.exit(self.BATCH_ERROR)
+
+    def _create_cleanup_task(self, all_tasks):
+
+        # Get the current symbols in the pipeline...
+        import pipeline_parse as PL
+
+        cmd = self._create_cleanup_cmd()
+
+        task = {}
+        task['name'] = "rm_temps_consolidate_logs"
+        task['command'] = cmd
+        task['walltime'] = "00:10:00"
+        task['cores'] = 1
+        task['module_files'] = [config.civet_job_python_module] if config.civet_job_python_module else []
+
+        task['dependencies'] = [t['name'] for t in all_tasks]
+
+        batch_job = BatchJob(cmd,
+                             workdir=PipelineFile.get_output_dir(),
+                             walltime=task['walltime'],
+                             modules=task['module_files'],
+                             name=task['name'],
+                             email_list=PL.error_email_address)
+
+        task['batch_script'] = PL.job_runner.write_script(batch_job)
+        task['stdout_path'] = batch_job.stdout_path
+        task['stderr_path'] = batch_job.stderr_path
+        task['epilogue_script'] = PL.job_runner.epilogue_filename
+        task['batch_env'] = PL.job_runner.generate_env(batch_job)
+        task['email_list'] = PL.error_email_address
+        task['mail_options'] = batch_job.mail_option
+
+        return task
 
 
 

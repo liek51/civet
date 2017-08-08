@@ -495,14 +495,9 @@ class TorqueJobRunner(object):
             batch_job.stdout_path =  os.path.join(log_dir, batch_job.name + ".o")
         if not batch_job.stderr_path:
             batch_job.stderr_path = os.path.join(log_dir, batch_job.name + ".e")
-            
-        #create script directory if necessary
-        self._setup_script_dir(batch_job.email_list)
 
         #write batch script
-        filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "{0}.sh".format(batch_job.name))
-        with open(filename, "w") as script_file:
-            script_file.write(self.generate_script(batch_job))
+        self.write_script(batch_job)
         
         if self.submit:
             # build up our torque job attributes and resources
@@ -518,7 +513,7 @@ class TorqueJobRunner(object):
             if batch_job.mem:
                 job_resources['mem'] = batch_job.mem
         
-            job_attributes[pbs.ATTR_v] = self._generate_env(batch_job)
+            job_attributes[pbs.ATTR_v] = self.generate_env(batch_job)
         
             if batch_job.name:
                 job_attributes[pbs.ATTR_N] = batch_job.name
@@ -642,6 +637,18 @@ class TorqueJobRunner(object):
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
 
+    def write_script(self, batch_job):
+
+        #create script directory if necessary
+        self._setup_script_dir(batch_job.email_list)
+
+        #write batch script
+        filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "{0}.sh".format(batch_job.name))
+        with open(filename, "w") as script_file:
+            script_file.write(self.generate_script(batch_job))
+
+        return filename
+
     def generate_script(self, batch_job):
         """
             Generate a Torque batch script based on our template and return as
@@ -656,7 +663,7 @@ class TorqueJobRunner(object):
         """  
         tokens = {}
         
-        tokens['PBS_DIRECTIVES'] = self._generate_directives(batch_job)
+        tokens['PBS_DIRECTIVES'] = self._generate_directives(batch_job, self.epilogue_filename)
         
         tokens['CMD'] = batch_job.cmd
         
@@ -763,7 +770,7 @@ class TorqueJobRunner(object):
         return string.Template(self.epilogue_template).substitute(tokens)
 
     @staticmethod
-    def _generate_env(batch_job):
+    def generate_env(batch_job):
         """
             Generate a basic environment string to send along with the job. 
             
@@ -792,7 +799,7 @@ class TorqueJobRunner(object):
         return env
 
     @staticmethod
-    def _generate_directives(batch_job):
+    def _generate_directives(batch_job, epilogue_filename=None):
         """
             Generate #PBS directives to insert into batch script to facilitate
             rerunning individual scripts by hand (during development)
@@ -803,6 +810,9 @@ class TorqueJobRunner(object):
         """
         directives = ["#PBS -l walltime=" + batch_job.walltime,
                       "#PBS -l nodes={0}:ppn={1}".format(batch_job.nodes, batch_job.ppn)]
+
+        if epilogue_filename:
+            directives.append("#PBS -l epilogue={}".format(epilogue_filename))
         
         if batch_job.mem:
             directives.append("#PBS -l mem=" + batch_job.mem)
@@ -919,7 +929,7 @@ class TorqueJobRunner(object):
 
         except OSError as exception:
             if exception.errno != errno.EEXIST:
-                print('Error while creating directory ' + path, file=sys.stderr)
+                print('Error while creating directory ' + script_dir, file=sys.stderr)
                 raise
 
 

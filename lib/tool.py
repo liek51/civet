@@ -368,6 +368,44 @@ class Tool(object):
                     vcs.append(vc)
         return vcs
 
+    def _build_multi_command(self, rm_tmp=True):
+
+        multi_command_list = [c.real_command for c in self.commands]
+
+        # Tack on a final command to delete our temp files.
+        if rm_tmp and self.tempfile_ids:
+            # Convert from file ids to paths.
+            for n in range(len(self.tempfile_ids)):
+                self.tempfile_ids[n] = (
+                    self.tool_files[self.tempfile_ids[n]].path)
+
+            # Use rm -f because if a command is executed conditionally
+            # due to if_exists and if_not_exists, a temp file may not
+            # exist.  Without -f the rm command would fail, causing
+            # the entire pipeline to fail. We also need -r to take care of
+            # <dir> tags declared temp
+            rm_cmd = 'rm -rf ' + ' '.join(self.tempfile_ids)
+            multi_command_list.append(rm_cmd)
+
+        return '  && \\\n'.join(multi_command_list)
+
+    def _build_veryify_file_list(self):
+        verify_file_list = None
+
+        if not self.skip_validation:
+            verify_file_list = self.verify_files
+            #do we need to load a Python modulefile?
+            need_python = True
+            for m in self.modules:
+                if m.startswith('python'):
+                    need_python = False
+            if need_python:
+                if config.civet_job_python_module:
+                    self.modules.append(config.civet_job_python_module)
+                verify_file_list.append('python')
+
+        return verify_file_list
+
     def submit(self, name):
         """
         Submit the commands that comprise the tool as a single cluster job.
@@ -400,33 +438,7 @@ class Tool(object):
             if p and (p not in self.verify_files):
                 self.verify_files.append(c.program)
 
-        # actually run the tool; get the date/time at the start of every
-        # command, and at the end of the run.
-        multi_command_list = []
-        for c in self.commands:
-            # We're calling date too many times.
-            # If we decide we need to time each command in the future, just
-            # uncomment these two date lines.
-            # multi_command_list.append('date')
-            multi_command_list.append(c.real_command)
-        # multi_command_list.append('date')
-
-        # Tack on a final command to delete our temp files.
-        if self.tempfile_ids:
-            # Convert from file ids to paths.
-            for n in range(len(self.tempfile_ids)):
-                self.tempfile_ids[n] = (
-                    self.tool_files[self.tempfile_ids[n]].path)
-
-            # Use rm -f because if a command is executed conditionally
-            # due to if_exists and if_not_exists, a temp file may not
-            # exist.  Without -f the rm command would fail, causing
-            # the entire pipeline to fail. We also need -r to take care of
-            # <dir> tags declared temp
-            rm_cmd = 'rm -rf ' + ' '.join(self.tempfile_ids)
-            multi_command_list.append(rm_cmd)
-
-        multi_command = '  && \\\n'.join(multi_command_list)
+        multi_command = self._build_multi_command()
 
         # Determine what jobs we depend on based on our input files.
         depends_on = []
@@ -441,24 +453,8 @@ class Tool(object):
                     depends_on.append(PL.foreach_barriers[f.foreach_dep])
 
         # Do the actual batch job submission
-        if self.thread_option_max:
-            submit_threads = self.thread_option_max
-        else:
-            submit_threads = self.default_threads
-        
-        if self.skip_validation:
-            verify_file_list = None
-        else:
-            verify_file_list = self.verify_files
-            #do we need to load a Python modulefile?
-            need_python = True
-            for m in self.modules:
-                if m.startswith('python'):
-                    need_python = False
-            if need_python:
-                if config.civet_job_python_module:
-                    self.modules.append(config.civet_job_python_module)
-                verify_file_list.append('python')
+        submit_threads = self.thread_option_max if self.thread_option_max else self.default_threads
+        verify_file_list = self._build_veryify_file_list()
 
         if PL.delay:
             date_time = PL.delay_timestamp
@@ -516,22 +512,21 @@ class Tool(object):
                     missing.append(f.path)
         return missing
 
-    def create_task(self, task_name):
+    def create_task(self, task_name, managed_batch=False):
         task = {}
 
         for c in self.commands:
             c.fixupOptionsFiles()
 
         # build the command to run the tool
-        multi_command_list = [c.real_command for c in self.commands]
-        multi_command = '  && \\\n'.join(multi_command_list)
+        multi_command = self._build_multi_command()
 
         task['name'] = task_name
         task['command'] = multi_command
         task['docker_image'] = self.docker_image
         task['mem'] = self.mem
         task['walltime'] = self.walltime
-        task['cores'] = self.threads
+        task['cores'] = self.thread_option_max if self.thread_option_max else self.default_threads
 
         task['input_files'] = []
         task['output_files'] = []
@@ -552,6 +547,42 @@ class Tool(object):
             outf.set_creator_job(task_name)
             task['output_files'].append({'id': output_name, 'local': outf.path,
                                          'cloud': outf.cloud_path})
+
+        if managed_batch:
+
+            # Get the current symbols in the pipeline...
+            import pipeline_parse as PL
+
+            # Do the actual batch job submission
+            submit_threads = task['cores']
+            verify_file_list = self._build_veryify_file_list()
+
+            batch_job = BatchJob(multi_command,
+                             workdir=PipelineFile.get_output_dir(),
+                             files_to_check=verify_file_list,
+                             ppn=submit_threads, walltime=self.walltime,
+                             modules=self.modules,
+                             name=task_name, error_strings=self.error_strings,
+                             version_cmds=self.collect_version_commands(),
+                             files_to_test=self.exit_if_exists,
+                             file_test_logic=self.exit_test_logic, mem=self.mem,
+                             email_list=PL.error_email_address,
+                             info=("Tool Definition File: " +
+                                   os.path.abspath(self.xml_file)),
+                             tool_path=self.path,
+                             stdout_path = os.path.join(PL.log_dir, task_name + ".o"),
+                             stderr_path = os.path.join(PL.log_dir, task_name + ".e"))
+
+
+            task['batch_script'] = PL.job_runner.write_script(batch_job)
+            task['stdout_path'] = batch_job.stdout_path
+            task['stderr_path'] = batch_job.stderr_path
+            task['epilogue_script'] = PL.job_runner.epilogue_filename
+            task['batch_env'] = PL.job_runner.generate_env(batch_job)
+            task['email_list'] = PL.error_email_address
+            task['mail_options'] = batch_job.mail_option
+            task['module_files'] = self.modules
+
 
         return task
 
