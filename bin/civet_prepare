@@ -69,7 +69,7 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
-    parser.add_argument('task_db',
+    parser.add_argument('--task-db', required=True,
                         help='filename where civet_prepare will store the tasks'
                              '. If the file exists, civet_prepare will '
                              'add new tasks to the file.')
@@ -105,7 +105,7 @@ def main():
     try:
         Session.session = initialize_model(args.task_db)
     except Exception as e:
-        print("Error opening task database: " + e.message)
+        print("Error opening task database: " + e.message, file=sys.stderr)
         sys.exit(3)
 
     if not append_mode:
@@ -113,23 +113,36 @@ def main():
 
     pipeline = Pipeline(PL.name, PL.log_dir)
 
+    # we need to be able to translate the dependencies as stored in the task
+    # list (list of other task names that a particular task depends on)
+    # into a list of Job object references that have already been added to the
+    # session. We will build up a dictionary of task['name'] : Job as we
+    # insert them
     deps_to_job = {}
-    for task in task_list:
-        dependencies = [deps_to_job[d] for d in task['dependencies']]
+    try:
+        for task in task_list:
+            dependencies = [deps_to_job[d] for d in task['dependencies']]
 
-        job = Job(pipeline, task['name'], task['cores'], task['stdout_path'],
-             task['stderr_path'], task['batch_script'], task['epilogue_script'], task['mem'],
-             task['email_list'], task['mail_options'], task['batch_env'], dependencies)
+            job = Job(pipeline, task['name'], task['cores'],
+                      task['stdout_path'], task['stderr_path'],
+                      task['batch_script'], task['epilogue_script'],
+                      task['mem'], task['email_list'], task['mail_options'],
+                      task['batch_env'], dependencies)
 
-        deps_to_job[task['name']] = job
-        Session.add(job)
-        Session.commit()
+            deps_to_job[task['name']] = job
+            Session.add(job)
+    except Exception as e:
+        print("Error inserting tasks into database: " + e.message, file=sys.stderr)
+        sys.exit(4)
 
+    # only commit the session if we were able to add all the jobs to the session
+    # without catching an Exception
+    Session.commit()
 
+    print("    tasks have been inserted into task database " + args.task_db)
+    print("    Log directory: " + PL.log_dir)
 
-
-    # XXX this is temporary for testing during feature development
-    print(json.dumps(task_list, indent=4, sort_keys=True))
+    print("\n    Pipeline can now be executed in managed mode with civet_start")
 
 if __name__ == "__main__":
     main()
