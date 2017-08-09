@@ -497,7 +497,7 @@ class TorqueJobRunner(object):
             batch_job.stderr_path = os.path.join(log_dir, batch_job.name + ".e")
 
         #write batch script
-        self.write_script(batch_job)
+        filename = self.write_script(batch_job)
         
         if self.submit:
             # build up our torque job attributes and resources
