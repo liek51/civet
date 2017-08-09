@@ -33,6 +33,8 @@ import version
 import utilities
 
 from managed_batch.model.session import Session
+from managed_batch.model.job import Job
+from managed_batch.model.pipeline import Pipeline
 
 from managed_batch.controller.utilities import initialize_model, init_statuses
 
@@ -67,10 +69,10 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
-    parser.add_argument('task_list',
-                        help='filename where civet_prepare will store the task '
-                             'list. If the file exists, civet_prepare will '
-                             'append new tasks to the file')
+    parser.add_argument('task_db',
+                        help='filename where civet_prepare will store the tasks'
+                             '. If the file exists, civet_prepare will '
+                             'add new tasks to the file.')
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
@@ -98,8 +100,32 @@ def main():
 
     task_list = PL.prepare_managed_tasks()
 
-    Session.session = initialize_model(args.task_list)
-    init_statuses()
+    append_mode = os.path.exists(args.task_db)
+
+    try:
+        Session.session = initialize_model(args.task_db)
+    except Exception as e:
+        print("Error opening task database: " + e.message)
+        sys.exit(3)
+
+    if not append_mode:
+        init_statuses()
+
+    pipeline = Pipeline(PL.name, PL.log_dir)
+
+    deps_to_job = {}
+    for task in task_list:
+        dependencies = [deps_to_job[d] for d in task['dependencies']]
+
+        job = Job(pipeline, task['name'], task['cores'], task['stdout_path'],
+             task['stderr_path'], task['batch_script'], task['epilogue_script'], task['mem'],
+             task['email_list'], task['mail_options'], task['batch_env'], dependencies)
+
+        deps_to_job[task['name']] = job
+        Session.add(job)
+        Session.commit()
+
+
 
 
     # XXX this is temporary for testing during feature development

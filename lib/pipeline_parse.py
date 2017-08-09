@@ -535,6 +535,7 @@ class Pipeline(object):
         task['name'] = "rm_temps_consolidate_logs"
         task['command'] = cmd
         task['walltime'] = "00:10:00"
+        task['mem'] = 1
         task['cores'] = 1
         task['module_files'] = [config.civet_job_python_module] if config.civet_job_python_module else []
 
@@ -545,7 +546,9 @@ class Pipeline(object):
                              walltime=task['walltime'],
                              modules=task['module_files'],
                              name=task['name'],
-                             email_list=PL.error_email_address)
+                             email_list=PL.error_email_address,
+                             stdout_path = os.path.join(PL.log_dir, task['name'] + ".o"),
+                             stderr_path = os.path.join(PL.log_dir, task['name'] + ".e"))
 
         task['batch_script'] = PL.job_runner.write_script(batch_job)
         task['stdout_path'] = batch_job.stdout_path

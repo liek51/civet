@@ -3,13 +3,23 @@ from __future__ import print_function
 
 import logging
 import time
+import inspect
+import os
+import sys
 
-from model.job import Job
-from model.pipeline import Pipeline
-from model.session import Session
-from model.status import Status
+# add some magic so when we run this without PYTHONPATH it can find the project
+# lib dir (this usually happens when testing without using a Civet modulefile)
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
+lib_folder = os.path.join(cmd_folder, '../../../lib')
+if lib_folder not in sys.path:
+    sys.path.insert(0, lib_folder)
 
-from controller.utilities import get_all_jobs, initialize_model, \
+from managed_batch.model.job import Job
+from managed_batch.model.pipeline import Pipeline
+from managed_batch.model.session import Session
+from managed_batch.model.status import Status
+
+from managed_batch.controller.utilities import get_all_jobs, initialize_model, \
     init_statuses, mark_complete_and_release_dependencies, mark_submitted, \
     scan_for_runnable_jobs
 

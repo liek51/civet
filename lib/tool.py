@@ -598,7 +598,6 @@ class Tool(object):
             task['mail_options'] = batch_job.mail_option
             task['module_files'] = self.modules
 
-
         return task
 
 
