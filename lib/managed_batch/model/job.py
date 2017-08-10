@@ -1,16 +1,3 @@
-# Copyright 2016 The Jackson Laboratory
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """
 Domain object for tracking Civet jobs in the incremental submission system
 """
@@ -46,11 +33,11 @@ class Job(Base):
     stderr_path = Column(String(512), nullable=False)
     script_path = Column(String(512), nullable=False)
     epilog_path = Column(String(512), nullable=False)
-    mem = Column(Integer)  # Nullable for now.
+    mem = Column(Integer)  # Nullable
     email_list = Column(String(512))  # Nullable
     mail_options = Column(String(64))  # Nullable
     # FIXME: Making this non-nullable gets an Integrity exception.  Don't
-    # understand the problem yet.
+    # understand the problem yet.  We assign the value in the constructor.
     status_id = Column(Integer, ForeignKey('status.id') ) #, nullable=False)
     torque_id = Column(String(30))
     env = Column(String(512))
