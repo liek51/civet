@@ -127,7 +127,7 @@ def main():
                       task['stdout_path'], task['stderr_path'],
                       task['batch_script'], task['epilogue_script'],
                       task['mem'], task['email_list'], task['mail_options'],
-                      task['batch_env'], dependencies)
+                      task['batch_env'], dependencies, task['log_dir'])
 
             deps_to_job[task['name']] = job
             Session.add(job)

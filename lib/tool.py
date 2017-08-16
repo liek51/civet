@@ -597,6 +597,7 @@ class Tool(object):
             task['email_list'] = PL.error_email_address
             task['mail_options'] = batch_job.mail_option
             task['module_files'] = self.modules
+            task['log_dir'] = PL.log_dir
 
         return task
 
