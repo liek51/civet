@@ -349,7 +349,9 @@ class TorqueJobRunner(object):
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
             MESSAGE="Command returned non-zero value ($$CMD_EXIT_STATUS)."
             echo "$$MESSAGE  Aborting pipeline!" >&2
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            if $SEND_FAILURE_EMAIL; then
+                send_failure_email $EMAIL_LIST "$$MESSAGE"
+            fi
             check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
             exit $$CMD_EXIT_STATUS
         fi
@@ -359,7 +361,9 @@ class TorqueJobRunner(object):
             if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                 MESSAGE="Found error string in stderr log."
                 echo "$$MESSAGE  Aborting pipeline!" >&2
-                send_failure_email $EMAIL_LIST "$$MESSAGE"
+                if $SEND_FAILURE_EMAIL; then
+                    send_failure_email $EMAIL_LIST "$$MESSAGE"
+                fi
                 check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
                 exit 1
             fi
@@ -403,10 +407,14 @@ class TorqueJobRunner(object):
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
             fi
             send_failure_email $EMAIL_LIST "$$MESSAGE"
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         elif [ $$EXIT_STATUS -gt 0 ]; then
             # Job exited with non-zero, Job script should have already sent email
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         else
             # normal exit
 
@@ -640,15 +648,21 @@ class TorqueJobRunner(object):
         for resource, val in job_resources.iteritems():
             pbs_attrs[attr_idx].name = pbs.ATTR_l
             pbs_attrs[attr_idx].resource = resource
-            pbs_attrs[attr_idx].value = val
+            # note, pbs_python requires that the values be char *  so we must
+            # convert everything to a Python str.  int or unicode values will
+            # cause an exception!
+            pbs_attrs[attr_idx].value = str(val)
             attr_idx += 1
 
         for attribute, val in job_attributes.iteritems():
             pbs_attrs[attr_idx].name = attribute
-            pbs_attrs[attr_idx].value = val
+            # see note above
+            pbs_attrs[attr_idx].value = str(val)
             attr_idx += 1
 
-        TorqueJobRunner.submit_with_retry(pbs_attrs, task['script_path'], task['queue'])
+        print(task['queue'])
+        queue = str(task['queue']) if task['queue'] else None
+        TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']), queue)
 
     @staticmethod
     def submit_with_retry(pbs_attrs, script_path, queue, pbs_server=None):
@@ -723,7 +737,7 @@ class TorqueJobRunner(object):
 
         return filename
 
-    def generate_script(self, batch_job):
+    def generate_script(self, batch_job, send_failure_email=True):
         """
             Generate a Torque batch script based on our template and return as
             a string.
@@ -795,6 +809,8 @@ class TorqueJobRunner(object):
         else:
             tokens['EMAIL_LIST'] = "${USER}"
 
+        tokens['SEND_FAILURE_EMAIL'] = 'true' if send_failure_email else 'false'
+
         if self.pipeline_path:
             tokens['PIPELINE_PATH'] = self.pipeline_path + ":"
         else:
@@ -816,21 +832,18 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-    def generate_epilogue(self, email_list):
+    def generate_epilogue(self, email_list, abort_on_failure=True):
 
         tokens = {}
         tokens['CIVET_VERSION'] = version.version_from_git()
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
+        tokens['EMAIL_LIST'] = email_list if email_list else "${USER}"
+        tokens['ABORT'] = 'true' if abort_on_failure else 'false'
 
         if self.execution_log_dir:
             tokens['LOG_DIR'] = self.execution_log_dir
         else:
             tokens['LOG_DIR'] = self.log_dir
-
-        if email_list:
-            tokens['EMAIL_LIST'] = email_list
-        else:
-            tokens['EMAIL_LIST'] = "${USER}"
 
         if config.io_sync_sleep:
             tokens['SLEEP'] = (

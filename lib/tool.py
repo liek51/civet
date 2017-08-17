@@ -535,7 +535,7 @@ class Tool(object):
         task['command'] = multi_command
         task['mem'] = self.mem
         task['walltime'] = self.walltime
-        task['cores'] = self.thread_option_max if self.thread_option_max else self.default_threads
+        task['threads'] = self.thread_option_max if self.thread_option_max else self.default_threads
 
         if execution_mode == ToolExecModes.CLOUD:
             task['docker_image'] = self.docker_image
@@ -572,6 +572,14 @@ class Tool(object):
                 if inf.creator_job and inf.creator_job not in task['dependencies']:
                     task['dependencies'].append(inf.creator_job)
 
+
+            for output_name in self.outs:
+                outf = self.pipeline_files[output_name]
+                # Any files that we created and that will be passed to other jobs
+                # need to be marked with our job id.  It is OK if we overwrite
+                # a previous job.
+                outf.set_creator_job(task_name)
+
             batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
                              files_to_check=verify_file_list,
@@ -597,7 +605,7 @@ class Tool(object):
             task['email_list'] = PL.error_email_address
             task['mail_options'] = batch_job.mail_option
             task['module_files'] = self.modules
-            task['log_dir'] = PL.execution_log_dir
+            task['log_dir'] = PL.job_runner.execution_log_dir
             task['queue'] = PL.job_runner.queue
 
         return task

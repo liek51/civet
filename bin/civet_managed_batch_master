@@ -33,9 +33,7 @@ import version
 import utilities
 import status
 
-import job_runner.torque as batch_system
-
-import managed_batch.manager
+from job_runner.torque import TorqueJobRunner as BatchRunner
 
 from managed_batch.model.session import Session
 from managed_batch.model.job import Job
@@ -43,7 +41,7 @@ from managed_batch.model.pipeline import Pipeline
 from managed_batch.model.status import Status
 from managed_batch.controller.utilities import initialize_model, init_statuses, \
     mark_complete_and_release_dependencies, mark_submitted, \
-    scan_for_runnable_jobs
+    scan_for_runnable_jobs, count_submitted_jobs
 
 _job_manager = status.PipelineStatus.get_job_manager()
 
@@ -55,13 +53,15 @@ def update_job_status(job):
     :return:
     """
     current_status = job.get_status()
+    print(current_status)
     if current_status == 'Submitted':
         new_status = status.ManagedJobStatus(job.pipeline.log_directory,
-                                             job.name, job.torque_id,
+                                             job.job_name, job.torque_id,
                                              _job_manager)
-        if new_status != 'Submitted':
-            job.set_status(new_status)
-
+        print(new_status.state)
+        if new_status.state == 'Complete':
+            mark_complete_and_release_dependencies(job)
+        #TODO handle failed jobs
 
 def update_jobs():
     submitted_status_id = Status.get_id('Submitted')
@@ -73,8 +73,9 @@ def update_jobs():
 
 
 def submit_job(job):
+
     task = {
-        'name': job.name,
+        'name': job.job_name,
         'threads': job.threads,
         'script_path': job.script_path,
         'stdout_path': job.stdout_path,
@@ -84,10 +85,11 @@ def submit_job(job):
         'batch_env': job.env,
         'epilogue_path': job.epilog_path,
         'mail_options': job.mail_options,
-        'email_list': job.email_list
+        'email_list': job.email_list,
+        'mem': job.mem
 
     }
-    batch_id = batch_system.TorqueJobRunner.submit_managed_job(task)
+    batch_id = BatchRunner.submit_managed_job(task)
     # mark job as submitted
     mark_submitted(job, batch_id)
 
@@ -109,7 +111,7 @@ def check_walltime(max_walltime):
     """
     if max_walltime:
         # get current walltime in minutes
-        walltime = time.time() - start_time / 60
+        walltime = (time.time() - start_time) / 60
 
         # if we have less than 15 minutes to go
         if max_walltime - walltime < 15:
@@ -126,7 +128,7 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('task-db', required=True,
+    parser.add_argument('task_db',
                         help="filename where civet_prepare will store the "
                              "tasks. If the file exists, civet_prepare will "
                              "add new tasks to the file.")
@@ -141,7 +143,7 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     max_walltime_minutes = args.max_walltime * 60 if args.max_walltime else None
 
@@ -149,25 +151,29 @@ def main():
         logging.info("Opening task database: " + args.task_db)
         Session.session = initialize_model(args.task_db)
     except Exception as e:
-        logging.error("Error opening task database: " + e.message, file=sys.stderr)
+        logging.error("Error opening task database: " + e.message)
         sys.exit(1)
 
     # main loop
+    iteration = 0
     while True:
 
+        iteration += 1
+        logging.info("Starting iteration {}".format(iteration))
+
         if all_complete():
-            logging.info("All tasks complete. Sending completion email.")
+            logging.info("\tAll tasks complete. Sending completion email.")
             # TODO send completion email
-            logging.info("Terminating.")
+            logging.info("\tTerminating.")
             break
 
         if not check_walltime(max_walltime_minutes):
-            logging.info("Approaching maximum walltime, submitting new management job.")
-            job_id = managed_batch.manager.submit_manager_job(args.task_db,
-                                                              args.max_walltime,
-                                                              args.max_queued,
-                                                              os.getcwd())
-            logging.info("New management job submitted: " + job_id)
+            logging.info("\tApproaching maximum walltime, submitting new management job.")
+            #job_id = managed_batch.submit_manager_job(args.task_db,
+            #                                                  args.max_walltime,
+            #                                                  args.max_queued,
+            #                                                  os.getcwd())
+            logging.info("\tNew management job submitted: " + job_id)
             break
 
         # update the status of all jobs that currently have the state
@@ -181,12 +187,14 @@ def main():
 
         # find out if we now have some available slots, meaning some of the jobs
         # that had the state Submitted have finished
-        available_job_slots = args.max_queued - managed_batch.controller.utilities.count_submitted_jobs()
+        available_job_slots = args.max_queued - count_submitted_jobs()
 
         # if we have available slots, see if we have any jobs ready to run
         if available_job_slots:
+            logging.info("\t{} slots available, looking for eligible jobs".format(available_job_slots))
             ready_jobs = scan_for_runnable_jobs(limit=available_job_slots)
             for job in ready_jobs:
+                logging.info("\tStarting {}".format(job.job_name))
                 submit_job(job)
 
 
@@ -197,3 +205,5 @@ def main():
     # job to take over
 
 
+if __name__ == "__main__":
+    main()

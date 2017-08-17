@@ -33,7 +33,7 @@ class Job(Base):
     stderr_path = Column(String(512), nullable=False)
     script_path = Column(String(512), nullable=False)
     epilog_path = Column(String(512), nullable=False)
-    walltime = Column(String(16), nullable=False)
+    walltime = Column(String(16))
     mem = Column(Integer)  # Nullable
     email_list = Column(String(512))  # Nullable
     mail_options = Column(String(64))  # Nullable

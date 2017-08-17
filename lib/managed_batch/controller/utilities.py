@@ -70,20 +70,19 @@ def mark_submitted(job, torque_id):
     Session.session.commit()
 
 
-def mark_complete_and_release_dependencies(torque_id):
+def mark_complete_and_release_dependencies(job):
     # Now let's complete that job.
-    logging.debug('Now completing torque_id: {0}'.format(torque_id))
+    logging.debug('Now completing job: {0}'.format(job.job_name))
 
-    completed_job = Session.session.query(Job).filter(Job.torque_id == torque_id).one()
-    completed_job.set_status('Complete')
-    logging.debug('The now-completed job is: {0}'.format(completed_job))
+    job.set_status('Complete')
+    logging.debug('The now-completed job is: {0}'.format(job))
 
     # Find all the jobs depending on the completed job.
     dependent_jobs = Session.session.query(Job).filter(
-        Job.depends_on.any(Job.torque_id == torque_id))
+        Job.depends_on.any(Job.id == job.id))
     for j in dependent_jobs:
         logging.debug('Found dependent job: {0}'.format(j))
-        j.depends_on.remove(completed_job)
+        j.depends_on.remove(job)
         logging.debug("New state with completed job removed: {0}".format(j))
     Session.session.commit()
 
