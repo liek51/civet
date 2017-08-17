@@ -660,7 +660,6 @@ class TorqueJobRunner(object):
             pbs_attrs[attr_idx].value = str(val)
             attr_idx += 1
 
-        print(task['queue'])
         queue = str(task['queue']) if task['queue'] else None
         TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']), queue)
 
