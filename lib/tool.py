@@ -759,9 +759,9 @@ class Command(object):
             self.delims = '{}'
         delim_1 = self.delims[0]
         delim_2 = self.delims[1]
-        if delim_1 in '|':
+        if delim_1 in '|()':
             delim_1 = '\\' + delim_1
-        if delim_2 in '|':
+        if delim_2 in '|()':
             delim_2 = '\\' + delim_2
         self.replacePattern = re.compile(delim_1 + '(.*?)' + delim_2)
 
