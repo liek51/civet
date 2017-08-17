@@ -23,10 +23,16 @@ Features
  - created new "managed batch" runtime -- see documentation for details.
 
 
+Version 1.8.4.3
+---------------
+Bug Fixes
+ - allow () to be used as tool command file delimiters
+
+
 Version 1.8.4.2
 ---------------
 Bug Fixes
- - Revert change to validity.py that broke it on Python 2.7
+ - revert change that prevented validity.py from working with Python 2.7
 
 
 Version 1.8.4.1
