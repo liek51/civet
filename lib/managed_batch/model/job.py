@@ -33,13 +33,15 @@ class Job(Base):
     stderr_path = Column(String(512), nullable=False)
     script_path = Column(String(512), nullable=False)
     epilog_path = Column(String(512), nullable=False)
+    walltime = Column(String(16), nullable=False)
     mem = Column(Integer)  # Nullable
     email_list = Column(String(512))  # Nullable
     mail_options = Column(String(64))  # Nullable
+    queue = Column(String(128)) # Nullable
     # FIXME: Making this non-nullable gets an Integrity exception.  Don't
     # understand the problem yet.  We assign the value in the constructor.
     status_id = Column(Integer, ForeignKey('status.id') ) #, nullable=False)
-    torque_id = Column(String(30))
+    torque_id = Column(String(512))
     env = Column(String(512))
     depends_on = relationship('Job', secondary=dependencies,
                               primaryjoin=id == dependencies.c.job_id,
@@ -48,7 +50,7 @@ class Job(Base):
 
     def __init__(self, pipeline, job_name, threads, stdout_path,
                  stderr_path, script_path, epilog_path, mem,
-                 email_list, mail_options, env, depends_on):
+                 email_list, mail_options, env, depends_on, queue, walltime):
         """
         Create a new Job object.  All jobs are created in state Not Submitted.
         :param pipeline: The pipeline of which this job is a part.
@@ -79,6 +81,8 @@ class Job(Base):
         self.env = env
         self.status_id = Status.get_id("Not Submitted")
         self.depends_on = depends_on
+        self.queue = queue
+        self.walltime = walltime
 
     def is_status(self, name):
         return self.status_id == Status.get_id(name)
@@ -93,7 +97,7 @@ class Job(Base):
         return '<Job: ID={0} Pipeline={1} JobName={2} ' \
                'StdoutPath={3} StderrPath={4} ScriptPath={5} EpilogPath={6} ' \
                'Mem={7} EmailList={8} MailOptions={9} Env={10} StatusID={11} ' \
-               'TorqueID={12} Dependencies={13}>'.format(
+               'TorqueID={12} Dependencies={13} Queue={14} Walltime={15}>'.format(
                 self.id,
                 self.pipeline.name,
                 self.job_name,
@@ -107,7 +111,9 @@ class Job(Base):
                 self.env,
                 self.status_id,
                 self.torque_id,
-                self.depends_on)
+                self.depends_on,
+                self.queue,
+                self.walltime)
 
     def str_for_pipeline(self):
         status_name = Status.get_name(self.status_id)
@@ -125,7 +131,7 @@ class Job(Base):
                'StdoutPath="{3}" StderrPath="{4}" ScriptPath="{5}" ' \
                'EpilogPath="{6}" Mem={7} EmailList="{8}" MailOptions="{9}" ' \
                'Env="{10}" StatusID={11} ' \
-               'TorqueID="{12}" Dependencies={13}>'.format(
+               'TorqueID="{12}" Dependencies={13} Queue={14} Walltime={15}>'.format(
                 self.id,
                 self.pipeline.name,
                 self.job_name,
@@ -139,4 +145,6 @@ class Job(Base):
                 self.env,
                 stat,
                 self.torque_id,
-                deps)
+                deps,
+                self.queue,
+                self.walltime)

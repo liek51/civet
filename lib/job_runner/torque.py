@@ -605,6 +605,80 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return job_id
 
+    @staticmethod
+    def submit_managed_job(task, pbs_server=None):
+        """
+        submit a managed job from the civet_managed_batch_master program.  Not
+        passed as a BatchJob object, but simply as dictionary describing the
+        task
+        :param task: dictionary describing the task.
+        :return: batch job ID
+        """
+         # build up our torque job attributes and resources
+        job_attributes = {}
+        job_resources = {}
+
+        job_resources['nodes'] = "1:ppn={}".format(task['threads'])
+        job_resources['walltime'] = task['walltime']
+        job_resources['epilogue'] = task['epilogue_path']
+        if task['mem']:
+            job_resources['mem'] = task['mem']
+
+        job_attributes[pbs.ATTR_v] = task['batch_env']
+        job_attributes[pbs.ATTR_N] = task['name']
+        job_attributes[pbs.ATTR_o] = task['stdout_path']
+        job_attributes[pbs.ATTR_e] = task['stderr_path']
+        if task['mail_options']:
+            job_attributes[pbs.ATTR_m] = task['mail_options']
+        if task['email_list']:
+            job_attributes[pbs.ATTR_M] = task['email_list']
+
+        pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
+
+        # populate pbs_attrs
+        attr_idx = 0
+        for resource, val in job_resources.iteritems():
+            pbs_attrs[attr_idx].name = pbs.ATTR_l
+            pbs_attrs[attr_idx].resource = resource
+            pbs_attrs[attr_idx].value = val
+            attr_idx += 1
+
+        for attribute, val in job_attributes.iteritems():
+            pbs_attrs[attr_idx].name = attribute
+            pbs_attrs[attr_idx].value = val
+            attr_idx += 1
+
+        TorqueJobRunner.submit_with_retry(pbs_attrs, task['script_path'], task['queue'])
+
+    @staticmethod
+    def submit_with_retry(pbs_attrs, script_path, queue, pbs_server=None):
+        # connect to pbs server
+        connection = _connect_to_server(pbs_server)
+
+        #submit job
+        retry = 0
+        job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                queue, None)
+
+        # if pbs.pbs_submit failed, try again
+        while not job_id and retry < _MAX_RETRY:
+            retry += 1
+            print("Retrying connection...", file=sys.stderr)
+            time.sleep(retry ** 2)
+            job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                    queue, None)
+
+        pbs.pbs_disconnect(connection)
+
+        #check to see if the job was submitted successfully.
+        if not job_id:
+            e, e_msg = pbs.error()
+            # the batch system returned an error, throw exception
+            raise Exception("Error submitting job.  "
+                            "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
+
+        return job_id
+
     def release_job(self, job_id, connection=None):
         """
             Release a user hold from a held batch job.

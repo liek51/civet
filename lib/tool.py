@@ -563,7 +563,7 @@ class Tool(object):
         elif execution_mode == ToolExecModes.BATCH_MANAGED:
 
             # Do the actual batch job submission
-            submit_threads = task['cores']
+            submit_threads = task['threads']
             verify_file_list = self._build_veryify_file_list()
 
             task['dependencies'] = []
@@ -589,15 +589,16 @@ class Tool(object):
                              stderr_path = os.path.join(PL.log_dir, task_name + ".e"))
 
 
-            task['batch_script'] = PL.job_runner.write_script(batch_job)
+            task['script_path'] = PL.job_runner.write_script(batch_job)
             task['stdout_path'] = batch_job.stdout_path
             task['stderr_path'] = batch_job.stderr_path
-            task['epilogue_script'] = PL.job_runner.epilogue_filename
+            task['epilogue_path'] = PL.job_runner.epilogue_filename
             task['batch_env'] = PL.job_runner.generate_env(batch_job)
             task['email_list'] = PL.error_email_address
             task['mail_options'] = batch_job.mail_option
             task['module_files'] = self.modules
-            task['log_dir'] = PL.log_dir
+            task['log_dir'] = PL.execution_log_dir
+            task['queue'] = PL.job_runner.queue
 
         return task
 
