@@ -36,6 +36,58 @@ def format_state(state):
     return state
 
 
+class ManagedJobStatus(object):
+    """
+    This is class used to obtain stripped down information about a job submitted
+    when running in the managed batch mode.  All the job manager cares about a
+    submitted job is if it is "Submitted" (queued but not complete), "Failed"
+    (complete, with non-zero exit status), "Complete" (complete, zero exit
+    status), and "Deleted" (no record of submitted job).
+    """
+    def __init__(self, log_dir, name, batch_id, job_manager):
+
+        if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
+            status = job_runner.common.get_status_from_file(log_dir, name)
+
+            # with old versions of Civet, it's possible for there it be an empty
+            # or incomplete -status.txt file if the job was canceled/qdel'd
+            # this will be the state if we can't determine otherwise
+            self.state = "Deleted"
+
+            if 'canceled' in status or 'cancelled' in status:
+                self.state = "Deleted"
+            elif 'exit_status' in status:
+                if status['exit_status'] == '0':
+                    self.state = "Complete"
+                else:
+                    self.state = "Failed"
+
+        else:
+            status = job_manager.query_job(batch_id)
+
+            if status:
+                if status.state == 'C':
+
+                    if status.exit_status == '0':
+                        # as of Civet 1.7.0 this shouldn't happen, even for
+                        # failed jobs. If this happens, then the job completed
+                        # without the job epilogue script running
+                        self.state = "Complete"
+                    else:
+                        self.state = "Failed"
+                else:
+                    if status.state in ['Q', 'H', 'W', 'R']:
+                        self.state = "Submitted"
+
+            else:
+                # no information for job, as of Civet 1.7.0 this should only be
+                # possible if the job is deleted (cancelled because of failed
+                # dependency or qdel'd) prior to running or if the node it is
+                # running on crashes.  As of Civet 1.7.0 all jobs that enter the
+                # R state should produce a -status.txt file
+                self.state = "Deleted"
+
+
 class Status(object):
 
     def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel):

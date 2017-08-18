@@ -17,6 +17,7 @@ import logging
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func
 
 from managed_batch.model.base import Base
 from managed_batch.model.job import Job
@@ -56,8 +57,12 @@ def initialize_model(db_path, echo_sql=False):
     return session
 
 
+def count_submitted_jobs():
+    count_q = Session.query(Job).filter_by(status_id=Status.get_id('Submitted')).statement.with_only_columns([func.count()]).order_by(None)
+    return Session.session.execute(count_q).scalar()
+
+
 def mark_submitted(job, torque_id):
-    # Fake submitting a job:
     logging.debug('Submitting: {0}'.format(job))
     job.set_status('Submitted')
     job.torque_id = torque_id
@@ -65,25 +70,24 @@ def mark_submitted(job, torque_id):
     Session.session.commit()
 
 
-def mark_complete_and_release_dependencies(torque_id):
+def mark_complete_and_release_dependencies(job):
     # Now let's complete that job.
-    logging.debug('Now completing torque_id: {0}'.format(torque_id))
+    logging.debug('Now completing job: {0}'.format(job.job_name))
 
-    completed_job = Session.session.query(Job).filter(Job.torque_id == torque_id).one()
-    completed_job.set_status('Complete')
-    logging.debug('The now-completed job is: {0}'.format(completed_job))
+    job.set_status('Complete')
+    logging.debug('The now-completed job is: {0}'.format(job))
 
     # Find all the jobs depending on the completed job.
     dependent_jobs = Session.session.query(Job).filter(
-        Job.depends_on.any(Job.torque_id == torque_id))
+        Job.depends_on.any(Job.id == job.id))
     for j in dependent_jobs:
         logging.debug('Found dependent job: {0}'.format(j))
-        j.depends_on.remove(completed_job)
+        j.depends_on.remove(job)
         logging.debug("New state with completed job removed: {0}".format(j))
     Session.session.commit()
 
 
-def scan_for_runnable_jobs():
+def scan_for_runnable_jobs(limit=None):
     """
     Cans the database for jobs that are eligible to run; in other words,
     those with an empty dependency list and the status "Not Submitted".
@@ -91,8 +95,11 @@ def scan_for_runnable_jobs():
     """
     unsubmitted_status_id = Status.get_id('Not Submitted')
     logging.debug('Finding runnable jobs')
-    ready_jobs = Session.query(Job).filter(~Job.depends_on.any()). \
-        filter_by(status_id=unsubmitted_status_id).all()
+    ready_jobs_query = Session.query(Job).filter(~Job.depends_on.any()). \
+        filter_by(status_id=unsubmitted_status_id)
+    if limit:
+        ready_jobs_query = ready_jobs_query.limit(limit)
+    ready_jobs = ready_jobs_query.all()
     if not ready_jobs:
         logging.debug('No jobs are ready to execute')
     else:

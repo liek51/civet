@@ -535,7 +535,7 @@ class Tool(object):
         task['command'] = multi_command
         task['mem'] = self.mem
         task['walltime'] = self.walltime
-        task['cores'] = self.thread_option_max if self.thread_option_max else self.default_threads
+        task['threads'] = self.thread_option_max if self.thread_option_max else self.default_threads
 
         if execution_mode == ToolExecModes.CLOUD:
             task['docker_image'] = self.docker_image
@@ -563,7 +563,7 @@ class Tool(object):
         elif execution_mode == ToolExecModes.BATCH_MANAGED:
 
             # Do the actual batch job submission
-            submit_threads = task['cores']
+            submit_threads = task['threads']
             verify_file_list = self._build_veryify_file_list()
 
             task['dependencies'] = []
@@ -571,6 +571,14 @@ class Tool(object):
                 inf = self.pipeline_files[input_name]
                 if inf.creator_job and inf.creator_job not in task['dependencies']:
                     task['dependencies'].append(inf.creator_job)
+
+
+            for output_name in self.outs:
+                outf = self.pipeline_files[output_name]
+                # Any files that we created and that will be passed to other jobs
+                # need to be marked with our job id.  It is OK if we overwrite
+                # a previous job.
+                outf.set_creator_job(task_name)
 
             batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
@@ -589,14 +597,16 @@ class Tool(object):
                              stderr_path = os.path.join(PL.log_dir, task_name + ".e"))
 
 
-            task['batch_script'] = PL.job_runner.write_script(batch_job)
+            task['script_path'] = PL.job_runner.write_script(batch_job)
             task['stdout_path'] = batch_job.stdout_path
             task['stderr_path'] = batch_job.stderr_path
-            task['epilogue_script'] = PL.job_runner.epilogue_filename
+            task['epilogue_path'] = PL.job_runner.epilogue_filename
             task['batch_env'] = PL.job_runner.generate_env(batch_job)
             task['email_list'] = PL.error_email_address
             task['mail_options'] = batch_job.mail_option
             task['module_files'] = self.modules
+            task['log_dir'] = PL.job_runner.execution_log_dir
+            task['queue'] = PL.job_runner.queue
 
         return task
 
@@ -749,9 +759,9 @@ class Command(object):
             self.delims = '{}'
         delim_1 = self.delims[0]
         delim_2 = self.delims[1]
-        if delim_1 in '|':
+        if delim_1 in '|()':
             delim_1 = '\\' + delim_1
-        if delim_2 in '|':
+        if delim_2 in '|()':
             delim_2 = '\\' + delim_2
         self.replacePattern = re.compile(delim_1 + '(.*?)' + delim_2)
 

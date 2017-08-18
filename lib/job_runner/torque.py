@@ -349,7 +349,9 @@ class TorqueJobRunner(object):
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
             MESSAGE="Command returned non-zero value ($$CMD_EXIT_STATUS)."
             echo "$$MESSAGE  Aborting pipeline!" >&2
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            if $SEND_FAILURE_EMAIL; then
+                send_failure_email $EMAIL_LIST "$$MESSAGE"
+            fi
             check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
             exit $$CMD_EXIT_STATUS
         fi
@@ -359,7 +361,9 @@ class TorqueJobRunner(object):
             if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                 MESSAGE="Found error string in stderr log."
                 echo "$$MESSAGE  Aborting pipeline!" >&2
-                send_failure_email $EMAIL_LIST "$$MESSAGE"
+                if $SEND_FAILURE_EMAIL; then
+                    send_failure_email $EMAIL_LIST "$$MESSAGE"
+                fi
                 check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
                 exit 1
             fi
@@ -403,10 +407,14 @@ class TorqueJobRunner(object):
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
             fi
             send_failure_email $EMAIL_LIST "$$MESSAGE"
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         elif [ $$EXIT_STATUS -gt 0 ]; then
             # Job exited with non-zero, Job script should have already sent email
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         else
             # normal exit
 
@@ -605,6 +613,86 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return job_id
 
+    @staticmethod
+    def submit_managed_job(task, pbs_server=None):
+        """
+        submit a managed job from the civet_managed_batch_master program.  Not
+        passed as a BatchJob object, but simply as dictionary describing the
+        task
+        :param task: dictionary describing the task.
+        :return: batch job ID
+        """
+         # build up our torque job attributes and resources
+        job_attributes = {}
+        job_resources = {}
+
+        job_resources['nodes'] = "1:ppn={}".format(task['threads'])
+        job_resources['walltime'] = task['walltime']
+        job_resources['epilogue'] = task['epilogue_path']
+        if task['mem']:
+            job_resources['mem'] = task['mem']
+
+        job_attributes[pbs.ATTR_v] = task['batch_env']
+        job_attributes[pbs.ATTR_N] = task['name']
+        job_attributes[pbs.ATTR_o] = task['stdout_path']
+        job_attributes[pbs.ATTR_e] = task['stderr_path']
+        if task['mail_options']:
+            job_attributes[pbs.ATTR_m] = task['mail_options']
+        if task['email_list']:
+            job_attributes[pbs.ATTR_M] = task['email_list']
+
+        pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
+
+        # populate pbs_attrs
+        attr_idx = 0
+        for resource, val in job_resources.iteritems():
+            pbs_attrs[attr_idx].name = pbs.ATTR_l
+            pbs_attrs[attr_idx].resource = resource
+            # note, pbs_python requires that the values be char *  so we must
+            # convert everything to a Python str.  int or unicode values will
+            # cause an exception!
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
+
+        for attribute, val in job_attributes.iteritems():
+            pbs_attrs[attr_idx].name = attribute
+            # see note above
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
+
+        print(task['queue'])
+        queue = str(task['queue']) if task['queue'] else None
+        TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']), queue)
+
+    @staticmethod
+    def submit_with_retry(pbs_attrs, script_path, queue, pbs_server=None):
+        # connect to pbs server
+        connection = _connect_to_server(pbs_server)
+
+        #submit job
+        retry = 0
+        job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                queue, None)
+
+        # if pbs.pbs_submit failed, try again
+        while not job_id and retry < _MAX_RETRY:
+            retry += 1
+            print("Retrying connection...", file=sys.stderr)
+            time.sleep(retry ** 2)
+            job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                    queue, None)
+
+        pbs.pbs_disconnect(connection)
+
+        #check to see if the job was submitted successfully.
+        if not job_id:
+            e, e_msg = pbs.error()
+            # the batch system returned an error, throw exception
+            raise Exception("Error submitting job.  "
+                            "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
+
+        return job_id
+
     def release_job(self, job_id, connection=None):
         """
             Release a user hold from a held batch job.
@@ -649,7 +737,7 @@ class TorqueJobRunner(object):
 
         return filename
 
-    def generate_script(self, batch_job):
+    def generate_script(self, batch_job, send_failure_email=True):
         """
             Generate a Torque batch script based on our template and return as
             a string.
@@ -721,6 +809,8 @@ class TorqueJobRunner(object):
         else:
             tokens['EMAIL_LIST'] = "${USER}"
 
+        tokens['SEND_FAILURE_EMAIL'] = 'true' if send_failure_email else 'false'
+
         if self.pipeline_path:
             tokens['PIPELINE_PATH'] = self.pipeline_path + ":"
         else:
@@ -742,21 +832,18 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-    def generate_epilogue(self, email_list):
+    def generate_epilogue(self, email_list, abort_on_failure=True):
 
         tokens = {}
         tokens['CIVET_VERSION'] = version.version_from_git()
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
+        tokens['EMAIL_LIST'] = email_list if email_list else "${USER}"
+        tokens['ABORT'] = 'true' if abort_on_failure else 'false'
 
         if self.execution_log_dir:
             tokens['LOG_DIR'] = self.execution_log_dir
         else:
             tokens['LOG_DIR'] = self.log_dir
-
-        if email_list:
-            tokens['EMAIL_LIST'] = email_list
-        else:
-            tokens['EMAIL_LIST'] = "${USER}"
 
         if config.io_sync_sleep:
             tokens['SLEEP'] = (

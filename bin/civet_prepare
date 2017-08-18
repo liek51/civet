@@ -47,16 +47,16 @@ def main():
     
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-q', '--queue', default=None,
+                        help="submission queue [default = TORQUE default]")
     parser.add_argument('-o', '--option-file', dest='option_file',
                         default=None, help="option override file")
     parser.add_argument('-t', '--keep-temp', dest='keep_temp',
                         action='store_true',
                         help="Don't delete temporary pipeline files")
-
     parser.add_argument('-f', '--force-conditional', dest='force_conditional',
                         action='store_true',
                         help="Force conditional steps to run")
-
     parser.add_argument('-e', '--email-address', dest='email_address',
                         default=None,
                         help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
@@ -83,6 +83,7 @@ def main():
     try:
         PL._parse_XML(args.pipeline[0], args.pipeline_args,
                       skip_validation=True,
+                      queue=args.queue,
                       search_path=os.environ.get('CIVET_PATH'),
                       user_override_file=args.option_file,
                       keep_temp=args.keep_temp,
@@ -123,11 +124,12 @@ def main():
         for task in task_list:
             dependencies = [deps_to_job[d] for d in task['dependencies']]
 
-            job = Job(pipeline, task['name'], task['cores'],
+            job = Job(pipeline, task['name'], task['threads'],
                       task['stdout_path'], task['stderr_path'],
-                      task['batch_script'], task['epilogue_script'],
+                      task['script_path'], task['epilogue_path'],
                       task['mem'], task['email_list'], task['mail_options'],
-                      task['batch_env'], dependencies)
+                      task['batch_env'], dependencies, task['queue'],
+                      task['walltime'])
 
             deps_to_job[task['name']] = job
             Session.add(job)

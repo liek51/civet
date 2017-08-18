@@ -536,7 +536,7 @@ class Pipeline(object):
         task['command'] = cmd
         task['walltime'] = "00:10:00"
         task['mem'] = 1
-        task['cores'] = 1
+        task['threads'] = 1
         task['module_files'] = [config.civet_job_python_module] if config.civet_job_python_module else []
 
         task['dependencies'] = [t['name'] for t in all_tasks]
@@ -550,13 +550,14 @@ class Pipeline(object):
                              stdout_path = os.path.join(PL.log_dir, task['name'] + ".o"),
                              stderr_path = os.path.join(PL.log_dir, task['name'] + ".e"))
 
-        task['batch_script'] = PL.job_runner.write_script(batch_job)
+        task['script_path'] = PL.job_runner.write_script(batch_job)
         task['stdout_path'] = batch_job.stdout_path
         task['stderr_path'] = batch_job.stderr_path
-        task['epilogue_script'] = PL.job_runner.epilogue_filename
+        task['epilogue_path'] = PL.job_runner.epilogue_filename
         task['batch_env'] = PL.job_runner.generate_env(batch_job)
         task['email_list'] = PL.error_email_address
         task['mail_options'] = batch_job.mail_option
+        task['queue'] = PL.job_runner.queue
 
         return task
 
