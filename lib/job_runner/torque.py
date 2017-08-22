@@ -28,6 +28,7 @@ import textwrap
 import socket
 import stat
 import time
+import tempfile
 
 import pbs
 import PBSQuery
@@ -480,6 +481,25 @@ class TorqueJobRunner(object):
             print("\nPIPELINE NOT SUBMITTED\n", file=sys.stderr)
             sys.exit(1)
 
+    @staticmethod
+    def __make_pbs_attrs(resources, attributes):
+        pbs_attrs = pbs.new_attropl(len(attributes) + len(resources))
+
+        # populate pbs_attrs
+        attr_idx = 0
+        for resource, val in resources.iteritems():
+            pbs_attrs[attr_idx].name = pbs.ATTR_l
+            pbs_attrs[attr_idx].resource = resource
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
+
+        for attribute, val in attributes.iteritems():
+            pbs_attrs[attr_idx].name = attribute
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
+
+        return pbs_attrs
+
     def queue_job(self, batch_job):
         """
           queue a BatchJob.
@@ -521,7 +541,7 @@ class TorqueJobRunner(object):
             if batch_job.mem:
                 job_resources['mem'] = batch_job.mem
         
-            job_attributes[pbs.ATTR_v] = self.generate_env(batch_job)
+            job_attributes[pbs.ATTR_v] = self.generate_env(batch_job.workdir)
         
             if batch_job.name:
                 job_attributes[pbs.ATTR_N] = batch_job.name
@@ -641,27 +661,66 @@ class TorqueJobRunner(object):
         if task['email_list']:
             job_attributes[pbs.ATTR_M] = task['email_list']
 
-        pbs_attrs = pbs.new_attropl(len(job_attributes) + len(job_resources))
-
-        # populate pbs_attrs
-        attr_idx = 0
-        for resource, val in job_resources.iteritems():
-            pbs_attrs[attr_idx].name = pbs.ATTR_l
-            pbs_attrs[attr_idx].resource = resource
-            # note, pbs_python requires that the values be char *  so we must
-            # convert everything to a Python str.  int or unicode values will
-            # cause an exception!
-            pbs_attrs[attr_idx].value = str(val)
-            attr_idx += 1
-
-        for attribute, val in job_attributes.iteritems():
-            pbs_attrs[attr_idx].name = attribute
-            # see note above
-            pbs_attrs[attr_idx].value = str(val)
-            attr_idx += 1
+        pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
+                                                     job_attributes)
 
         queue = str(task['queue']) if task['queue'] else None
-        TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']), queue)
+        return TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']),
+                                                 queue)
+
+    @staticmethod
+    def submit_simple_job(task, pbs_server=None):
+        """
+        Submit a basic batch job, without all the extra stuff used in a normal
+        civet job.  This is used to submit the civet_managed_batch_master
+        command.
+        :param task:
+        :param pbs_server:
+        :return:
+        """
+
+        # build up our torque job attributes and resources
+        job_attributes = {}
+        job_resources = {}
+
+        # we will require a number of threads, walltime, workdir, and name
+        # if workdir is not defined, use the current working directory
+        # if threads is not defined, use 1
+        workdir = task.get('workdir', os.getcwd())
+        job_resources['nodes'] = "1:ppn={}".format(task.get('threads', '1'))
+        job_resources['walltime'] = task['walltime']
+        job_attributes[pbs.ATTR_v] = TorqueJobRunner.generate_env(workdir)
+        job_attributes[pbs.ATTR_N] = task['name']
+
+        if 'mem' in task:
+            job_resources['mem'] = task['mem']
+        if 'stdout_path' in task:
+            job_attributes[pbs.ATTR_o] = task['stdout_path']
+        if 'stderr_path' in task:
+            job_attributes[pbs.ATTR_e] = task['stderr_path']
+        if 'mail_options' in task:
+            job_attributes[pbs.ATTR_m] = task['mail_options']
+        if 'email_list' in task:
+            job_attributes[pbs.ATTR_M] = task['email_list']
+
+
+        pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
+                                                     job_attributes)
+
+        queue = str(task['queue']) if task['queue'] else None
+
+        # generate a simple batch submission script to run our command
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write("#!/bin/bash\n")
+            tf.write("cd $PBS_O_WORKDIR\n")
+            tf.write(task['cmd'])
+            script_path = tf.name
+
+        job_id = TorqueJobRunner.submit_with_retry(pbs_attrs, script_path,
+                                                   queue)
+        os.unlink(script_path)
+
+        return job_id
 
     @staticmethod
     def submit_with_retry(pbs_attrs, script_path, queue, pbs_server=None):
@@ -856,7 +915,7 @@ class TorqueJobRunner(object):
         return string.Template(self.epilogue_template).substitute(tokens)
 
     @staticmethod
-    def generate_env(batch_job):
+    def generate_env(workdir):
         """
             Generate a basic environment string to send along with the job. 
             
@@ -864,11 +923,11 @@ class TorqueJobRunner(object):
             job's environment when it executes. We define some of the typical 
             PBS_O_* variables
 
-            :param batch_job: BatchJob for which to generate environment
+            :param workdir: working directory of the job
         """
     
         # our script start with "cd $PBS_O_WORKDIR", make sure we set it
-        env = "PBS_O_WORKDIR={0}".format(batch_job.workdir)
+        env = "PBS_O_WORKDIR={0}".format(workdir)
         
         # define some of the other typical PBS_O_* environment variables
         # PBS_O_HOST is used to set default stdout/stderr paths, the rest probably

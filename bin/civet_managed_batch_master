@@ -43,6 +43,8 @@ from managed_batch.controller.utilities import initialize_model, init_statuses, 
     mark_complete_and_release_dependencies, mark_submitted, \
     scan_for_runnable_jobs, count_submitted_jobs
 
+from managed_batch.manager import submit_management_job
+
 _job_manager = status.PipelineStatus.get_job_manager()
 
 
@@ -53,15 +55,14 @@ def update_job_status(job):
     :return:
     """
     current_status = job.get_status()
-    print(current_status)
     if current_status == 'Submitted':
         new_status = status.ManagedJobStatus(job.pipeline.log_directory,
                                              job.job_name, job.torque_id,
                                              _job_manager)
-        print(new_status.state)
         if new_status.state == 'Complete':
             mark_complete_and_release_dependencies(job)
         #TODO handle failed jobs
+
 
 def update_jobs():
     submitted_status_id = Status.get_id('Submitted')
@@ -113,10 +114,9 @@ def check_walltime(max_walltime):
         # get current walltime in minutes
         walltime = (time.time() - start_time) / 60
 
-        # if we have less than 15 minutes to go
-        if max_walltime - walltime < 15:
+        # if we have less than 10 minutes to go indicate it's time to resubmit
+        if max_walltime - walltime < 10:
             return False
-
     return True
 
 
@@ -132,7 +132,7 @@ def main():
                         help="filename where civet_prepare will store the "
                              "tasks. If the file exists, civet_prepare will "
                              "add new tasks to the file.")
-    parser.add_argument('--max-walltime', '-w', type=int, default=24,
+    parser.add_argument('--max-walltime', '-w', type=int, default=None,
                         help="Maximum walltime, in hours, to run. If this "
                              "argument is specified, this program will submit "
                              "a new management job to take over and will exit "
@@ -140,10 +140,16 @@ def main():
     parser.add_argument('--max-queued', '-m', type=int, default=100,
                         help="maximum number of jobs to have in the running "
                              "state at any one time.")
+    parser.add_argument('--queue', '-q', default=None,
+                        help="Submission queue to use for management job "
+                             "resubmission. Ignored if not combined with "
+                             "--max-walltime. [default = TORQUE default]")
+    parser.add_argument('--verbose', action='store_true',
+                        help="enable verbose mode")
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     max_walltime_minutes = args.max_walltime * 60 if args.max_walltime else None
 
@@ -159,21 +165,20 @@ def main():
     while True:
 
         iteration += 1
-        logging.info("Starting iteration {}".format(iteration))
+        if args.verbose:
+            print("Starting iteration {}".format(iteration))
 
         if all_complete():
-            logging.info("\tAll tasks complete. Sending completion email.")
+            print("\tAll tasks complete. Sending completion email.")
             # TODO send completion email
-            logging.info("\tTerminating.")
+            print("\tTerminating.")
             break
 
         if not check_walltime(max_walltime_minutes):
-            logging.info("\tApproaching maximum walltime, submitting new management job.")
-            #job_id = managed_batch.submit_manager_job(args.task_db,
-            #                                                  args.max_walltime,
-            #                                                  args.max_queued,
-            #                                                  os.getcwd())
-            logging.info("\tNew management job submitted: " + job_id)
+            print("\tApproaching maximum walltime, submitting new management job.")
+            job_id = submit_management_job(args.task_db, args.queue,
+                                           args.max_walltime, args.max_queued)
+            print("\tNew management job submitted: " + job_id)
             break
 
         # update the status of all jobs that currently have the state
@@ -188,11 +193,15 @@ def main():
         # find out if we now have some available slots, meaning some of the jobs
         # that had the state Submitted have finished
         available_job_slots = args.max_queued - count_submitted_jobs()
+        if args.verbose:
+            print("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queued))
+            print("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queuedscan_))
 
         # if we have available slots, see if we have any jobs ready to run
         if available_job_slots:
-            logging.info("\t{} slots available, looking for eligible jobs".format(available_job_slots))
+            logging.info("Iteration {}: {} slots available, looking for eligible jobs".format(iteration, available_job_slots))
             ready_jobs = scan_for_runnable_jobs(limit=available_job_slots)
+            print("Iteration {}: Starting {} jobs".format(iteration, len(ready_jobs)))
             for job in ready_jobs:
                 logging.info("\tStarting {}".format(job.job_name))
                 submit_job(job)

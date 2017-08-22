@@ -18,11 +18,14 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
+from sqlalchemy import and_
+from sqlalchemy import join
 
 from managed_batch.model.base import Base
 from managed_batch.model.job import Job
 from managed_batch.model.status import Status
 from managed_batch.model.pipeline import Pipeline
+from managed_batch.model.file_info import FileInfo
 
 from managed_batch.model.session import Session
 
@@ -119,14 +122,33 @@ def init_statuses():
 
     logging.debug("In init_statuses(), session={0}".format(Session.session))
     # Create the statuses
-    statuses = ['Not Submitted', 'Submitted', 'Complete', 'Failed', 'Deleted']
+    statuses = ['Not Submitted', 'Submitted', 'Complete', 'Failed', 'Deleted',
+                'Pipeline Failure']
     logging.debug("Creating {0} statuses.  They are: {1}".format(
         len(statuses), statuses))
 
     for status in statuses:
         Session.add(Status(status))
     Session.commit()
-    pass
+
+
+def init_file_info():
+
+    # create the single row in the FileInfo table, this should only be called
+    # when creating a new task file
+    file_info = FileInfo(schema_version=FileInfo.CURRENT_SCHEMA_VERSION,
+                         started=False)
+    Session.add(file_info)
+    Session.commit()
+
+
+def get_file_info():
+    return Session.query(FileInfo).one()
+
+def mark_file_submitted():
+    file_info = get_file_info()
+    file_info.started = True
+    Session.commit()
 
 
 def get_all_jobs():

@@ -36,7 +36,7 @@ from managed_batch.model.session import Session
 from managed_batch.model.job import Job
 from managed_batch.model.pipeline import Pipeline
 
-from managed_batch.controller.utilities import initialize_model, init_statuses
+from managed_batch.controller.utilities import initialize_model, init_statuses, get_file_info, init_file_info
 
 
 def main():
@@ -111,6 +111,15 @@ def main():
 
     if not append_mode:
         init_statuses()
+        init_file_info()
+    else:
+        # make sure the task file hasn't already been submitted
+        file_info = get_file_info()
+        if file_info.started:
+            print("\tUnable to add tasks to task file {}".format(args.task_db),
+                  file=sys.stderr)
+            print("\t\tTask file has already been submitted.", file=sys.stderr)
+            sys.exit(4)
 
     pipeline = Pipeline(PL.name, PL.log_dir)
 
@@ -141,10 +150,12 @@ def main():
     # without catching an Exception
     Session.commit()
 
-    print("    tasks have been inserted into task database " + args.task_db)
-    print("    Log directory: " + PL.log_dir)
+    print("    tasks have been inserted into task file " + args.task_db)
+    print("    pipeline log directory: " + PL.log_dir + "\n")
 
-    print("\n    Pipeline can now be executed in managed mode with civet_start")
+    print("    Pipeline can now be executed in managed mode with the civet_start_managed command")
+    print("        civet_start_managed {}".format(args.task_db))
+    print("        See civet_start_managed_command --help for program options")
 
 if __name__ == "__main__":
     main()

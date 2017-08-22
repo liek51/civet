@@ -47,16 +47,25 @@ class Pipeline(Base):
     def is_complete(self):
         """
         Check whether all the jobs are complete.  If so, mark the pipeline as
-        complete.
+        complete.  If any of the jobs have failed,  mark it as "Failed"
         :return: Boolean
         """
         complete = Status.get_id('Complete')
         failed = Status.get_id('Failed')
         submitted = Status.get_id('Submitted')
+        not_submitted = Status.get_id('Not Submitted')
+        failed_pipeline = Status.get_id('Pipeline Failure')
+
+        # if we already are marked as Complete or Failed, return right away
+        if self.status_id in [failed, complete]:
+            return True
+
+        # status
 
         incomplete_jobs = Session.query(Job). \
             filter(Job.status_id != complete). \
             filter(Job.pipeline_id == self.id).all()
+
 
         if not incomplete_jobs:
             self.status_id = complete
@@ -66,19 +75,28 @@ class Pipeline(Base):
         # If any are complete, then we have submitted the pipeline.
 
         any_submitted = len(incomplete_jobs) < len(self.jobs)
+        any_failed = False
 
         for job in incomplete_jobs:
             if job.is_status('Failed'):
-                # FIXME: Should we mark some jobs as terminated here???
+                # FIXME: Should we change status of unsubmitted jobs of a failed pipeline?
                 self.status_id = failed
                 Session.commit()
-                # A failed pipeline is still complete
-                return True
+                any_failed = True
+                break
 
             if job.is_status('Submitted') or job.is_status('Complete'):
                 # If anything is submitted or already complete, but
                 # we're not all complete, then the pipeline is submitted.
                 any_submitted = True
+
+        if any_failed:
+            for job in self.jobs:
+                if job.status_id == not_submitted:
+                    job.status_id = failed_pipeline
+                    Session.commit()
+            # A failed pipeline is still considered complete
+            return True
 
         if any_submitted:
             self.status_id = submitted

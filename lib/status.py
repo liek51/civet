@@ -63,7 +63,7 @@ class ManagedJobStatus(object):
                     self.state = "Failed"
 
         else:
-            status = job_manager.query_job(batch_id)
+            status = job_manager.query_job(str(batch_id))
 
             if status:
                 if status.state == 'C':
