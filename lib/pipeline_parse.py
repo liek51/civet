@@ -77,14 +77,16 @@ class Pipeline(object):
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
                   error_email_address=None, walltime_multiplier=1,
-                  write_pipeline_files=False):
+                  write_pipeline_files=False,
+                  tool_exec_mode=ToolExecModes.BATCH_STANDARD):
 
         try:
             self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
                             completion_mail, search_path, user_override_file,
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
-                            walltime_multiplier, write_pipeline_files=False)
+                            walltime_multiplier, write_pipeline_files,
+                            tool_exec_mode)
         except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
@@ -93,11 +95,12 @@ class Pipeline(object):
             sys.exit(1)
 
     def _parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
-                  submit_jobs=True, completion_mail=True, search_path="",
-                  user_override_file=None, keep_temp=False, release_jobs=True,
-                  force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None, walltime_multiplier=1,
-                  write_pipeline_files=False):
+                   submit_jobs=True, completion_mail=True, search_path="",
+                   user_override_file=None, keep_temp=False, release_jobs=True,
+                   force_conditional_steps=False, delay=None, email_address=None,
+                   error_email_address=None, walltime_multiplier=1,
+                   write_pipeline_files=False,
+                   tool_exec_mode=ToolExecModes.BATCH_STANDARD):
         try:
             pipe = ET.parse(xmlfile).getroot()
         except ET.ParseError as e:
@@ -131,7 +134,7 @@ class Pipeline(object):
         if user_override_file and os.path.exists(user_override_file):
             self.parse_override_file(user_override_file, "user")
 
-        self.execution_mode = ToolExecModes.BATCH_STANDARD
+        self.execution_mode = tool_exec_mode
             
            
         # Register the parameters that may be file paths
