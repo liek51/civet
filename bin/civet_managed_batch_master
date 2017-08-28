@@ -41,7 +41,7 @@ from managed_batch.model.pipeline import Pipeline
 from managed_batch.model.status import Status
 from managed_batch.controller.utilities import initialize_model, init_statuses, \
     mark_complete_and_release_dependencies, mark_submitted, \
-    scan_for_runnable_jobs, count_submitted_jobs
+    scan_for_runnable_jobs, count_submitted_jobs, write_batch_id_to_log_dir
 
 from managed_batch.manager import submit_management_job
 
@@ -61,10 +61,13 @@ def update_job_status(job):
                                              _job_manager)
         if new_status.state == 'Complete':
             mark_complete_and_release_dependencies(job)
-        #TODO handle failed jobs
+        elif new_status.state == 'Failed':
+            job.set_status('Failed')
+            Session.commit()
 
 
 def update_jobs():
+    logging.debug("Updating Job states")
     submitted_status_id = Status.get_id('Submitted')
     submitted_jobs = Session.query(Job).filter_by(
         status_id=submitted_status_id).all()
@@ -96,11 +99,31 @@ def submit_job(job):
 
 
 def all_complete():
+    is_complete = True
     for pipeline in Session.query(Pipeline):
         if not pipeline.is_complete():
-            return False
+            is_complete = False
+            break
 
-    return True
+    cancel_failed_pipelines()
+
+    return is_complete
+
+
+def cancel_failed_pipelines():
+    """
+    cancel any running jobs for pipelines that are considered to be failed
+    this mirrors the standard behavior where a failed job sends the qdel
+    message to all the other jobs in a pipeline
+    :return:
+    """
+    failed_status_id = Status.get_id("Failed")
+    submitted_status_id = Status.get_id("Submitted")
+    for pipeline in Session.query(Pipeline).filter_by(status_id=failed_status_id).all():
+        print("Detected pipeline failure, canceling all submitted jobs for {}".format(pipeline.name))
+        for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id).filter(Job.status_id == submitted_status_id).all():
+            logging.debug("deleting {}".format(job.torque_id))
+            _job_manager.delete_job(str(job.torque_id))
 
 
 def check_walltime(max_walltime):
@@ -118,6 +141,8 @@ def check_walltime(max_walltime):
         if max_walltime - walltime < 10:
             return False
     return True
+
+
 
 
 def main():
@@ -149,12 +174,12 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.ERROR)
 
     max_walltime_minutes = args.max_walltime * 60 if args.max_walltime else None
 
     try:
-        logging.info("Opening task database: " + args.task_db)
+        print("Opening task database: " + args.task_db)
         Session.session = initialize_model(args.task_db)
     except Exception as e:
         logging.error("Error opening task database: " + e.message)
@@ -168,6 +193,13 @@ def main():
         if args.verbose:
             print("Starting iteration {}".format(iteration))
 
+        # update the status of all jobs that currently have the state
+        # "Submitted" (these are jobs that were either Queued or Running last
+        # iteration
+        update_jobs()
+
+        # all_complete() will update Pipeline statuses and return true if they
+        # are all now complete
         if all_complete():
             print("\tAll tasks complete. Sending completion email.")
             # TODO send completion email
@@ -178,24 +210,16 @@ def main():
             print("\tApproaching maximum walltime, submitting new management job.")
             job_id = submit_management_job(args.task_db, args.queue,
                                            args.max_walltime, args.max_queued)
+            write_batch_id_to_log_dir(job_id)
             print("\tNew management job submitted: " + job_id)
             break
 
-        # update the status of all jobs that currently have the state
-        # "Submitted" (these are jobs that were either Queued or Running last
-        # iteration
-        update_jobs()
-
-        # TODO find out if we need to abort a pipeline -- if a pipeline has a
-        # failed job, we should remove all other jobs from that pipeline from
-        # consideration for execution
 
         # find out if we now have some available slots, meaning some of the jobs
         # that had the state Submitted have finished
         available_job_slots = args.max_queued - count_submitted_jobs()
         if args.verbose:
             print("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queued))
-            print("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queuedscan_))
 
         # if we have available slots, see if we have any jobs ready to run
         if available_job_slots:

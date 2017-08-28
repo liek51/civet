@@ -190,6 +190,7 @@ class PipelineStatus(object):
         self.deleted_jobs = 0
         self.cancel_message = None
         self.jobs_running_at_cancel = []
+        self.managed_batch = False
 
         try:
             batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
@@ -200,6 +201,9 @@ class PipelineStatus(object):
         if os.path.exists(os.path.join(log_dir, job_runner.common.NO_SUB_FLAG)):
             self.status = "NO_SUB"
             return
+
+        if os.path.exists(os.path.join(log_dir, "MANAGED_BATCH")):
+            self.managed_batch = True
 
         jm = job_manager
 

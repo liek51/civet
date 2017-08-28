@@ -15,6 +15,8 @@ from __future__ import print_function
 
 import logging
 
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
@@ -145,6 +147,7 @@ def init_file_info():
 def get_file_info():
     return Session.query(FileInfo).one()
 
+
 def mark_file_submitted():
     file_info = get_file_info()
     file_info.started = True
@@ -156,3 +159,7 @@ def get_all_jobs():
     return jobs
 
 
+def write_batch_id_to_log_dir(batch_id):
+    for pipeline in Session.query(Pipeline):
+        with open(os.path.join(pipeline.log_directory, "MANAGED_BATCH"), mode='w') as f:
+            f.write(batch_id + '\n')

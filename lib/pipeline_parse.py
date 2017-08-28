@@ -32,6 +32,7 @@ from tool import *
 
 from job_runner.torque import *
 from job_runner.batch_job import *
+import job_runner.common
 import utilities
 import civet_exceptions
 import config
@@ -402,10 +403,22 @@ class Pipeline(object):
         print('Preparing pipeline ' + self.name)
 
         self.write_command_info()
+        self._write_managed_flag()
 
         tasks = self.create_task_list()
 
+        # create the pipeline_batch_id_list.txt file (normally created when
+        # submitting jobs -- this is needed by civet_status
+        with open(os.path.join(self.log_dir, job_runner.common.BATCH_ID_LOG), mode='w') as job_list:
+            idx = 0
+            for task in tasks:
+                job_list.write(task['name'] + ".managed_task" + '\t' + task['name'] + '\t[' + ", ".join(task['dependencies']) + ']\n')
+                idx += 1
+
         return tasks
+
+    def _write_managed_flag(self):
+        open(os.path.join(self.log_dir, "MANAGED_BATCH"), 'w').close()
 
     @property
     def job_runner(self):

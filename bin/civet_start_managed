@@ -29,7 +29,7 @@ if lib_folder not in sys.path:
 
 import managed_batch.manager
 from managed_batch.model.session import Session
-from managed_batch.controller.utilities import mark_file_submitted, initialize_model
+from managed_batch.controller.utilities import mark_file_submitted, initialize_model, write_batch_id_to_log_dir
 
 
 import version
@@ -72,6 +72,8 @@ def main():
                                                          args.queue,
                                                          args.max_walltime,
                                                          args.max_queued)
+
+    write_batch_id_to_log_dir(job_id)
 
     print("Management job started with job id " + job_id)
 
