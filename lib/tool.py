@@ -26,13 +26,7 @@ import pipeline_parse as PL
 import civet_exceptions
 from pipeline_file import *
 import config
-
-
-class ToolExecModes(object):
-    BATCH_STANDARD = 1
-    BATCH_MANAGED = 2
-    CLOUD = 3
-
+from exec_modes import ToolExecModes
 
 class Tool(object):
     # This script parses all of a tool definition.  Tools may be invoked

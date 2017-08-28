@@ -61,7 +61,11 @@ def update_job_status(job):
                                              _job_manager)
         if new_status.state == 'Complete':
             mark_complete_and_release_dependencies(job)
-        elif new_status.state == 'Failed':
+        elif new_status.state == 'Failed' or new_status.state == 'Deleted':
+            # for now consider a deleted job as 'failed'
+            # the only way for a job to get this state is for the node to
+            # crash/reboot while the job is running, otherwise the job
+            # epilogue should run and create the status.txt file.
             job.set_status('Failed')
             Session.commit()
 
@@ -124,6 +128,7 @@ def cancel_failed_pipelines():
         for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id).filter(Job.status_id == submitted_status_id).all():
             logging.debug("deleting {}".format(job.torque_id))
             _job_manager.delete_job(str(job.torque_id))
+        #TODO send failure email?
 
 
 def check_walltime(max_walltime):
@@ -201,8 +206,8 @@ def main():
         # all_complete() will update Pipeline statuses and return true if they
         # are all now complete
         if all_complete():
-            print("\tAll tasks complete. Sending completion email.")
-            # TODO send completion email
+            print("\tAll tasks complete.")
+            # TODO send completion email? each pipeline already sends a completion email
             print("\tTerminating.")
             break
 

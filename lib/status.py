@@ -21,6 +21,7 @@ import glob
 
 import job_runner.torque as batch_system
 import job_runner.common
+from exec_modes import ToolExecModes
 
 
 def format_state(state):
@@ -90,7 +91,7 @@ class ManagedJobStatus(object):
 
 class Status(object):
 
-    def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel):
+    def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel, excution_mode):
 
         self.state = None
         self.exit_status = None
@@ -121,6 +122,10 @@ class Status(object):
                     self.state = "SUCCESS"
                 elif status['exit_status'] == '-11':
                     self.state = "FAILED (WALLTIME)"
+                elif status['exit_status'] == '271':
+                    # running torque jobs canceled with qdel have exit status 271
+                    self.state = "CANCELED"
+                    self.state_at_cancel = "Running"
                 else:
                     self.state = "FAILED"
 
@@ -133,6 +138,11 @@ class Status(object):
                 self.walltime = status['walltime']
             if 'requested_walltime' in status:
                 self.walltime_requested = status['requested_walltime']
+
+        elif excution_mode == ToolExecModes.BATCH_MANAGED:
+            # if the pipeline is being run in managed mode, there will be no
+            # status information for unfinished jobs
+            self.state = "MANAGED"
 
         else:
             status = job_manager.query_job(id)
@@ -188,9 +198,10 @@ class PipelineStatus(object):
         self.delayed_jobs = 0
         self.queued_jobs = 0
         self.deleted_jobs = 0
+        self.managed_unknown = 0
         self.cancel_message = None
         self.jobs_running_at_cancel = []
-        self.managed_batch = False
+        self.execution_mode = False
 
         try:
             batch_jobs = job_runner.common.jobs_from_logdir(log_dir)
@@ -203,7 +214,9 @@ class PipelineStatus(object):
             return
 
         if os.path.exists(os.path.join(log_dir, "MANAGED_BATCH")):
-            self.managed_batch = True
+            self.execution_mode = ToolExecModes.BATCH_MANAGED
+        else:
+            self.execution_mode = ToolExecModes.BATCH_STANDARD
 
         jm = job_manager
 
@@ -232,7 +245,7 @@ class PipelineStatus(object):
 
         for job in batch_jobs:
             job_status = Status(log_dir, job[1], job[0], job[2], jm,
-                                self.jobs_running_at_cancel)
+                                self.jobs_running_at_cancel, self.execution_mode)
             self.jobs.append(job_status)
 
             if job_status.state == "RUNNING":
@@ -251,6 +264,8 @@ class PipelineStatus(object):
                 self.deleted_jobs += 1
             elif job_status.state == "CANCELED":
                 self.canceled_jobs += 1
+            elif job_status.state == "MANAGED":
+                self.managed_unknown += 1
 
         if self.total_jobs == 0:
             self.status = "SUBMIT_ERROR"

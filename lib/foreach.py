@@ -19,7 +19,7 @@ from step import *
 from pipeline_file import *
 from job_runner.torque import *
 from civet_exceptions import *
-from tool import ToolExecModes
+from exec_modes import ToolExecModes
 
 
 

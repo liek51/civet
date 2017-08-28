@@ -36,6 +36,7 @@ import job_runner.common
 import utilities
 import civet_exceptions
 import config
+from exec_modes import ToolExecModes
 
 
 class Pipeline(object):

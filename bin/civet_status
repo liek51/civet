@@ -33,6 +33,7 @@ if lib_folder not in sys.path:
 import job_runner.common
 import version
 import status
+from exec_modes import ToolExecModes
 
 
 def format_state(state):
@@ -184,6 +185,9 @@ def main():
                     else:
                         print("\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job.name))
 
+                elif job.state == "MANAGED":
+                    print("\tcivet_status can only get information on complete jobs when pipeline is run in managed batch mode")
+
                 else:
                     print("\t" + status.format_state(job.state))
 
@@ -206,9 +210,12 @@ def main():
             print("\tTotal Pipeline Jobs: {0}".format(dir_status.total_jobs))
             print("\t\tCompleted Jobs (success): {0}".format(dir_status.complete_jobs_success))
             print("\t\tCompleted Jobs (with error): {0}".format(dir_status.complete_jobs_failure))
-            print("\t\tRunning Jobs: {0}".format(dir_status.running_jobs))
-            print("\t\tPending Jobs (waiting for compute resources): {0}".format(dir_status.queued_jobs))
-            print("\t\tPending Jobs (waiting on dependency): {0}".format(dir_status.held_jobs))
+            if dir_status.execution_mode == ToolExecModes.BATCH_MANAGED:
+                print("\t\tIncomplete jobs: {}".format(dir_status.managed_unknown))
+            else:
+                print("\t\tRunning Jobs: {0}".format(dir_status.running_jobs))
+                print("\t\tPending Jobs (waiting for compute resources): {0}".format(dir_status.queued_jobs))
+                print("\t\tPending Jobs (waiting on dependency): {0}".format(dir_status.held_jobs))
             if dir_status.delayed_jobs:
                 print("\t\tPending Jobs (delayed start): {0}".format(dir_status.delayed_jobs))
             if dir_status.canceled_jobs:
@@ -223,7 +230,7 @@ def main():
             if dir_status.complete_jobs_failure:
                 print_header = True
                 for job in dir_status.jobs:
-                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD'] and job.exit_status != 0 and job.exit_status != 271:
+                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD', 'MANAGED'] and job.exit_status != 0 and job.exit_status != 271:
                         if print_header:
                             print("\tFailed Jobs:")
                             print_header = False
