@@ -230,7 +230,11 @@ class PipelineFile(object):
             # to be handled at a higher level
             self.apply_in_dir_and_create_temp(files, circularity)
 
-        self.finalize_path()
+        try:
+            self.finalize_path()
+        except:
+            print("ERROR CALLING finalize_path() for {}:  {}".format(self.id, self.path))
+            sys.exit()
         self.finalized = True
 
         # Make sure a directory exists, unless explicitly requested
