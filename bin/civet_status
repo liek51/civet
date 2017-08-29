@@ -102,7 +102,7 @@ def main():
             for root, dirs, files in os.walk(d, topdown=True, followlinks=True):
 
                 # in fast mode we short circuit the directory walk if we find
-                # a directory called 'logs' and we only decend into that dir
+                # a directory called 'logs' and we only descend into that dir
                 if args.fast and 'logs' in dirs:
                     dirs[:] = ['logs']
 
