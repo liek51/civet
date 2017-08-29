@@ -356,7 +356,7 @@ class PipelineFile(object):
             my_dir = PipelineFile.get_output_dir()
 
         if self.is_list:
-            return
+            self.path = my_dir
         elif self.is_temp and not self.path:
             # If it is an anonymous temp, we'll create it in
             # the proper directory
