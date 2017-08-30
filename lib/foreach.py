@@ -294,7 +294,7 @@ class ForEach(object):
 
                 task['name'] = "{}-{}_temp_file_cleanup".format(name_prefix, iteration)
                 task['command'] = cmd
-                task['mem'] = 1
+                task['mem'] = "1"
                 task['walltime'] = "00:30:00"
                 task['threads'] = 1
 
