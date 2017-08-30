@@ -131,6 +131,7 @@ def main():
     deps_to_job = {}
     try:
         for task in task_list:
+            print("Inserting {}".format(task['name']))
             dependencies = [deps_to_job[d] for d in task['dependencies']]
 
             job = Job(pipeline, task['name'], task['threads'],

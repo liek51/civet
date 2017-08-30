@@ -290,6 +290,7 @@ class ForEach(object):
                 tmps.append(self.pipelineFiles[fid].path)
 
             if len(tmps):
+                task = {}
                 cmd = 'rm -f ' + ' '.join(tmps)
 
                 task['name'] = "{}-{}_temp_file_cleanup".format(name_prefix, iteration)
@@ -336,9 +337,6 @@ class ForEach(object):
                 del self.pipelineFiles[fid]
 
         return tasks
-
-
-
 
         
 class ForEachFile(object):
