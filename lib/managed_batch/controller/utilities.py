@@ -31,6 +31,8 @@ from managed_batch.model.file_info import FileInfo
 
 from managed_batch.model.session import Session
 
+__engine = None
+
 
 def initialize_model(db_path, echo_sql=False):
     """
@@ -47,7 +49,9 @@ def initialize_model(db_path, echo_sql=False):
     the rest of the modules.  So we return it, and it is up to our caller to
     set it in the Session class.
     """
+    global __engine
     engine = create_engine('sqlite:///{0}'.format(db_path))
+    __engine = engine
 
     #Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine, checkfirst=True)
@@ -60,6 +64,10 @@ def initialize_model(db_path, echo_sql=False):
         db_path
     ))
     return session
+
+
+def dispose_engine():
+    __engine.dispose()
 
 
 def count_submitted_jobs():
