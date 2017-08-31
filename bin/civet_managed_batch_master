@@ -94,7 +94,7 @@ def submit_job(job):
         'epilogue_path': job.epilog_path,
         'mail_options': job.mail_options,
         'email_list': job.email_list,
-        'mem': "{}gb".format(job.mem)
+        'mem': "{}gb".format(job.mem) if job.mem else None
 
     }
     batch_id = BatchRunner.submit_managed_job(task)
