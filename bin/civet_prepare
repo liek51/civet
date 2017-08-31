@@ -156,7 +156,7 @@ def main():
 
     print("    Pipeline can now be executed in managed mode with the civet_start_managed command")
     print("        civet_start_managed {}".format(args.task_db))
-    print("        See civet_start_managed_command --help for program options")
+    print("        See civet_start_managed --help for program options")
 
 if __name__ == "__main__":
     main()
