@@ -129,11 +129,15 @@ def main():
     # session. We will build up a dictionary of task['name'] : Job as we
     # insert them
     deps_to_job = {}
+    print("  Inserting tasks into {}".format(args.task_db))
     try:
         for task in task_list:
-            print("Inserting {}".format(task['name']))
-            dependencies = [deps_to_job[d] for d in task['dependencies']]
-
+            print("    -> {}".format(task['name']))
+            try:
+                dependencies = [deps_to_job[d] for d in task['dependencies']]
+            except KeyError as e:
+                msg = "Task {} depends on a task that hasn't been been processed ({}). Check your Pipeline XML".format(task['name'], d)
+                raise Exception(msg)
             job = Job(pipeline, task['name'], task['threads'],
                       task['stdout_path'], task['stderr_path'],
                       task['script_path'], task['epilogue_path'],
@@ -151,11 +155,11 @@ def main():
     # without catching an Exception
     Session.commit()
 
-    print("    tasks have been inserted into task file " + args.task_db)
+    print("  {} tasks have been inserted into task file {}\n".format(len(task_list), args.task_db))
     print("    pipeline log directory: " + PL.log_dir + "\n")
 
-    print("    Pipeline can now be executed in managed mode with the civet_start_managed command")
-    print("        civet_start_managed {}".format(args.task_db))
+    print("    Pipeline can now be executed in managed mode with the 'civet_start_managed' command")
+    print("        civet_start_managed {}:".format(args.task_db))
     print("        See civet_start_managed --help for program options")
 
 if __name__ == "__main__":
