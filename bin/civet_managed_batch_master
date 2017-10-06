@@ -159,9 +159,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('task_db',
-                        help="filename where civet_prepare will store the "
-                             "tasks. If the file exists, civet_prepare will "
-                             "add new tasks to the file.")
+                        help="path of task file created by civet_prepare")
     parser.add_argument('--max-walltime', '-w', type=int, default=None,
                         help="Maximum walltime, in hours, to run. If this "
                              "argument is specified, this program will submit "
