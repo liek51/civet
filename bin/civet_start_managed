@@ -29,7 +29,8 @@ if lib_folder not in sys.path:
 
 import managed_batch.manager
 from managed_batch.model.session import Session
-from managed_batch.controller.utilities import mark_file_submitted, initialize_model, write_batch_id_to_log_dir
+from managed_batch.controller.utilities import mark_file_submitted, \
+    initialize_model, write_batch_id_to_log_dir, get_file_info
 
 
 import version
@@ -56,13 +57,27 @@ def main():
     parser.add_argument('-q', '--queue', default=None,
                         help="submission queue [default = TORQUE default]")
 
+    parser.add_argument('--force', '-f', action='store_true',
+                        help="start a management process even if the task file indicates one has already been started")
+
     args = parser.parse_args()
 
     try:
         Session.session = initialize_model(args.task_db)
     except Exception as e:
         print("Error opening task database: " + e.message, file=sys.stderr)
-        sys.exit(3)
+        sys.exit(1)
+
+    # make sure the task file hasn't already been submitted
+    file_info = get_file_info()
+    if not args.force and file_info.started:
+        print("\n"
+              "A mangement process has already been started for this task file",
+              file=sys.stderr)
+        print("\tIf you are sure that management process is no longer running\n"
+              "\tyou can start another one with civet_start_managed -f",
+              file=sys.stderr)
+        sys.exit(1)
 
     # mark the task file as "started"
     mark_file_submitted()
