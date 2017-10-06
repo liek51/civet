@@ -20,8 +20,6 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
-from sqlalchemy import and_
-from sqlalchemy import join
 
 from managed_batch.model.base import Base
 from managed_batch.model.job import Job

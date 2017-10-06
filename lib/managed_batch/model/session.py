@@ -30,5 +30,5 @@ class Session(object):
         Session.session.commit()
 
     @staticmethod
-    def query(*domain_object):
-        return Session.session.query(*domain_object)
+    def query(*entities, **kwargs):
+        return Session.session.query(*entities, **kwargs)
