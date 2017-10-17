@@ -203,6 +203,18 @@ def get_memory(dir, jobs):
     """
     Given an analysis log directory, register the memory used by each job.
 
+    ********
+    This relies on the current Torque epilogue in use at JAX. This won't work
+    at other sites, and the epilogue is currently out of our control so it's
+    output could change at any time.
+
+    Glen would like to modify Civet's per job Torque epilogue to output memory
+    usage to the job's status file so that for future versions of Civet we don't
+    have to parse the job's stdout to get memory usage.
+
+    At that point, this routine would need to be completely rewritten.
+    ********
+
     The memory usage is written by each job's Torque epilog; except for the
     cleanup job, they are all together in concatenated_stdout.txt which we will
     scan in this routine.
