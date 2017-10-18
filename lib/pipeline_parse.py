@@ -204,6 +204,7 @@ class Pipeline(object):
         self._steps = []
         self._files = {}
         self.foreach_barriers = {}
+        self.foreach_tasks = {}
 
         # create some implicitly defined file IDs
         PipelineFile.add_simple_dir("PIPELINE_ROOT", self.master_XML_dir,

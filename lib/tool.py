@@ -542,6 +542,10 @@ class Tool(object):
                 if inf.creator_job and inf.creator_job not in task['dependencies']:
                     task['dependencies'].append(inf.creator_job)
 
+                if inf.is_list:
+                    if inf.foreach_dep:
+                        task['dependencies'].extend(PL.foreach_tasks[inf.foreach_dep])
+
                 task['input_files'].append({'id': input_name, 'local': inf.path,
                                             'cloud': inf.cloud_path})
 
@@ -565,6 +569,9 @@ class Tool(object):
                 inf = self.pipeline_files[input_name]
                 if inf.creator_job and inf.creator_job not in task['dependencies']:
                     task['dependencies'].append(inf.creator_job)
+                if inf.is_list:
+                    if inf.foreach_dep:
+                        task['dependencies'].extend(PL.foreach_tasks[inf.foreach_dep])
 
 
             for output_name in self.outs:

@@ -305,7 +305,6 @@ class ForEach(object):
 
                 elif execution_mode == ToolExecModes.BATCH_MANAGED:
 
-
                     task['dependencies'] = iteration_tasks
 
                     # need to make a BatchJob object so we can generate a job
@@ -336,6 +335,7 @@ class ForEach(object):
             for fid in cleanups:
                 del self.pipelineFiles[fid]
 
+        PL.foreach_tasks[self.id] = [task['name'] for task in tasks]
         return tasks
 
         
