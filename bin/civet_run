@@ -95,7 +95,10 @@ def main():
     except civet_exceptions.MissingFile as e:
         print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
         sys.exit(2)
-    PL.submit()
+
+    print('Executing pipeline ' + PL.name)
+    sub_info = PL.submit(silent=True)
+    print("Log directory:  " + sub_info['log_dir'])
 
 if __name__ == "__main__":
     main()

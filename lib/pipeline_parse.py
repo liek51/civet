@@ -274,12 +274,13 @@ class Pipeline(object):
             utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
-    def submit(self):
+    def submit(self, silent=False):
         """
         Submit a constructed pipeline to the batch system for execution
         :return:
         """
-        print('Executing pipeline ' + self.name)
+        if not silent:
+            print('Executing pipeline ' + self.name)
 
         # Capture the CWD and the command line that invoked us.
         of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
@@ -417,7 +418,13 @@ class Pipeline(object):
             self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
-        print('Log directory:  ' + self.log_dir)
+        if not silent:
+            print('Log directory:  ' + self.log_dir)
+
+        return {
+            'log_dir': self.log_dir,
+            'output_dir': PipelineFile.get_output_dir()
+        }
 
     def abort_submit(self, message, status=1):
         """
