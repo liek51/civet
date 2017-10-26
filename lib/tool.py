@@ -366,7 +366,7 @@ class Tool(object):
                     vcs.append(vc)
         return vcs
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
@@ -501,7 +501,8 @@ class Tool(object):
             f = self.pipeline_files[fid]
             f.add_consumer_job(job_id)
 
-        print("{0}: {1}".format(job_id, self.name_from_pipeline))
+        if not silent:
+            print("{0}: {1}".format(job_id, self.name_from_pipeline))
         return job_id
 
     def check_files_exist(self):

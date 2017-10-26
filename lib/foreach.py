@@ -93,7 +93,7 @@ class ForEach(object):
                    "'{}' is used as a file and related file id in '{}'.\n\n{}")
             raise ParseError(msg.format(self.file.id, self.id, ET.tostring(e)))
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent=False):
 
         import pipeline_parse as PL
 

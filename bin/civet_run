@@ -21,6 +21,7 @@ import argparse
 import sys
 import inspect
 import os
+import json
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
@@ -68,6 +69,8 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
+    parser.add_argument('--json', action='store_true',
+                        help="stdout written in json format")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
@@ -96,9 +99,11 @@ def main():
         print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
         sys.exit(2)
 
-    print('Executing pipeline ' + PL.name)
-    sub_info = PL.submit(silent=True)
-    print("Log directory:  " + sub_info['log_dir'])
+    if not args.json:
+        PL.submit()
+    else:
+        sub_info = PL.submit(silent=True)
+        print(json.dumps(sub_info), indent=2, sort_keys=True)
 
 if __name__ == "__main__":
     main()

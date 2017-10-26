@@ -342,7 +342,7 @@ class Pipeline(object):
         for step in self._steps:
             invocation += 1
             name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
-            job_id = step.submit(name_prefix)
+            job_id = step.submit(name_prefix, silent)
             for j in job_id:
                 self.all_batch_jobs.append(j)
 
@@ -423,7 +423,8 @@ class Pipeline(object):
 
         return {
             'log_dir': self.log_dir,
-            'output_dir': PipelineFile.get_output_dir()
+            'output_dir': PipelineFile.get_output_dir(),
+            'job_ids': self.all_batch_jobs
         }
 
     def abort_submit(self, message, status=1):
