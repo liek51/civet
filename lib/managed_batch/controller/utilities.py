@@ -70,8 +70,9 @@ def dispose_engine():
 
 def count_submitted_jobs():
     count_q = Session.query(Job).filter_by(status_id=Status.get_id('Submitted')).statement.with_only_columns([func.count()]).order_by(None)
-    return Session.session.execute(count_q).scalar()
-
+    count = Session.session.execute(count_q).scalar()
+    logging.debug("Counted {} submitted jobs".format(count))
+    return count
 
 def mark_submitted(job, torque_id):
     logging.debug('Submitting: {0}'.format(job))
@@ -141,7 +142,6 @@ def init_statuses():
 
 
 def init_file_info():
-
     # create the single row in the FileInfo table, this should only be called
     # when creating a new task file
     file_info = FileInfo(schema_version=FileInfo.CURRENT_SCHEMA_VERSION,
@@ -151,17 +151,20 @@ def init_file_info():
 
 
 def get_file_info():
-    return Session.query(FileInfo).one()
-
+    inf = Session.query(FileInfo).one()
+    logging.debug("get_file_info() returned: {}".format(inf))
+    return inf
 
 def mark_file_submitted():
     file_info = get_file_info()
     file_info.started = True
     Session.commit()
+    logging.debug("File is now marked as submitted.")
 
 
 def get_all_jobs():
     jobs = Session.query(Job).all()
+    logging.debug("get_all_jobs() returned {} jobs".format(len(jobs)))
     return jobs
 
 

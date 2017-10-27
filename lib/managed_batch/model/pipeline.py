@@ -19,6 +19,7 @@ from base import Base
 from job import Job
 from session import Session
 from status import Status
+import logging
 
 from sqlalchemy.orm import relationship
 
@@ -43,6 +44,7 @@ class Pipeline(Base):
         self.name = name
         self.log_directory = log_directory
         self.status_id = Status.get_id('Not Submitted')
+        logging.debug("Created pipeline for {} in {}".format(name, log_directory))
 
     def is_complete(self):
         """
@@ -66,7 +68,6 @@ class Pipeline(Base):
             filter(Job.status_id != complete). \
             filter(Job.pipeline_id == self.id).all()
 
-
         if not incomplete_jobs:
             self.status_id = complete
             Session.commit()
@@ -80,6 +81,7 @@ class Pipeline(Base):
         for job in incomplete_jobs:
             if job.is_status('Failed'):
                 # FIXME: Should we change status of unsubmitted jobs of a failed pipeline?
+                logging.debug("Job {} failed, marking pipeline {} (log dir: {}) failed.".format(job, self.name, self.log_directory))
                 self.status_id = failed
                 Session.commit()
                 any_failed = True
@@ -93,12 +95,14 @@ class Pipeline(Base):
         if any_failed:
             for job in self.jobs:
                 if job.status_id == not_submitted:
+                    logging.debug("Marking job {} as 'failed pipeline'.".format(job))
                     job.status_id = failed_pipeline
                     Session.commit()
             # A failed pipeline is still considered complete
             return True
 
         if any_submitted:
+            logging.debug("Marking pipeline {} (log dir: {}) submitted.".format(self.name, self.log_directory))
             self.status_id = submitted
             Session.commit()
 
