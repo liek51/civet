@@ -150,13 +150,14 @@ def init_file_info():
 
 def get_file_info():
     inf = Session.query(FileInfo).one()
-    logging.debug("FileInfo: {}".format(inf))
     return inf
+
 
 def mark_file_submitted():
     file_info = get_file_info()
     file_info.started = True
     Session.commit()
+    logging.debug("FileInfo: {}".format(file_info))
     logging.debug("File is now marked as submitted.")
 
 
