@@ -81,7 +81,7 @@ class Pipeline(Base):
         for job in incomplete_jobs:
             if job.is_status('Failed'):
                 # FIXME: Should we change status of unsubmitted jobs of a failed pipeline?
-                logging.debug("Job {} failed, marking pipeline {} (log dir: {}) failed.".format(job, self.name, self.log_directory))
+                logging.debug("Job {} failed, marking pipeline {} (log dir: {}) failed.".format(job.job_name, self.name, self.log_directory))
                 self.status_id = failed
                 Session.commit()
                 any_failed = True
@@ -95,13 +95,13 @@ class Pipeline(Base):
         if any_failed:
             for job in self.jobs:
                 if job.status_id == not_submitted:
-                    logging.debug("Marking job {} as 'failed pipeline'.".format(job))
+                    logging.debug("Marking job {} (log dir: {}) as 'failed pipeline'.".format(job.job_name, self.log_directory))
                     job.status_id = failed_pipeline
                     Session.commit()
             # A failed pipeline is still considered complete
             return True
 
-        if any_submitted:
+        if any_submitted and self.status_id != submitted:
             logging.debug("Marking pipeline {} (log dir: {}) submitted.".format(self.name, self.log_directory))
             self.status_id = submitted
             Session.commit()
