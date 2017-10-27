@@ -102,7 +102,6 @@ def submit_job(job):
 
     }
     batch_id = BatchRunner.submit_managed_job(task)
-    logging.debug("Submitted job {} (log dir: {}) as batch ID {}".format(job.job_name, job.pipeline.log_directory, batch_id))
     # mark job as submitted
     mark_submitted(job, batch_id)
 
@@ -136,9 +135,17 @@ def cancel_failed_pipelines():
     failed_status_id = Status.get_id("Failed")
     submitted_status_id = Status.get_id("Submitted")
     for pipeline in Session.query(Pipeline).filter_by(status_id=failed_status_id).all():
-        logging.info("Detected pipeline failure, canceling all submitted jobs for {} (log dir: {})".format(pipeline.name, pipeline.log_directory))
-        print("Detected pipeline failure, canceling all submitted jobs for {} (log dir: {}".format(pipeline.name, pipeline.log_directory))
+        msg_out = False
         for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id).filter(Job.status_id == submitted_status_id).all():
+            if not msg_out:
+                msg_out = True
+                logging.info(
+                    "Detected pipeline failure, canceling all submitted jobs for {} (log dir: {})".format(
+                        pipeline.name, pipeline.log_directory))
+                print(
+                    "Detected pipeline failure, canceling all submitted jobs for {} (log dir: {}".format(
+                        pipeline.name, pipeline.log_directory))
+
             logging.debug("deleting {}".format(job.torque_id))
             _job_manager.delete_job(str(job.torque_id))
         #TODO send failure email?
@@ -194,7 +201,7 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()), format='%(asctime)s %(message)s')
 
     max_walltime_minutes = args.max_walltime * 60 if args.max_walltime else None
 
@@ -227,18 +234,6 @@ def main():
             print("\tTerminating.")
             break
 
-        if not check_walltime(max_walltime_minutes):
-            logging.info("Approaching maximum walltime, submitting new management job.")
-            print("\tApproaching maximum walltime, submitting new management job.")
-            dispose_engine()
-            job_id = submit_management_job(args.task_db, args.queue,
-                                           args.max_walltime, args.max_queued)
-            write_batch_id_to_log_dir(job_id)
-            logging.info("New management job submitted: " + job_id)
-            print("\tNew management job submitted: " + job_id)
-            break
-
-
         # find out if we now have some available slots, meaning some of the jobs
         # that had the state Submitted have finished
         available_job_slots = args.max_queued - count_submitted_jobs()
@@ -250,9 +245,22 @@ def main():
             ready_jobs = scan_for_runnable_jobs(limit=available_job_slots)
             logging.info("Iteration {}: Starting {} jobs".format(iteration, len(ready_jobs)))
             for job in ready_jobs:
-                logging.info("\tStarting {}".format(job.job_name))
+                logging.info("\tStarting {} (log dir: {})".format(job.job_name, job.pipeline.log_directory))
                 submit_job(job)
 
+            if not check_walltime(max_walltime_minutes):
+                logging.info(
+                    "Approaching maximum walltime, submitting new management job.")
+                print(
+                    "\tApproaching maximum walltime, submitting new management job.")
+                dispose_engine()
+                job_id = submit_management_job(args.task_db, args.queue,
+                                               args.max_walltime,
+                                               args.max_queued)
+                write_batch_id_to_log_dir(job_id)
+                logging.info("New management job submitted: " + job_id)
+                print("\tNew management job submitted: " + job_id)
+                break
 
         # done iteration.  Sleep for a little while.
         time.sleep(30)

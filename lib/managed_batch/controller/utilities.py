@@ -74,28 +74,26 @@ def count_submitted_jobs():
     logging.debug("Counted {} submitted jobs".format(count))
     return count
 
+
 def mark_submitted(job, torque_id):
-    logging.debug('Submitting: {0}'.format(job))
+    logging.debug('Marked submitted: {} (log dir: {})'.format(job.job_name, job.pipeline.log_directory))
     job.set_status('Submitted')
     job.torque_id = torque_id
-    logging.debug('Now in submitted state: {0}'.format(job))
     Session.session.commit()
 
 
 def mark_complete_and_release_dependencies(job):
     # Now let's complete that job.
-    logging.debug('Now completing job: {0}'.format(job.job_name))
-
+    logging.debug('Now completing job: {}, ID: {} (log dir: {})'.format(job.job_name, job.id, job.pipeline.log_directory))
     job.set_status('Complete')
-    logging.debug('The now-completed job is: {0}'.format(job))
 
     # Find all the jobs depending on the completed job.
     dependent_jobs = Session.session.query(Job).filter(
         Job.depends_on.any(Job.id == job.id))
     for j in dependent_jobs:
-        logging.debug('Found dependent job: {0}'.format(j))
+        logging.debug('Found dependent job: {0}'.format(j.job_name))
         j.depends_on.remove(job)
-        logging.debug("New state with completed job removed: {0}".format(j))
+        logging.debug("New dependencies with completed job removed: {0}".format(j.depends_on))
     Session.session.commit()
 
 
@@ -117,7 +115,7 @@ def scan_for_runnable_jobs(limit=None):
     else:
         logging.debug('The jobs that are ready to execute are:')
         for j in ready_jobs:
-            logging.debug('    {0} (log dir: {})'.format(j.job_name, j.pipeline.log_directory))
+            logging.debug('    {} (log dir: {})'.format(j.job_name, j.pipeline.log_directory))
     return ready_jobs
 
 
