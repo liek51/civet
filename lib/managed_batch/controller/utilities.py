@@ -150,7 +150,7 @@ def init_file_info():
 
 def get_file_info():
     inf = Session.query(FileInfo).one()
-    logging.debug("get_file_info() returned: {}".format(inf))
+    logging.debug("FileInfo: {}".format(inf))
     return inf
 
 def mark_file_submitted():
