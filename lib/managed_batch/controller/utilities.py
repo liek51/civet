@@ -93,7 +93,7 @@ def mark_complete_and_release_dependencies(job):
     for j in dependent_jobs:
         logging.debug('Found dependent job: {0}'.format(j.job_name))
         j.depends_on.remove(job)
-        logging.debug("New dependencies with completed job removed: {0}".format(j.depends_on))
+        logging.debug("New dependencies with completed job removed: {0}".format([x.job_name for x in j.depends_on]))
     Session.session.commit()
 
 
