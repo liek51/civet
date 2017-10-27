@@ -138,7 +138,7 @@ def main():
     logging.debug("Pipeline is: {}".format(pipeline))
 
     task_list = PL.prepare_managed_tasks()
-    logging.debug("Task list is: {}".format([x.name for x in task_list]))
+    logging.debug("Task list is: {}".format([x['name'] for x in task_list]))
 
     # we need to be able to translate the dependencies as stored in the task
     # list (list of other task names that a particular task depends on)
