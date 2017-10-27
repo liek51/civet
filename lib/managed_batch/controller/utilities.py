@@ -117,7 +117,7 @@ def scan_for_runnable_jobs(limit=None):
     else:
         logging.debug('The jobs that are ready to execute are:')
         for j in ready_jobs:
-            logging.debug('    {0}'.format(j))
+            logging.debug('    {0} (log dir: {})'.format(j.job_name, j.pipeline.log_directory))
     return ready_jobs
 
 

@@ -60,7 +60,7 @@ def update_job_status(job):
                                              job.job_name, job.torque_id,
                                              _job_manager)
         if new_status.state == 'Complete':
-            logging.debug("Marking job {} 'Complete'.".format(job))
+            logging.debug("Marking job {} (log dir: {}) 'Complete'.".format(job.job_name, job.pipeline.log_directory))
             mark_complete_and_release_dependencies(job)
         elif new_status.state == 'Failed' or new_status.state == 'Deleted':
             # for now consider a deleted job as 'failed'
@@ -68,8 +68,8 @@ def update_job_status(job):
             # crash/reboot while the job is running, otherwise the job
             # epilogue should run and create the status.txt file.
             if new_status.state == 'Deleted':
-                logging.debug("Job {} has status 'Deleted'.".format(job))
-            logging.debug("Marking job {} 'Failed'".format(job))
+                logging.debug("Job {} (log dir: {}) has status 'Deleted'.".format(job.job_name, job.pipeline.log_directory))
+            logging.debug("Marking job {} (log dir: {}) 'Failed'".format(job.job_name, job.pipeline.log_directory))
             job.set_status('Failed')
             Session.commit()
 
@@ -102,8 +102,7 @@ def submit_job(job):
 
     }
     batch_id = BatchRunner.submit_managed_job(task)
-    logging.debug("Submitted job {} as batch ID {}".format(job.job_name, batch_id))
-    logging.debug("Script path: {}".format(job.script_path))
+    logging.debug("Submitted job {} (log dir: {}) as batch ID {}".format(job.job_name, job.pipeline.log_directory, batch_id))
     # mark job as submitted
     mark_submitted(job, batch_id)
 
@@ -157,7 +156,7 @@ def check_walltime(max_walltime):
         walltime = (time.time() - start_time) / 60
 
         # if we have less than 10 minutes to go indicate it's time to resubmit
-        logging.debug("Walltime remaining: {}".format(max_walltime - walltime))
+        logging.debug("Walltime remaining: {}".format(int(max_walltime - walltime)))
         if max_walltime - walltime < 10:
             logging.info("We have reached walltime limit.")
             return False
@@ -211,8 +210,7 @@ def main():
     while True:
 
         iteration += 1
-        if args.verbose:
-            print("Starting iteration {}".format(iteration))
+        logging.info("Starting iteration {}".format(iteration))
 
         # update the status of all jobs that currently have the state
         # "Submitted" (these are jobs that were either Queued or Running last

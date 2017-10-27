@@ -165,7 +165,7 @@ def main():
                       task['walltime'])
 
             deps_to_job[task['name']] = job
-            logging.debug("Adding job {} to session".format(job))
+            logging.debug("Adding job {} (log dir: {}) to session".format(job.job_name, job.pipeline.log_directory))
             Session.add(job)
     except Exception as e:
         logging.exception("Error inserting tasks into database")
