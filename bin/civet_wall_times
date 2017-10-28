@@ -32,7 +32,10 @@ lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
     sys.path.insert(0, lib_folder)
 
+# Ignore the warning that this import is not at the top of the file.
+# It depends on us setting the import path, in the lines above.
 import version
+
 
 def usage():
     if len(sys.argv) < 2:
@@ -54,13 +57,25 @@ def parse_args():
 class JobTimes(object):
     def __init__(self, job):
         self.job = job
+
+        # Time stats
         self.max = -1
         self.min = 999999999
         self.total = 0
         self.count = 0
         self.requested = 0
         self.max_requested = 0
-        self._long_node = 'Unknown'
+        self.req = 0
+
+        # memory stats  (all in GiB, as floats)
+        self.max_mem = -1.0
+        self.min_mem = 999999999.0
+        self.total_mem = 0.0
+        self.count_mem = 0.0  # Should always match self.count
+        # Not tracking requested, only actual at this point.
+
+        # Long time node.
+        self.long_node = 'Unknown'
 
     def register_time(self, used_timestr, requested_timestr):
         secs = JobTimes.to_seconds(used_timestr)
@@ -78,25 +93,52 @@ class JobTimes(object):
         self.count += 1
         return new_longest
 
-    @property
-    def long_node(self):
-        return self._long_node
+    def record_memory(self, mem):
+        """
+        Record the memory used by a job, converting from kB to ~GiB.  I
+        don't know whether Torque records use in kB or kiB, so I'm not sure it
+        is truly GiB. Anyway, we divide the incoming value by 1024 ^ 2.
+        :param mem: (float) memory used by the job in kB or kiB.
+        :return: None
+        """
+        mem = mem / (1024.0 * 1024.0)
+        if mem > self.max_mem:
+            self.max_mem = mem
+        if mem < self.min_mem:
+            self.min_mem = mem
 
-    @long_node.setter
-    def long_node(self, node):
-        self._long_node = node
+        self.total_mem += mem
+        self.count_mem += 1.0
 
     def __str__(self):
         max = JobTimes.from_seconds(self.max)
         min = JobTimes.from_seconds(self.min)
-        avg = JobTimes.from_seconds(int(float(self.total)/float(self.count)))
-        return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}'.format(
-             self.job, self.req, max, self.long_node,
-             avg, min, self.count)
+        if self.count:
+            avg = JobTimes.from_seconds(int(float(self.total) /
+                                            float(self.count)))
+        else:
+            avg = 'NA'
+
+        # values are already floats. Convert to truncated strings.
+        # Can't do this for average since it may occasionally be 'NA', which
+        # will blow up in {0:0.2f} formatting.  Since we have to do it
+        # externally for avg_mem, do it here for all.
+        max_mem_str = '{0:0.2f} GiB'.format(self.max_mem)
+        min_mem_str = '{0:0.2f} GiB'.format(self.min_mem)
+        if self.count_mem:
+            avg_mem_str = '{0:0.2f} GiB'.format(self.total_mem/self.count_mem)
+        else:
+            avg_mem_str = 'NA'
+
+        return '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}'.format(
+                self.job, self.req, max, self.long_node,
+                avg, min, self.count, max_mem_str, avg_mem_str, min_mem_str,
+                self.count_mem)
 
     @staticmethod
     def header(collect_nodes):
-        head = 'Name\tRequested\tMax\tLong node\tAverage\tMin\tCount'
+        head = 'Name\tT. Requested\tT. Max\tLong node\tT. Average\tT. Min' \
+               '\tT. Count\tM. Max\tM. Average\tM. Min\tM. Count'
         if collect_nodes:
             head += '\tNodes list'
         return head
@@ -120,21 +162,22 @@ class JobTimes(object):
     def from_seconds(insecs):
         days = insecs/(24*3600)
         rem = insecs - days*(24*3600)
-        hours = rem/(3600)
+        hours = rem/3600
         rem = rem - hours*3600
         minutes = rem/60
         seconds = rem - minutes*60
         if days:
             return '{0}:{1:02d}:{2:02d}:{3:02d}'.format(days, hours,
-                                                   minutes, seconds)
+                                                        minutes, seconds)
         else:
             return '{0:02d}:{1:02d}:{2:02d}'.format(hours, minutes,
-                                                 seconds)
+                                                    seconds)
 
 
 def process_file(dir, fn, jobs, nodes, all_nodes):
     path = os.path.join(dir, fn)
     used = None
+    req = 0
     for line in open(path):
         if 'requested_walltime' in line:
             req = line.strip()
@@ -154,6 +197,82 @@ def process_file(dir, fn, jobs, nodes, all_nodes):
 
     if all_nodes is not None:
         collect_node(dir, job, all_nodes)
+
+
+def get_memory(dir, jobs):
+    """
+    Given an analysis log directory, register the memory used by each job.
+
+    ********
+    This relies on the current Torque epilogue in use at JAX. This won't work
+    at other sites, and the epilogue is currently out of our control so it's
+    output could change at any time.
+
+    Glen would like to modify Civet's per job Torque epilogue to output memory
+    usage to the job's status file so that for future versions of Civet we don't
+    have to parse the job's stdout to get memory usage.
+
+    At that point, this routine would need to be completely rewritten.
+    ********
+
+    The memory usage is written by each job's Torque epilog; except for the
+    cleanup job, they are all together in concatenated_stdout.txt which we will
+    scan in this routine.
+
+    There may be arbitrary data in the concatenated_stdout.txt file written
+    by whatever tools are used in the pipeline.  Fortunately, there are two
+    lines by which we can tell we're near data we need.
+
+    The line "######## Log info from:" means the next line has our job name.
+    The line "|  JAX TORQUE EPILOGUE" means we're near the line with the
+    memory information, and particularly, that there are no lines from other
+    sources in the way.
+
+    :param dir: An analysis log directory.
+    :param jobs: a dictionary of job objects, keyed by job name.
+    :return: None
+    """
+    log_info_found = False
+    epilogue_found = False
+    next_is_job_name = False
+    job_name = ''
+
+    for line in open(os.path.join(dir, 'concatenated_stdout.txt')):
+        line = line.strip()
+        if not log_info_found:
+            if line == '######## Log info from:':
+                log_info_found = True
+                next_is_job_name = True
+                epilogue_found = False
+            continue
+
+        # We're past the log info line
+        if next_is_job_name:
+            job_name = line.split()[1][:-2]
+            next_is_job_name = False
+            continue
+
+        # Now looking for the epilog section
+        if line == '|  JAX TORQUE EPILOGUE':
+            epilogue_found = True
+            continue
+
+        # Finally, looking for the memory line.
+        if epilogue_found:
+            if 'kb,vmem=' in line:
+                match = re.match(r'.*,mem=(\d+)kb,vmem.*', line)
+                # Use float because we're going to turn it into GiB
+                mem = float(match.group(1))
+
+                # I'm not checking that job_name is in jobs.
+                # Because this is called after collecting the times, there is a
+                # very serious consistency problem should the name not already
+                # be in the dict.  I _want_ to bomb in that case.
+                jobs[job_name].record_memory(mem)
+                # Reset for the next job in this concatenated file.
+                epilogue_found = False
+                log_info_found = False
+                # continue needed here if we add more in the loop below here.
 
 
 def get_node_from_individual_file(dir, job):
@@ -189,24 +308,42 @@ def get_node(dir, job):
             node = line.split()[1]
             break
     if node is None:
-        print("Couldn't find node in {0} for {1}".format(run_logs, job))
+        # Don't warn about the civet utility job rm_temps_consolidate_logs,
+        # which frequently doesn't have a complete epilogue file for some
+        # reason
+        if job != 'rm_temps_consolidate_logs':
+            print("Couldn't find node in {0} for {1}".format(run_logs, job))
         node = 'Unknown'
     return node
 
 
 def get_files(start_dir, jobs, nodes, all_nodes):
+    """
+    For a root passed in on the command line, walk the tree to find analysis
+    log directories and record the stats for all the jobs in each log dir.
+    :param start_dir: A directory tree root to examine
+    :param jobs: The dictionary in which we are tracking job data
+    :param nodes: A dict in which we collect the name of the node with the
+        longest run time for any job.  If a high preponderance of long jobs
+        are on a single node, we might have a broken node.
+    :param all_nodes: A dictionary (or None) in which we collect all the nodes
+        that a job has run on across all analysis runs.
+    :return:  None.
+    """
     for (dirpath, dirnames, filenames) in os.walk(start_dir):
         if 'log' not in dirpath:
             continue
         for fn in filenames:
             if fn.endswith('-status.txt'):
                 process_file(dirpath, fn, jobs, nodes, all_nodes)
+        if 'concatenated_stdout.txt' in filenames:
+            get_memory(dirpath, jobs)
 
 
 def collect_node(dir, job, all_nodes):
     if job not in all_nodes:
         all_nodes[job] = []
-    node = get_node(dir,job)
+    node = get_node(dir, job)
     if node not in all_nodes[job]:
         all_nodes[job].append(node)
 
@@ -226,10 +363,15 @@ def main():
     for dir in args.dirs:
         get_files(dir, jobs, long_nodes, all_nodes)
     print(JobTimes.header(args.collect_nodes))
+    # Get rid of the civet utility job rm_temps_consolidate_logs
+    del jobs['rm_temps_consolidate_logs']
     for job in sorted(jobs.iterkeys()):
         jobs[job].long_node = long_nodes[job]
         sys.stdout.write(str(jobs[job]))
         if all_nodes is not None:
             sys.stdout.write('\t' + str(sorted(all_nodes[job])))
         sys.stdout.write('\n')
-main()
+
+
+if __name__ == '__main__':
+    main()

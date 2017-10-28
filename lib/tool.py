@@ -406,12 +406,12 @@ class Tool(object):
 
         return verify_file_list
 
-    def submit(self, name):
+    def submit(self, name_prefix, silent):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
 
-        :param name:  a unique (to the pipeline) job name.
+        :param name_prefix:  a unique (to the pipeline) job name.
         :return: job_id: a value which can be passed in as a depends_on list
                 element in a subsequent tool submission.
         """
@@ -466,7 +466,7 @@ class Tool(object):
                              files_to_check=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules, depends_on=depends_on,
-                             name=name, error_strings=self.error_strings,
+                             name=name_prefix, error_strings=self.error_strings,
                              version_cmds=self.collect_version_commands(),
                              files_to_test=self.exit_if_exists,
                              file_test_logic=self.exit_test_logic, mem=self.mem,
@@ -496,7 +496,8 @@ class Tool(object):
             f = self.pipeline_files[fid]
             f.add_consumer_job(job_id)
 
-        print("{0}: {1}".format(job_id, self.name_from_pipeline))
+        if not silent:
+            print("{0}: {1}".format(job_id, self.name_from_pipeline))
         return job_id
 
     def check_files_exist(self):

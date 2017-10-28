@@ -40,13 +40,13 @@ class Step(object):
                 raise ParseError(msg)
             self.tools.append(PipelineTool(child, files))
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent=False):
         invocation = 0
         job_ids = []
         for tool in self.tools:
             invocation += 1
             name = self.generate_name(name_prefix, invocation, tool.tool.name_from_pipeline)
-            job_id = tool.submit(name)
+            job_id = tool.submit(name, silent)
             job_ids.append(job_id)
         return job_ids
 

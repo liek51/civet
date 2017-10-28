@@ -325,12 +325,13 @@ class Pipeline(object):
                     of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt,
                                                           val, source))
 
-    def submit(self):
+    def submit(self, silent=False):
         """
         Submit a constructed pipeline to the batch system for execution
         :return:
         """
-        print('Executing pipeline ' + self.name)
+        if not silent:
+            print('Executing pipeline ' + self.name)
 
         self.write_command_info()
 
@@ -352,8 +353,8 @@ class Pipeline(object):
         for step in self._steps:
             invocation += 1
             name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
-            job_ids = step.submit(name_prefix)
-            for j in job_ids:
+            job_id = step.submit(name_prefix, silent)
+            for j in job_id:
                 self.all_batch_jobs.append(j)
 
         # Submit last cleanup / bookkeeping job
@@ -367,7 +368,14 @@ class Pipeline(object):
             self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
-        print('Log directory:  ' + self.log_dir)
+        if not silent:
+            print('Log directory:  ' + self.log_dir)
+
+        return {
+            'log_dir': self.log_dir,
+            'output_dir': PipelineFile.get_output_dir(),
+            'job_ids': self.all_batch_jobs
+        }
 
     def abort_submit(self, message, status=1):
         """
