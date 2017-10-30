@@ -38,9 +38,7 @@ class Job(Base):
     email_list = Column(String(512))  # Nullable
     mail_options = Column(String(64))  # Nullable
     queue = Column(String(128))  # Nullable
-    # FIXME: Making this non-nullable gets an Integrity exception.  Don't
-    # understand the problem yet.  We assign the value in the constructor.
-    status_id = Column(Integer, ForeignKey('status.id'))  # nullable=False)
+    status_id = Column(Integer, default=Status.NOT_SET, nullable=False)
     torque_id = Column(String(512))
     env = Column(String(512))
     depends_on = relationship('Job', secondary=dependencies,

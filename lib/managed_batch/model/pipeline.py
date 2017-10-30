@@ -27,7 +27,7 @@ class Pipeline(Base):
     __tablename__ = 'pipeline'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
+    status_id = Column(Integer, default=Status.NOT_SET, nullable=False)
     name = Column(String(50), nullable=False)
     log_directory = Column(String(512), nullable=False)
     jobs = relationship('Job', back_populates='pipeline')
