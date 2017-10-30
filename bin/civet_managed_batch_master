@@ -60,12 +60,16 @@ def update_job_status(job):
                                              job.job_name, job.torque_id,
                                              _job_manager)
         if new_status.state == 'Complete':
+            logging.debug("Marking job {} (log dir: {}) 'Complete'.".format(job.job_name, job.pipeline.log_directory))
             mark_complete_and_release_dependencies(job)
         elif new_status.state == 'Failed' or new_status.state == 'Deleted':
             # for now consider a deleted job as 'failed'
             # the only way for a job to get this state is for the node to
             # crash/reboot while the job is running, otherwise the job
             # epilogue should run and create the status.txt file.
+            if new_status.state == 'Deleted':
+                logging.debug("Job {} (log dir: {}) has status 'Deleted'.".format(job.job_name, job.pipeline.log_directory))
+            logging.debug("Marking job {} (log dir: {}) 'Failed'".format(job.job_name, job.pipeline.log_directory))
             job.set_status('Failed')
             Session.commit()
 
@@ -105,10 +109,17 @@ def submit_job(job):
 def all_complete():
     is_complete = True
     for pipeline in Session.query(Pipeline):
+        # This call checks whether a pipeline's jobs are all in status "complete",
+        # and also whether any job is in status "failed." If either condition is
+        # true, it marks the pipeline as complete or failed, respectively.
         if not pipeline.is_complete():
             is_complete = False
-            break
+            # Although we have determined that we're not all complete, we
+            # want to continue the scan, for its side effect of marking
+            # failed pipelines.  Therefore don't put a break here.
 
+    # This call checks for any pipelines which may have been marked failed,
+    # above, and cancels any possible remaining jobs that are running.
     cancel_failed_pipelines()
 
     return is_complete
@@ -124,8 +135,17 @@ def cancel_failed_pipelines():
     failed_status_id = Status.get_id("Failed")
     submitted_status_id = Status.get_id("Submitted")
     for pipeline in Session.query(Pipeline).filter_by(status_id=failed_status_id).all():
-        print("Detected pipeline failure, canceling all submitted jobs for {}".format(pipeline.name))
+        msg_out = False
         for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id).filter(Job.status_id == submitted_status_id).all():
+            if not msg_out:
+                msg_out = True
+                logging.info(
+                    "Detected pipeline failure, canceling all submitted jobs for {} (log dir: {})".format(
+                        pipeline.name, pipeline.log_directory))
+                print(
+                    "Detected pipeline failure, canceling all submitted jobs for {} (log dir: {}".format(
+                        pipeline.name, pipeline.log_directory))
+
             logging.debug("deleting {}".format(job.torque_id))
             _job_manager.delete_job(str(job.torque_id))
         #TODO send failure email?
@@ -143,7 +163,9 @@ def check_walltime(max_walltime):
         walltime = (time.time() - start_time) / 60
 
         # if we have less than 10 minutes to go indicate it's time to resubmit
+        logging.debug("Walltime remaining: {}".format(int(max_walltime - walltime)))
         if max_walltime - walltime < 10:
+            logging.info("We have reached walltime limit.")
             return False
     return True
 
@@ -172,12 +194,14 @@ def main():
                         help="Submission queue to use for management job "
                              "resubmission. Ignored if not combined with "
                              "--max-walltime. [default = TORQUE default]")
-    parser.add_argument('--verbose', action='store_true',
-                        help="enable verbose mode")
+    parser.add_argument('--log-level', '-l',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                        default='ERROR',
+                        help="Minimum logging level to display. [%(default)s]")
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.ERROR)
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()), format='%(asctime)s %(message)s')
 
     max_walltime_minutes = args.max_walltime * 60 if args.max_walltime else None
 
@@ -193,8 +217,7 @@ def main():
     while True:
 
         iteration += 1
-        if args.verbose:
-            print("Starting iteration {}".format(iteration))
+        logging.info("Starting iteration {}".format(iteration))
 
         # update the status of all jobs that currently have the state
         # "Submitted" (these are jobs that were either Queued or Running last
@@ -204,36 +227,40 @@ def main():
         # all_complete() will update Pipeline statuses and return true if they
         # are all now complete
         if all_complete():
+            logging.info("All tasks complete.")
             print("\tAll tasks complete.")
             # TODO send completion email? each pipeline already sends a completion email
+            logging.info("Terminating.")
             print("\tTerminating.")
             break
-
-        if not check_walltime(max_walltime_minutes):
-            print("\tApproaching maximum walltime, submitting new management job.")
-            dispose_engine()
-            job_id = submit_management_job(args.task_db, args.queue,
-                                           args.max_walltime, args.max_queued)
-            write_batch_id_to_log_dir(job_id)
-            print("\tNew management job submitted: " + job_id)
-            break
-
 
         # find out if we now have some available slots, meaning some of the jobs
         # that had the state Submitted have finished
         available_job_slots = args.max_queued - count_submitted_jobs()
-        if args.verbose:
-            print("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queued))
+        logging.info("Iteration {}: {} of {} job slots available".format(iteration, available_job_slots, args.max_queued))
 
         # if we have available slots, see if we have any jobs ready to run
         if available_job_slots:
             logging.info("Iteration {}: {} slots available, looking for eligible jobs".format(iteration, available_job_slots))
             ready_jobs = scan_for_runnable_jobs(limit=available_job_slots)
-            print("Iteration {}: Starting {} jobs".format(iteration, len(ready_jobs)))
+            logging.info("Iteration {}: Starting {} jobs".format(iteration, len(ready_jobs)))
             for job in ready_jobs:
-                logging.info("\tStarting {}".format(job.job_name))
+                logging.info("\tStarting {} (log dir: {})".format(job.job_name, job.pipeline.log_directory))
                 submit_job(job)
 
+            if not check_walltime(max_walltime_minutes):
+                logging.info(
+                    "Approaching maximum walltime, submitting new management job.")
+                print(
+                    "\tApproaching maximum walltime, submitting new management job.")
+                dispose_engine()
+                job_id = submit_management_job(args.task_db, args.queue,
+                                               args.max_walltime,
+                                               args.max_queued)
+                write_batch_id_to_log_dir(job_id)
+                logging.info("New management job submitted: " + job_id)
+                print("\tNew management job submitted: " + job_id)
+                break
 
         # done iteration.  Sleep for a little while.
         time.sleep(30)
