@@ -19,13 +19,9 @@ import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import func
 
 from managed_batch.model.base import Base
-from managed_batch.model.job import Job
-from managed_batch.model.status import Status
 from managed_batch.model.pipeline import Pipeline
-from managed_batch.model.file_info import FileInfo
 
 from managed_batch.model.session import Session
 
@@ -51,7 +47,7 @@ def initialize_model(db_path, echo_sql=False):
     engine = create_engine('sqlite:///{0}'.format(db_path))
     __engine = engine
 
-    #Base.metadata.drop_all(engine)
+    # Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine, checkfirst=True)
     session_func = sessionmaker(bind=engine)
     session = session_func()
@@ -68,106 +64,8 @@ def dispose_engine():
     __engine.dispose()
 
 
-def count_submitted_jobs():
-    count_q = Session.query(Job).filter_by(status_id=Status.get_id('Submitted')).statement.with_only_columns([func.count()]).order_by(None)
-    count = Session.session.execute(count_q).scalar()
-    logging.debug("Counted {} submitted jobs".format(count))
-    return count
-
-
-def mark_submitted(job, torque_id):
-    logging.debug('Marked submitted: {} (log dir: {})'.format(job.job_name, job.pipeline.log_directory))
-    job.set_status('Submitted')
-    job.torque_id = torque_id
-    Session.session.commit()
-
-
-def mark_complete_and_release_dependencies(job):
-    # Now let's complete that job.
-    logging.debug('Now completing job: {}, ID: {} (log dir: {})'.format(job.job_name, job.id, job.pipeline.log_directory))
-    job.set_status('Complete')
-
-    # Find all the jobs depending on the completed job.
-    dependent_jobs = Session.session.query(Job).filter(
-        Job.depends_on.any(Job.id == job.id))
-    for j in dependent_jobs:
-        logging.debug('Found dependent job: {0}'.format(j.job_name))
-        j.depends_on.remove(job)
-        logging.debug("New dependencies with completed job removed: {0}".format([x.job_name for x in j.depends_on]))
-    Session.session.commit()
-
-
-def scan_for_runnable_jobs(limit=None):
-    """
-    Cans the database for jobs that are eligible to run; in other words,
-    those with an empty dependency list and the status "Not Submitted".
-    :return: A list of runnable jobs.
-    """
-    unsubmitted_status_id = Status.get_id('Not Submitted')
-    logging.debug('Finding runnable jobs')
-    ready_jobs_query = Session.query(Job).filter(~Job.depends_on.any()). \
-        filter_by(status_id=unsubmitted_status_id)
-    if limit:
-        ready_jobs_query = ready_jobs_query.limit(limit)
-    ready_jobs = ready_jobs_query.all()
-    if not ready_jobs:
-        logging.debug('No jobs are ready to execute')
-    else:
-        logging.debug('The jobs that are ready to execute are:')
-        for j in ready_jobs:
-            logging.debug('    {} (log dir: {})'.format(j.job_name, j.pipeline.log_directory))
-    return ready_jobs
-
-
-def init_statuses():
-    """
-    Create database records for the statuses we need to track.  This is real
-    code that can probably go into the final solution.
-    :return: None
-    """
-    # Delete any previous records; we're initializing from scratch.
-
-    logging.debug("In init_statuses(), session={0}".format(Session.session))
-    # Create the statuses
-    statuses = ['Not Submitted', 'Submitted', 'Complete', 'Failed', 'Deleted',
-                'Pipeline Failure']
-    logging.debug("Creating {0} statuses.  They are: {1}".format(
-        len(statuses), statuses))
-
-    for status in statuses:
-        Session.add(Status(status))
-    Session.commit()
-
-
-def init_file_info():
-    # create the single row in the FileInfo table, this should only be called
-    # when creating a new task file
-    file_info = FileInfo(schema_version=FileInfo.CURRENT_SCHEMA_VERSION,
-                         started=False)
-    Session.add(file_info)
-    Session.commit()
-
-
-def get_file_info():
-    inf = Session.query(FileInfo).one()
-    return inf
-
-
-def mark_file_submitted():
-    file_info = get_file_info()
-    file_info.started = True
-    Session.commit()
-    logging.debug("FileInfo: {}".format(file_info))
-    logging.debug("File is now marked as submitted.")
-
-
-def get_all_jobs():
-    jobs = Session.query(Job).all()
-    logging.debug("get_all_jobs() returned {} jobs".format(len(jobs)))
-    return jobs
-
-
 def write_batch_id_to_log_dir(batch_id):
     for pipeline in Session.query(Pipeline):
-        with open(os.path.join(pipeline.log_directory, "MANAGED_BATCH"), mode='w') as f:
+        with open(os.path.join(pipeline.log_directory, "MANAGED_BATCH"),
+                  mode='w') as f:
             f.write(batch_id + '\n')

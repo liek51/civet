@@ -37,10 +37,10 @@ class Job(Base):
     mem = Column(Integer)  # Nullable
     email_list = Column(String(512))  # Nullable
     mail_options = Column(String(64))  # Nullable
-    queue = Column(String(128)) # Nullable
+    queue = Column(String(128))  # Nullable
     # FIXME: Making this non-nullable gets an Integrity exception.  Don't
     # understand the problem yet.  We assign the value in the constructor.
-    status_id = Column(Integer, ForeignKey('status.id') ) #, nullable=False)
+    status_id = Column(Integer, ForeignKey('status.id'))  # nullable=False)
     torque_id = Column(String(512))
     env = Column(String(512))
     depends_on = relationship('Job', secondary=dependencies,
@@ -93,11 +93,35 @@ class Job(Base):
     def get_status(self):
         return Status.get_name(self.status_id)
 
+    def mark_submitted(self, torque_id):
+        logging.debug('Marked submitted: {} (log dir: {})'.format(
+            self.job_name, self.pipeline.log_directory))
+        self.set_status('Submitted')
+        self.torque_id = torque_id
+        Session.commit()
+
+    def mark_complete_and_release_dependencies(self):
+        # Now let's complete that job.
+        logging.debug('Now completing job: {}, ID: {} (log dir: {})'.format(
+            self.job_name, self.id, self.pipeline.log_directory))
+        self.set_status('Complete')
+
+        # Find all the jobs depending on the completed job.
+        dependent_jobs = Session.query(Job).filter(
+            Job.depends_on.any(Job.id == self.id))
+        for j in dependent_jobs:
+            logging.debug('Found dependent job: {0}'.format(j.job_name))
+            j.depends_on.remove(self)
+            logging.debug("New dependencies with completed job removed: {0}".
+                          format([x.job_name for x in j.depends_on]))
+        Session.commit()
+
     def __repr__(self):
         return '<Job: ID={0} Pipeline={1} JobName={2} ' \
                'StdoutPath={3} StderrPath={4} ScriptPath={5} EpilogPath={6} ' \
                'Mem={7} EmailList={8} MailOptions={9} Env={10} StatusID={11} ' \
-               'TorqueID={12} Dependencies={13} Queue={14} Walltime={15}>'.format(
+               'TorqueID={12} Dependencies={13} Queue={14} Walltime={15}>'.\
+            format(
                 self.id,
                 self.pipeline.name,
                 self.job_name,
@@ -131,7 +155,8 @@ class Job(Base):
                'StdoutPath="{3}" StderrPath="{4}" ScriptPath="{5}" ' \
                'EpilogPath="{6}" Mem={7} EmailList="{8}" MailOptions="{9}" ' \
                'Env="{10}" StatusID={11} ' \
-               'TorqueID="{12}" Dependencies={13} Queue={14} Walltime={15}>'.format(
+               'TorqueID="{12}" Dependencies={13} Queue={14} Walltime={15}>'.\
+            format(
                 self.id,
                 self.pipeline.name,
                 self.job_name,
@@ -148,3 +173,40 @@ class Job(Base):
                 deps,
                 self.queue,
                 self.walltime)
+
+    @staticmethod
+    def scan_for_runnable(limit=None):
+        """
+        Cans the database for jobs that are eligible to run; in other words,
+        those with an empty dependency list and the status "Not Submitted".
+        :return: A list of runnable jobs.
+        """
+        logging.debug('Finding runnable jobs')
+        ready_jobs_query = Session.query(Job).filter(~Job.depends_on.any()). \
+            filter_by(status_id=Status.NOT_SUBMITTED)
+        if limit:
+            ready_jobs_query = ready_jobs_query.limit(limit)
+        ready_jobs = ready_jobs_query.all()
+        if not ready_jobs:
+            logging.debug('No jobs are ready to execute')
+        else:
+            logging.debug('The jobs that are ready to execute are:')
+            for j in ready_jobs:
+                logging.debug('    {} (log dir: {})'.format(
+                    j.job_name, j.pipeline.log_directory))
+        return ready_jobs
+
+    @staticmethod
+    def count_submitted():
+        count_q = Session.query(Job).filter_by(
+            status_id=Status.SUBMITTED).statement. \
+            with_only_columns([func.count()]).order_by(None)
+        count = Session.session.execute(count_q).scalar()
+        logging.debug("Counted {} submitted jobs".format(count))
+        return count
+
+    @staticmethod
+    def get_all():
+        jobs = Session.query(Job).all()
+        logging.debug("Jobs.get_all() returned {} jobs".format(len(jobs)))
+        return jobs
