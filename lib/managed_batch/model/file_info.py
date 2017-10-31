@@ -30,3 +30,6 @@ class FileInfo(Base):
     def __init__(self, schema_version, started):
         self.schema_version = schema_version
         self.started = started
+
+    def __str__(self):
+        return "schema_version: {}  started: {}".format(self.schema_version, self.started)

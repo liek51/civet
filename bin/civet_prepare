@@ -21,7 +21,7 @@ import argparse
 import sys
 import inspect
 import os
-import json
+import logging
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
@@ -73,12 +73,21 @@ def main():
                         help='filename where civet_prepare will store the tasks'
                              '. If the file exists, civet_prepare will '
                              'add new tasks to the file.')
+    parser.add_argument('--log-level', '-l',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                        default='ERROR',
+                        help="Minimum logging level to display. [%(default)s]")
+
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
     parser.set_defaults(keep_temp=False)
     parser.set_defaults(force_conditional=False)
     args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+
+    logging.debug("Parsed arguments: {}".format(args))
 
     try:
         PL._parse_XML(args.pipeline[0], args.pipeline_args,
@@ -93,10 +102,11 @@ def main():
                       walltime_multiplier=args.walltime_multiplier,
                       write_pipeline_files=args.write_file_summary)
     except civet_exceptions.ParseError as e:
-        print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
-        sys.exit(1)
+        logging.exception("Error parsing XML:  {}\n".format(e))
+        sys.exit("\nError parsing XML:  {}\n".format(e))
     except civet_exceptions.MissingFile as e:
-        print("\nPipeline Error: ", e, "\n", file=sys.stderr)
+        logging.exception("Pipeline Error: {}".format(e))
+        print("\nPipeline Error: {}".format(e), "\n", file=sys.stderr)
         sys.exit(2)
 
     append_mode = os.path.exists(args.task_db)
@@ -104,24 +114,31 @@ def main():
     try:
         Session.session = initialize_model(args.task_db)
     except Exception as e:
-        print("Error opening task database: " + e.message, file=sys.stderr)
+        logging.exception("Error opening task database: {}".format(e.message))
+        print("Error opening task database: {}".format(e.message), file=sys.stderr)
         sys.exit(3)
 
     if not append_mode:
+        logging.debug("Not in append mode. Initializing.")
         init_statuses()
         init_file_info()
     else:
         # make sure the task file hasn't already been submitted
+        logging.debug("In append mode.")
         file_info = get_file_info()
         if file_info.started:
-            print("\tUnable to add tasks to task file {}".format(args.task_db),
+            logging.error("Unable to add tasks to task file {}\n"
+                  "\tTask file has already been submitted.".format(args.task_db))
+            print("\tUnable to add tasks to task file {}\n"
+                  "\t\tTask file has already been submitted.".format(args.task_db),
                   file=sys.stderr)
-            print("\t\tTask file has already been submitted.", file=sys.stderr)
             sys.exit(4)
 
     pipeline = Pipeline(PL.name, PL.log_dir)
+    logging.debug("Pipeline is: {}".format(pipeline))
 
     task_list = PL.prepare_managed_tasks()
+    logging.debug("Task list is: {}".format([x['name'] for x in task_list]))
 
     # we need to be able to translate the dependencies as stored in the task
     # list (list of other task names that a particular task depends on)
@@ -130,12 +147,14 @@ def main():
     # insert them
     deps_to_job = {}
     print("  Inserting tasks into {}".format(args.task_db))
+    logging.info("Inserting tasks into {}".format(args.task_db))
     try:
         for task in task_list:
             print("    -> {}".format(task['name']))
             try:
                 dependencies = [deps_to_job[d] for d in task['dependencies']]
             except KeyError as e:
+                logging.exception("Key error processing dependencies")
                 msg = "Task {} depends on a task that hasn't been been processed ({}). Check your Pipeline XML".format(task['name'], d)
                 raise Exception(msg)
             job = Job(pipeline, task['name'], task['threads'],
@@ -146,8 +165,10 @@ def main():
                       task['walltime'])
 
             deps_to_job[task['name']] = job
+            logging.debug("Adding job {} (log dir: {}) to session".format(job.job_name, job.pipeline.log_directory))
             Session.add(job)
     except Exception as e:
+        logging.exception("Error inserting tasks into database")
         print("Error inserting tasks into database: " + e.message, file=sys.stderr)
         sys.exit(4)
 
@@ -155,6 +176,7 @@ def main():
     # without catching an Exception
     Session.commit()
 
+    logging.info("  {} tasks have been inserted into task file {}; (log dir: {})".format(len(task_list), args.task_db, PL.log_dir))
     print("  {} tasks have been inserted into task file {}\n".format(len(task_list), args.task_db))
     print("    pipeline log directory: " + PL.log_dir + "\n")
 

@@ -17,6 +17,7 @@ from __future__ import print_function
 
 import os
 import inspect
+import logging
 
 from job_runner.torque import TorqueJobRunner as BatchRunner
 
@@ -32,11 +33,11 @@ __my_dir = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspec
 __cmd_dir = os.path.join(__my_dir, '../../bin')
 
 
-def submit_management_job(task_db, queue, walltime_hours, max_queued):
+def submit_management_job(task_db, queue, walltime_hours, max_queued, log_level):
 
     manager_cmd = os.path.abspath(os.path.join(__cmd_dir, 'civet_managed_batch_master'))
 
-    queue_string = queue if queue else ''
+    queue_string = '--queue {}'.format(queue) if queue else ''
 
     modules_commands = []
     if config.purge_user_modulefiles:
@@ -46,13 +47,15 @@ def submit_management_job(task_db, queue, walltime_hours, max_queued):
 
     task = {
 
-        'cmd': "\n".join(modules_commands) + "\n" + manager_cmd + " {} --max-walltime {} --max-queued {} {}".format(queue_string, walltime_hours, max_queued, task_db),
+        'cmd': "\n".join(modules_commands) + "\n" + manager_cmd +
+               " {} --max-walltime {} --max-queued {} --log-level {} {}".format(
+                   queue_string, walltime_hours, max_queued, log_level, task_db),
         'walltime': "{}:00:00".format(walltime_hours),
         'name': "civet_managment",
         'queue': queue
 
     }
-
+    logging.debug("About to start management job with: {}".format(task))
     return BatchRunner.submit_simple_job(task)
 
 
