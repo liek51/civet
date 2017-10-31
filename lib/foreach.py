@@ -135,7 +135,7 @@ class ForEach(object):
 
         return cleanups, files_to_delete
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent=False):
 
         import pipeline_parse as PL
 

@@ -43,10 +43,11 @@ class PipelineTool(object):
         if 'tool_config_prefix' in att:
             tool_config_prefix = att['tool_config_prefix']
 
-        self.tool = Tool(self.description, input, output, files, self.name, walltime, tool_config_prefix)
+        self.tool = Tool(self.description, input, output, files, self.name,
+                         walltime, tool_config_prefix)
         
-    def submit(self, name_prefix):
-        return self.tool.submit(name_prefix)
+    def submit(self, name_prefix, silent=False):
+        return self.tool.submit(name_prefix, silent)
 
     def create_task(self, task_id, execution_mode):
         return self.tool.create_task(task_id, execution_mode)
