@@ -249,7 +249,7 @@ def main():
         if available_job_slots:
             logging.info("Iteration {}: {} slots available, looking for "
                          "eligible jobs".format(iteration, available_job_slots))
-            ready_jobs = Job.scan_for_runnable_jobs(limit=available_job_slots)
+            ready_jobs = Job.scan_for_runnable(limit=available_job_slots)
             logging.info("Iteration {}: Starting {} jobs".format(
                 iteration, len(ready_jobs)))
             for job in ready_jobs:
