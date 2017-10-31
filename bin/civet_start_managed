@@ -83,6 +83,13 @@ def main():
         logging.exception("Error opening task database: " + e.message)
         sys.exit("Error opening task database: " + e.message)
 
+    if not FileInfo.is_current_schema():
+        msg = "Task database {} is not the current schema version, and " \
+              "cannot be used.".format(args.task_db)
+        logging.error(msg)
+        print(msg, file=sys.stderr)
+        sys.exit(4)
+
     # make sure the task file hasn't already been submitted
     if not args.force and FileInfo.is_started():
         logging.error("A mangement process has already been started for this "

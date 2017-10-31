@@ -132,8 +132,16 @@ def main():
         # Initialize the file_info table in the database.
         FileInfo()
     else:
-        # make sure the task file hasn't already been submitted
         logging.debug("In append mode.")
+
+        # make sure the task file is the correct schema and hasn't already
+        # been submitted
+        if not FileInfo.is_current_schema():
+            msg = "Task database {} is not the current schema version, and " \
+                  "cannot be used.".format(args.task_db)
+            logging.error(msg)
+            print(msg, file=sys.stderr)
+            sys.exit(4)
 
         if FileInfo.is_started():
             logging.error("Unable to add tasks to task file {}\n"
@@ -142,7 +150,7 @@ def main():
             print("\tUnable to add tasks to task file {}\n"
                   "\t\tTask file has already been submitted.".format(
                 args.task_db), file=sys.stderr)
-            sys.exit(4)
+            sys.exit(5)
 
     pipeline = Pipeline(PL.name, PL.log_dir)
     logging.debug("Pipeline is: {}".format(pipeline))
@@ -184,7 +192,7 @@ def main():
         logging.exception("Error inserting tasks into database")
         print("Error inserting tasks into database: " + e.message,
               file=sys.stderr)
-        sys.exit(4)
+        sys.exit(6)
 
     # only commit the session if we were able to add all the jobs to the session
     # without catching an Exception

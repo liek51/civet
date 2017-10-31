@@ -38,7 +38,7 @@ class FileInfo(Base):
                       "\t started is {}.".format(
             self.schema_version, self.started
         ))
-        if self.schema_version != FileInfo.CURRENT_SCHEMA_VERSION:
+        if self.schema_version is None:
             logging.debug("Initializing FileInfo table")
             self.schema_version = FileInfo.CURRENT_SCHEMA_VERSION
             self.started = False
@@ -61,3 +61,8 @@ class FileInfo(Base):
     def is_started():
         inf = Session.query(FileInfo).one()
         return inf.started
+
+    @staticmethod
+    def is_current_schema():
+        inf = Session.query(FileInfo).one()
+        return inf.schema_version == FileInfo.CURRENT_SCHEMA_VERSION

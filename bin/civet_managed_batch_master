@@ -40,6 +40,7 @@ from managed_batch.model.session import Session
 from managed_batch.model.job import Job
 from managed_batch.model.pipeline import Pipeline
 from managed_batch.model.status import Status
+from managed_batch.model.file_info import FileInfo
 from managed_batch.controller.utilities import initialize_model,  \
      write_batch_id_to_log_dir, dispose_engine
 
@@ -217,6 +218,13 @@ def main():
     except Exception as e:
         logging.error("Error opening task database: " + e.message)
         sys.exit(1)
+
+    if not FileInfo.is_current_schema():
+        msg = "Task database {} is not the current schema version, and " \
+              "cannot be used.".format(args.task_db)
+        logging.error(msg)
+        print(msg, file=sys.stderr)
+        sys.exit(4)
 
     # main loop
     iteration = 0

@@ -43,7 +43,7 @@ class Pipeline(Base):
         """
         self.name = name
         self.log_directory = log_directory
-        self.status_id = Status.get_id('Not Submitted')
+        self.status_id = Status.NOT_SUBMITTED
         logging.debug("Created pipeline for {} in {}".format(name, log_directory))
 
     def is_complete(self):
