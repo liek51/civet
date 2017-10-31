@@ -47,7 +47,6 @@ def initialize_model(db_path, echo_sql=False):
     engine = create_engine('sqlite:///{0}'.format(db_path))
     __engine = engine
 
-    # Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine, checkfirst=True)
     session_func = sessionmaker(bind=engine)
     session = session_func()
