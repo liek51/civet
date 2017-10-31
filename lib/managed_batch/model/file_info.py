@@ -23,7 +23,6 @@ class FileInfo(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     schema_version = Column(Integer, nullable=False)
     started = Column(Boolean, nullable=False)
-    init_done = False
     CURRENT_SCHEMA_VERSION = 1
 
     def __init__(self):
@@ -31,13 +30,20 @@ class FileInfo(Base):
         Write one row to the file_info table, with the schema version and
         the "started" status False.
         """
-        if FileInfo.init_done:
-            return
-        self.schema_version = FileInfo.CURRENT_SCHEMA_VERSION
-        self.started = False
-        Session.add(self)
-        Session.commit()
-        FileInfo.init_done = True
+        #
+        # Have we been initialized before? If so, schema_version should be
+        # FileInfo.CURRENT_SCHEMA_VERSION.  If not, we need to initialize.
+        #
+        logging.debug("In FileInfo constructor. schema_version is: {}.\n"
+                      "\t started is {}.".format(
+            self.schema_version, self.started
+        ))
+        if self.schema_version != FileInfo.CURRENT_SCHEMA_VERSION:
+            logging.debug("Initializing FileInfo table")
+            self.schema_version = FileInfo.CURRENT_SCHEMA_VERSION
+            self.started = False
+            Session.add(self)
+            Session.commit()
 
     def __str__(self):
         return "schema_version: {}  started: {}".format(self.schema_version,
