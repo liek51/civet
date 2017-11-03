@@ -40,11 +40,11 @@ def format_state(state):
 
 class ManagedJobStatus(object):
     """
-    This is class used to obtain stripped down information about a job submitted
-    when running in the managed batch mode.  All the job manager cares about a
-    submitted job is if it is "Submitted" (queued but not complete), "Failed"
-    (complete, with non-zero exit status), "Complete" (complete, zero exit
-    status), and "Deleted" (no record of submitted job).
+    This is the class used to obtain stripped down information about a job
+    submitted when running in the managed batch mode.  All the job manager cares
+    about a submitted job is if it is "Submitted" (queued but not complete),
+    "Failed" (complete, with non-zero exit status), "Complete" (complete, zero
+    exit status), and "Deleted" (no record of submitted job).
     """
     def __init__(self, log_dir, name, batch_id, job_manager):
 
@@ -92,7 +92,8 @@ class ManagedJobStatus(object):
 
 class Status(object):
 
-    def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel, excution_mode):
+    def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel,
+                 excution_mode):
 
         self.state = None
         self.exit_status = None
@@ -205,7 +206,7 @@ class PipelineStatus(object):
         self.managed_unknown = 0
         self.cancel_message = None
         self.jobs_running_at_cancel = []
-        self.execution_mode = False
+        self.execution_mode = None
 
         try:
             batch_jobs = job_runner.common.jobs_from_logdir(log_dir)

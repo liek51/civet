@@ -5,6 +5,7 @@ from sqlalchemy import *
 from base import Base
 import logging
 from sqlalchemy.orm import relationship
+from sqlalchemy import func
 from session import Session
 from status import Status
 
@@ -21,10 +22,7 @@ class Job(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     pipeline_id = Column(Integer, ForeignKey('pipeline.id'))
-    pipeline = relationship('Pipeline',
-                            # primaryjoin=id == pipeline.c.id,
-                            # secondaryjoin=id ==job.c.pipeline_id,
-                            back_populates='jobs')
+    pipeline = relationship('Pipeline', back_populates='jobs')
     job_name = Column(String(50), nullable=False)
     threads = Column(Integer, nullable=False)
     # These paths may be long, but we don't really care as long as

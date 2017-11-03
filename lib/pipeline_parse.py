@@ -292,6 +292,8 @@ class Pipeline(object):
             of.write(os.getcwd() + '\n\n')
             of.write('Command line used to invoke the pipeline:\n')
             of.write(' '.join(sys.argv) + '\n\n')
+            of.write('Execution mode: \n')
+            of.write('  {}\n\n'.format(ToolExecModes.to_str(self.execution_mode)))
             of.write('Parameters to parse_XML:\n')
             of.write('  xmlfile: {0}\n'.format(self.xmlfile))
             of.write('  params: {0}\n'.format(self.params))

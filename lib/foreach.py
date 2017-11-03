@@ -299,7 +299,7 @@ class ForEach(object):
                 task['walltime'] = "00:30:00"
                 task['threads'] = 1
 
-                if execution_mode == ToolExecModes.CLOUD:
+                if execution_mode == ToolExecModes.CLOUD_GCP:
                     # TODO
                     raise Exception("TODO Finish foreach for cloud")
 

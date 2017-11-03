@@ -11,7 +11,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class ToolExecModes(object):
     BATCH_STANDARD = 1
     BATCH_MANAGED = 2
-    CLOUD = 3
+    CLOUD_GCP = 3
+
+    _strings = {
+        BATCH_STANDARD: "Standard Batch",
+        BATCH_MANAGED: "Managed Batch",
+        CLOUD_GCP: "Google Cloud Platform"
+    }
+
+    def __init__(self):
+        raise Exception("Do not instantiate the ToolExecModes class. "
+                        "It is an enumeration")
+
+    @staticmethod
+    def to_str(mode):
+        return ToolExecModes._strings[mode]

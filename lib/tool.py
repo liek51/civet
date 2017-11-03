@@ -532,7 +532,7 @@ class Tool(object):
         task['walltime'] = self.walltime
         task['threads'] = self.thread_option_max if self.thread_option_max else self.default_threads
 
-        if execution_mode == ToolExecModes.CLOUD:
+        if execution_mode == ToolExecModes.CLOUD_GCP:
             task['docker_image'] = self.docker_image
             task['input_files'] = []
             task['output_files'] = []
