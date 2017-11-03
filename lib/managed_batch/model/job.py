@@ -94,7 +94,7 @@ class Job(Base):
     def mark_submitted(self, torque_id):
         logging.debug('Marked submitted: {} (log dir: {})'.format(
             self.job_name, self.pipeline.log_directory))
-        self.set_status('Submitted')
+        self.status_id = Status.SUBMITTED
         self.torque_id = torque_id
         Session.commit()
 
@@ -102,7 +102,7 @@ class Job(Base):
         # Now let's complete that job.
         logging.debug('Now completing job: {}, ID: {} (log dir: {})'.format(
             self.job_name, self.id, self.pipeline.log_directory))
-        self.set_status('Complete')
+        self.status_id = Status.COMPLETE
 
         # Find all the jobs depending on the completed job.
         dependent_jobs = Session.query(Job).filter(
@@ -175,8 +175,9 @@ class Job(Base):
     @staticmethod
     def scan_for_runnable(limit=None):
         """
-        Cans the database for jobs that are eligible to run; in other words,
+        Scans the database for jobs that are eligible to run; in other words,
         those with an empty dependency list and the status "Not Submitted".
+        :param limit: Place an arbitrary limit on the number of jobs returned.
         :return: A list of runnable jobs.
         """
         logging.debug('Finding runnable jobs')

@@ -146,10 +146,10 @@ def main():
         if FileInfo.is_started():
             logging.error("Unable to add tasks to task file {}\n"
                           "\tTask file has already been submitted.".format(
-                        args.task_db))
+                              args.task_db))
             print("\tUnable to add tasks to task file {}\n"
                   "\t\tTask file has already been submitted.".format(
-                args.task_db), file=sys.stderr)
+                      args.task_db), file=sys.stderr)
             sys.exit(5)
 
     pipeline = Pipeline(PL.name, PL.log_dir)
@@ -175,7 +175,7 @@ def main():
                 logging.exception("Key error processing dependencies")
                 msg = "Task {} depends on a task that hasn't been been " \
                       "processed ({}). Check your Pipeline XML".format(
-                    task['name'], d)
+                          task['name'], d)
                 raise Exception(msg)
             job = Job(pipeline, task['name'], task['threads'],
                       task['stdout_path'], task['stderr_path'],
