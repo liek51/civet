@@ -18,6 +18,7 @@ from __future__ import print_function
 import sys
 import os
 import glob
+import json
 
 import job_runner.torque as batch_system
 import job_runner.common
@@ -119,6 +120,9 @@ class Status(object):
     def __str__(self):
         return "{}, {}, {}, {}".format(self.state, self.exit_status,
                                        self.walltime, self.walltime_requested)
+
+    def to_json_serializable(self):
+       return self.__dict__
 
 
 class PipelineStatus(object):
@@ -222,9 +226,25 @@ class PipelineStatus(object):
         else:
             self.status = "UNKNOWN"
 
-
     def __str__(self):
         return str(self.__dict__)
+
+    def to_json_serializable(self):
+        return {
+            'log_dir': self.log_dir,
+            'jobs': [j.to_json_serializable() for j in self.jobs],
+            'aborted': self.aborted,
+            'complete_jobs_success': self.complete_jobs_success,
+            'complete_jobs_failure': self.complete_jobs_failure,
+            'canceled_jobs': self.canceled_jobs,
+            'running_jobs': self.running_jobs,
+            'held_jobs': self.held_jobs,
+            'dealyed_jobs': self.delayed_jobs,
+            'queued_jobs': self.queued_jobs,
+            'deleted_jobs': self.deleted_jobs,
+            'cancel_message': self.cancel_message,
+            'jobs_running_at_cancel': self.jobs_running_at_cancel,
+        }
 
     @staticmethod
     def get_job_manager():

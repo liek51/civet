@@ -24,6 +24,7 @@ import argparse
 import sys
 import os
 import inspect
+import json
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
@@ -55,6 +56,9 @@ def main():
                         action='store_true', help="Run in recursive mode")
     parser.add_argument('--verbose', dest='verbose', action='store_true',
                         help="More verbose output")
+    parser.add_argument('--json', action='store_true',
+                        help="Output status in JSON format. "
+                             "Overrides --verbose and --quiet options.")
     parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
                         help="Only produce output for failed runs")
     parser.add_argument('-f', '--fast', dest='fast', action='store_true',
@@ -74,8 +78,14 @@ def main():
     parser.set_defaults(recursive=True)
     args = parser.parse_args()
 
-    verbose = args.verbose
-    quiet = args.quiet
+    if not args.json:
+        verbose = args.verbose
+        quiet = args.quiet
+    else:
+        verbose = False
+        quiet = False
+
+    json_output = {}
 
     job_manager = status.PipelineStatus.get_job_manager()
 
@@ -140,6 +150,10 @@ def main():
             print(e, file=sys.stderr)
             continue
 
+        if args.json:
+            json_output[log_dir] = dir_status.to_json_serializable()
+            continue
+
         if dir_status.status == "SUBMIT_ERROR":
             print("{0}: Pipeline submission error".format(log_dir), file=sys.stderr)
             continue
@@ -187,7 +201,6 @@ def main():
                 else:
                     print("\t" + status.format_state(job.state))
 
-
                 if job.walltime is not None:
                     print("\tWalltime={0}".format(job.walltime))
 
@@ -196,6 +209,9 @@ def main():
 
                 if job.state == 'H':
                     print("\tDepends on {}".format(job.dependencies))
+
+        if args.json:
+            continue
 
         if verbose:
             print("\nSummary:")
@@ -231,6 +247,9 @@ def main():
 
         if verbose:
             print("\n\n")
+
+    if args.json:
+        print(json.dumps(json_output, indent=2, sort_keys=True))
 
 if __name__ == '__main__':
     main()
