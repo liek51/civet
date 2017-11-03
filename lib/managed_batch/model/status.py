@@ -12,53 +12,53 @@
 # limitations under the License.
 
 """
-Domain object for tracking Civet jobs in the incremental submission system
-"""
-from sqlalchemy import *
-from base import Base
-from session import Session
-
-
-"""
-Statuses that we care about:
- - not submitted (dependencies not met)
- - eligible (eligible for submission)
- - submitted
- - complete
- - failed
- - deleted
+Enumerations for tracking Civet jobs in the incremental submission system
 """
 
+#
+# CAUTION: The class list NAME must be maintained in parallel with the
+#    enumeration values.  YOU HAVE BEEN WARNED!
+#
+class Status(object):
+    NOT_SET = 0
+    NOT_SUBMITTED = 1
+    ELIGIBLE = 2
+    SUBMITTED = 3
+    COMPLETE = 4
+    FAILED = 5
+    DELETED = 6
+    PIPELINE_FAILURE = 7
 
-class Status(Base):
-    __tablename__ = 'status'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(30))
+    NAME = [
+        'Not Set',
+        'Not Submitted',
+        'Eligible',
+        'Submitted',
+        'Complete',
+        'Failed',
+        'Deleted',
+        'Pipeline Failure',
+    ]
 
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return '<Status: ID={0} Name={1}>'.format(self.id, self.name)
+    def __init__(self):
+        raise Exception("Do not instantiate the Status class. "
+                        "It is an enumeration")
 
     @staticmethod
     def get_id(name):
         """
-        Throughout, we need to set and query on various statuses.  We need the ID
-        associated with a status name.
+        Throughout, we need to set and query on various statuses.  We need the
+        ID associated with a status name.
         :param name: The name of the status.
         :return: The id associated with the name
         """
-        id = Session.query(Status.id).filter(
-            Status.name == name).one()[0]
-        return id
+        return Status.NAME.index(name)
 
     @staticmethod
-    def get_name(id):
+    def get_name(status_id):
         """
         Given a status ID, get the name.
-        :param id:
-        :return:
+        :param status_id: the ID of the status
+        :return: The associated name.
         """
-        status = Session.query(Status).get(id)
-        return status.name
+        return Status.NAME[status_id]
