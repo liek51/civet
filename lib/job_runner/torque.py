@@ -271,7 +271,6 @@ class TorqueJobRunner(object):
                    submitted.  Useful for debugging pipelines.
     """
 
-
     # the template script, which will be customized for each job
     # $VAR will be substituted before job submission $$VAR will become $VAR
     # after substitution
@@ -611,26 +610,24 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return job_id
 
-    def release_job(self, id, connection=None):
+    def release_job(self, job_id, connection=None):
         """
             Release a user hold from a held batch job.
             
+            :param job_id: job id to release (short form not allowed)
             :param id: job id to release (short form not allowed)
             :param connection: optional connection to a pbs_server, if not
                   passed release_job will establish a new connection
         """
-        if connection:
-            c = connection
-        else:
-            c = _connect_to_server(self._server)
+        c = connection if connection else _connect_to_server(self._server)
         
-        rval = pbs.pbs_rlsjob(c, id, 'u', '')
+        rval = pbs.pbs_rlsjob(c, job_id, 'u', '')
         
         if not connection:
             pbs.pbs_disconnect(c)
         
         if rval == 0:
-            self.held_jobs.remove(id)
+            self.held_jobs.remove(job_id)
         return rval
 
     def release_all(self):

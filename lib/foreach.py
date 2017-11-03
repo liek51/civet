@@ -27,7 +27,12 @@ class ForEach(object):
         'file',
         'related',
         'step',
-        'id' ]
+    ]
+
+    valid_attributes = [
+        'dir',
+        'id'
+    ]
 
     # to prevent a user from flooding the system we impose a limit on the
     # maximum number of jobs that can be created by one foreach instance
@@ -88,7 +93,7 @@ class ForEach(object):
                    "'{}' is used as a file and related file id in '{}'.\n\n{}")
             raise ParseError(msg.format(self.file.id, self.id, ET.tostring(e)))
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent=False):
 
         import pipeline_parse as PL
 
@@ -150,7 +155,7 @@ class ForEach(object):
                 cleanups.append(rel.id)
                 if rel.is_temp:
                     files_to_delete.append(rel.id)
-            PipelineFile.fix_up_files(self.pipelineFiles)
+            PipelineFile.finalize_file_paths(self.pipelineFiles)
 
             step_iteration = 0
             for s in self.steps:

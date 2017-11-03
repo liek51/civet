@@ -21,17 +21,16 @@ import argparse
 import sys
 import inspect
 import os
+import json
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
     sys.path.insert(0, lib_folder)
-
 import civet_exceptions
 import pipeline_parse as PL
 import version
 import utilities
-
 
 
 def main():
@@ -66,6 +65,12 @@ def main():
     parser.add_argument('--walltime-multiplier', dest='walltime_multiplier',
                         type=float, default=None,
                         help="optional walltime multiplier to be applied to every job's walltime")
+    parser.add_argument('--write-file-summary', action='store_true',
+                        help="write a file containing information about Civet "
+                             "file objects used in this pipeline into the log "
+                             "directory")
+    parser.add_argument('--json', action='store_true',
+                        help="stdout written in json format")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
@@ -74,22 +79,31 @@ def main():
     parser.set_defaults(release_jobs=True)
     parser.set_defaults(force_conditional=False)
     args = parser.parse_args()
-    
 
     try:
-        PL.parse_XML(args.pipeline[0], args.pipeline_args, skip_validation=True,
-                     queue=args.queue, submit_jobs=args.submit,
-                     search_path=os.environ.get('CIVET_PATH'),
-                     user_override_file=args.option_file,
-                     keep_temp=args.keep_temp, release_jobs=args.release_jobs,
-                     force_conditional_steps=args.force_conditional,
-                     delay=args.delay, email_address=args.email_address,
-                     error_email_address=args.error_email_address,
-                     walltime_multiplier=args.walltime_multiplier)
+        PL._parse_XML(args.pipeline[0], args.pipeline_args,
+                      skip_validation=True,
+                      queue=args.queue, submit_jobs=args.submit,
+                      search_path=os.environ.get('CIVET_PATH'),
+                      user_override_file=args.option_file,
+                      keep_temp=args.keep_temp, release_jobs=args.release_jobs,
+                      force_conditional_steps=args.force_conditional,
+                      delay=args.delay, email_address=args.email_address,
+                      error_email_address=args.error_email_address,
+                      walltime_multiplier=args.walltime_multiplier,
+                      write_pipeline_files=args.write_file_summary)
     except civet_exceptions.ParseError as e:
-        print("\nError parsing XML:  {}".format(e), file=sys.stderr)
+        print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)
-    PL.submit()
+    except civet_exceptions.MissingFile as e:
+        print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
+        sys.exit(2)
+
+    if not args.json:
+        PL.submit()
+    else:
+        sub_info = PL.submit(silent=True)
+        print(json.dumps(sub_info, indent=2, sort_keys=True))
 
 if __name__ == "__main__":
     main()

@@ -26,7 +26,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../conf/conf
     content = [x for x in conf_file.readlines() if not x.lstrip().startswith("//") and x.strip()]
 
 try:
-    # join the remaining config file lines and parse and json
+    # join the remaining config file lines and parse as json
     __config = json.loads(''.join(content))
 except Exception as e:
     sys.exit("Error loading config file: {}".format(e))

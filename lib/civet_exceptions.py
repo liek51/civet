@@ -19,3 +19,5 @@ class CivetException(Exception):
 class ParseError(CivetException):
     pass
 
+class MissingFile(CivetException):
+    pass

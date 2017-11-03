@@ -4,6 +4,36 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+Version 1.8.5
+-------------
+Bug Fixes
+ - If the default output directory was passed as a parameter and marked as
+   input, Civet would still create it if it does not exist. Now Civet correctly
+   exits after printing an appropriate error message.
+
+Features
+ - create wrapped version of parse_XML() to catch parse errors and exit
+   automatically (enhances existing wrapper scripts). Old behavior can be
+   found by calling _parse_XML()
+ - a file can now be based on a filelist passed as input parameter. In this
+   case the first file in the filelist is used as the source for the based_on
+   file
+ - Enhanced recovery for Torque connection errors (unable to open socket errors)
+ - added --write-file-summary option to civet_run
+ - added --json options to civet_run and civet_status
+
+
+Version 1.8.4.3
+---------------
+Bug Fixes
+ - allow () to be used as tool command file delimiters
+
+
+Version 1.8.4.2
+---------------
+Bug Fixes
+ - revert change that prevented validity.py from working with Python 2.7
+
 
 Version 1.8.4.1
 ---------------

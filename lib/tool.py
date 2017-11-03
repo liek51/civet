@@ -131,9 +131,8 @@ class Tool(object):
         try:
             tool = ET.parse(self.xml_file).getroot()
         except ET.ParseError as e:
-            print('Exception raised while parsing' + xml_file, file=sys.stderr)
-            print(e.msg, file=sys.stderr)
-            sys.exit(1)
+            raise civet_exceptions.ParseError("XML ParseError when parsing {}: {}".format(xml_file, e))
+
         atts = tool.attrib
 
         # Validate the attributes
@@ -255,14 +254,16 @@ class Tool(object):
 
         # Now we can fix up our files.
         try:
-            PipelineFile.fix_up_files(self.tool_files)
+            PipelineFile.finalize_file_paths(self.tool_files)
         except civet_exceptions.ParseError as e:
-            # fix_up_files can throw a civet_exceptions.ParseError, however
+            # finalize_file_paths can throw a civet_exceptions.ParseError, however
             # it doesn't know what file it is in at the time,  so we catch it
             # here, add the filename to the message, and raise an exception
             msg = "{}:  {}".format(os.path.basename(self.xml_file), e)
             raise civet_exceptions.ParseError(msg)
         
+        sumarize_files(self.tool_files, self.name_from_pipeline)
+
         # Now we can process self.exit_if_exists
         if self.exit_if_exists:
             files_to_test = []
@@ -341,7 +342,7 @@ class Tool(object):
             raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), self.id))
         
 
-        PipelineFile.parse_XML(e, self.tool_files)
+        PipelineFile.parse_xml(e, self.tool_files)
 
         # Track all the tool temporary files, so that we can
         # delete them at the end of the tool's execution.
@@ -365,7 +366,7 @@ class Tool(object):
                     vcs.append(vc)
         return vcs
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
@@ -500,7 +501,8 @@ class Tool(object):
             f = self.pipeline_files[fid]
             f.add_consumer_job(job_id)
 
-        print("{0}: {1}".format(job_id, self.name_from_pipeline))
+        if not silent:
+            print("{0}: {1}".format(job_id, self.name_from_pipeline))
         return job_id
 
     def check_files_exist(self):
@@ -665,9 +667,9 @@ class Command(object):
             self.delims = '{}'
         delim_1 = self.delims[0]
         delim_2 = self.delims[1]
-        if delim_1 in '|':
+        if delim_1 in '|()':
             delim_1 = '\\' + delim_1
-        if delim_2 in '|':
+        if delim_2 in '|()':
             delim_2 = '\\' + delim_2
         self.replacePattern = re.compile(delim_1 + '(.*?)' + delim_2)
 

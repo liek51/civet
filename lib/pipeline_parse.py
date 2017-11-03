@@ -23,6 +23,7 @@ import datetime
 import os
 import getpass
 import xml.etree.ElementTree as ET
+import json
 
 from foreach import *
 from pipeline_file import *
@@ -60,7 +61,6 @@ class Pipeline(object):
         'foreach',
         'step',
         'filelist',
-        'version'
     ]
 
     valid_attributes = [
@@ -68,21 +68,39 @@ class Pipeline(object):
         'path'
     ]
 
-    valid_version_attributes = [
-        'directory'
-    ]
-
-    valid_directory_versions = [1, 2]
-
     def __init__(self):
         pass
 
-    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None, 
+    def parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
                   submit_jobs=True, completion_mail=True, search_path="",
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None, walltime_multiplier=1):
-        pipe = ET.parse(xmlfile).getroot()
+                  error_email_address=None, walltime_multiplier=1,
+                  write_pipeline_files=False):
+
+        try:
+            self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
+                            completion_mail, search_path, user_override_file,
+                            keep_temp, release_jobs, force_conditional_steps,
+                            delay, email_address, error_email_address,
+                            walltime_multiplier, write_pipeline_files=False)
+        except civet_exceptions.ParseError as e:
+            print("\nError parsing XML:  {}".format(e), file=sys.stderr)
+            sys.exit(1)
+        except civet_exceptions.MissingFile as e:
+            print(e)
+            sys.exit(1)
+
+    def _parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
+                  submit_jobs=True, completion_mail=True, search_path="",
+                  user_override_file=None, keep_temp=False, release_jobs=True,
+                  force_conditional_steps=False, delay=None, email_address=None,
+                  error_email_address=None, walltime_multiplier=1,
+                  write_pipeline_files=False):
+        try:
+            pipe = ET.parse(xmlfile).getroot()
+        except ET.ParseError as e:
+            raise civet_exceptions.ParseError("XML ParseError when parsing {}: {}".format(xmlfile, e))
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
@@ -100,6 +118,10 @@ class Pipeline(object):
         
         # option overrides
         self.option_overrides = {}
+
+        # used while generating a summary of all file ids and their final path
+        # for logging
+        self.file_summary = {}
         
         override_file = os.path.splitext(xmlfile)[0] + '.options'
         if os.path.exists(override_file):
@@ -146,7 +168,6 @@ class Pipeline(object):
             self.error_email_address = os.path.expandvars(error_email_address)
         else:
             self.error_email_address = self.email_address
-        self.directory_version = 1
 
         if self.delay:
             try:
@@ -178,7 +199,7 @@ class Pipeline(object):
 
         # create some implicitly defined file IDs
         PipelineFile.add_simple_dir("PIPELINE_ROOT", self.master_XML_dir,
-                                    self._files)
+                                    self._files, input=True)
 
 
         # Walk the child tags.
@@ -187,26 +208,28 @@ class Pipeline(object):
             if t not in Pipeline.valid_tags:
                 msg = "{}: Illegal tag: {}".format(os.path.basename(self.xmlfile), t)
                 raise civet_exceptions.ParseError(msg)
+
             if t == 'step' or t == 'foreach':
                 pending.append(child)
-            elif t == 'version':
-                self.parse_version_tag(child)
             else:
                 # <file> <dir> <filelist> and <string> are all handled by PipelineFile
-                PipelineFile.parse_XML(child, self._files)
+                PipelineFile.parse_xml(child, self._files)
         
         # Here we have finished parsing the files in the pipeline XML.
         # Time to fix up various aspects of files that need to have
         # all files done first.
 
         try:
-            PipelineFile.fix_up_files(self._files)
+            PipelineFile.finalize_file_paths(self._files)
         except civet_exceptions.ParseError as e:
-            # fix_up_files can throw a civet_exceptions.ParseError, however
-            # it doesn't know what file it is in at the time,  so we catch it
-            # here, add the filename to the message, and raise an exception
+            # add the xml file path to the exception message
             msg = "{}:  {}".format(os.path.basename(self.xmlfile), e)
             raise civet_exceptions.ParseError(msg)
+
+        if write_pipeline_files:
+            sumarize_files(self._files, 'pipeline_files')
+            with open(os.path.join(self.log_dir, "pipeline_files.json"), 'w') as f:
+                f.write(json.dumps(self.file_summary, indent=4, sort_keys=True))
 
         # Now that our files are all processed and fixed up, we can
         # process the rest of the XML involved with this pipeline.
@@ -246,20 +269,18 @@ class Pipeline(object):
     @property
     def log_dir(self):
         if not self._log_dir:
-            if self.directory_version == 1:
-                self._log_dir = os.path.join(PipelineFile.get_output_dir(),
-                      'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
-            elif self.directory_version == 2:
-                self._log_dir = os.path.join(PipelineFile.get_output_dir(), 'logs')
+            self._log_dir = os.path.join(PipelineFile.get_output_dir(),
+                  'logs', datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
             utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
-    def submit(self):
+    def submit(self, silent=False):
         """
         Submit a constructed pipeline to the batch system for execution
         :return:
         """
-        print('Executing pipeline ' + self.name)
+        if not silent:
+            print('Executing pipeline ' + self.name)
 
         # Capture the CWD and the command line that invoked us.
         of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
@@ -321,7 +342,7 @@ class Pipeline(object):
         for step in self._steps:
             invocation += 1
             name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
-            job_id = step.submit(name_prefix)
+            job_id = step.submit(name_prefix, silent)
             for j in job_id:
                 self.all_batch_jobs.append(j)
 
@@ -397,7 +418,14 @@ class Pipeline(object):
             self.job_runner.release_all()
 
         # Let the people know where they can see their logs.
-        print('Log directory:  ' + self.log_dir)
+        if not silent:
+            print('Log directory:  ' + self.log_dir)
+
+        return {
+            'log_dir': self.log_dir,
+            'output_dir': PipelineFile.get_output_dir(),
+            'job_ids': self.all_batch_jobs
+        }
 
     def abort_submit(self, message, status=1):
         """
@@ -473,17 +501,6 @@ class Pipeline(object):
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
 
-    def parse_version_tag(self, tag):
-        for attr in tag.attrib:
-            if attr not in self.valid_version_attributes:
-                msg = "{}: Illegal version attribute '{}'\n\n{}".format(os.path.basename(self.xmlfile), attr, ET.tostring(tag))
-                raise civet_exceptions.ParseError(msg)
-            if attr == 'directory':
-                version = int(tag.attrib[attr])
-                if version not in self.valid_directory_versions:
-                    msg = "{}: Invalid directory version '{}'\n\n{}".format(os.path.basename(self.xmlfile), version, ET.tostring(tag))
-                    raise civet_exceptions.ParseError(msg)
-                self.directory_version = version
 
 
 sys.modules[__name__] = Pipeline()
