@@ -93,7 +93,8 @@ def main():
         version.print_version_string_and_exit()
     
     if verbose and quiet:
-        print("--quiet (-q) and --verbose options are mutually exclusive\n", file=sys.stderr)
+        print("--quiet (-q) and --verbose options are mutually exclusive\n",
+              file=sys.stderr)
         return 1
     
     dir_list_arg = []
@@ -211,6 +212,8 @@ def main():
                     print("\tDepends on {}".format(job.dependencies))
 
         if args.json:
+            # no need to print the pipeline summary when we are preparing
+            # JSON ouptut.  Just continue on to the next log directory
             continue
 
         if verbose:
