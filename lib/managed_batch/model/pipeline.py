@@ -27,7 +27,7 @@ class Pipeline(Base):
     __tablename__ = 'pipeline'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
+    status_id = Column(Integer, default=Status.NOT_SET, nullable=False)
     name = Column(String(50), nullable=False)
     log_directory = Column(String(512), nullable=False)
     jobs = relationship('Job', back_populates='pipeline')
@@ -43,7 +43,7 @@ class Pipeline(Base):
         """
         self.name = name
         self.log_directory = log_directory
-        self.status_id = Status.get_id('Not Submitted')
+        self.status_id = Status.NOT_SUBMITTED
         logging.debug("Created pipeline for {} in {}".format(name, log_directory))
 
     def is_complete(self):
@@ -52,24 +52,19 @@ class Pipeline(Base):
         complete.  If any of the jobs have failed,  mark it as "Failed"
         :return: Boolean
         """
-        complete = Status.get_id('Complete')
-        failed = Status.get_id('Failed')
-        submitted = Status.get_id('Submitted')
-        not_submitted = Status.get_id('Not Submitted')
-        failed_pipeline = Status.get_id('Pipeline Failure')
 
         # if we already are marked as Complete or Failed, return right away
-        if self.status_id in [failed, complete]:
+        if self.status_id in [Status.FAILED, Status.COMPLETE]:
             return True
 
         # status
 
         incomplete_jobs = Session.query(Job). \
-            filter(Job.status_id != complete). \
+            filter(Job.status_id != Status.COMPLETE). \
             filter(Job.pipeline_id == self.id).all()
 
         if not incomplete_jobs:
-            self.status_id = complete
+            self.status_id = Status.COMPLETE
             Session.commit()
             return True
 
@@ -82,7 +77,7 @@ class Pipeline(Base):
             if job.is_status('Failed'):
                 # FIXME: Should we change status of unsubmitted jobs of a failed pipeline?
                 logging.debug("Job {} failed, marking pipeline {} (log dir: {}) failed.".format(job.job_name, self.name, self.log_directory))
-                self.status_id = failed
+                self.status_id = Status.FAILED
                 Session.commit()
                 any_failed = True
                 break
@@ -94,16 +89,16 @@ class Pipeline(Base):
 
         if any_failed:
             for job in self.jobs:
-                if job.status_id == not_submitted:
+                if job.status_id == Status.NOT_SUBMITTED:
                     logging.debug("Marking job {} (log dir: {}) as 'failed pipeline'.".format(job.job_name, self.log_directory))
-                    job.status_id = failed_pipeline
+                    job.status_id = Status.PIPELINE_FAILURE
                     Session.commit()
             # A failed pipeline is still considered complete
             return True
 
-        if any_submitted and self.status_id != submitted:
+        if any_submitted and self.status_id != Status.SUBMITTED:
             logging.debug("Marking pipeline {} (log dir: {}) submitted.".format(self.name, self.log_directory))
-            self.status_id = submitted
+            self.status_id = Status.SUBMITTED
             Session.commit()
 
         # But if we get here, we're not complete.
@@ -111,9 +106,6 @@ class Pipeline(Base):
 
     def is_status(self, name):
         return self.status_id == Status.get_id(name)
-
-    def set_status(self, name):
-        self.status_id = Status.get_id(name)
 
     def get_status(self):
         return Status.get_name(self.status_id)
