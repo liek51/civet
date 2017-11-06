@@ -25,7 +25,7 @@ import config
 
 # we need to get the path to the civet_managed_batch_master executable, which
 # may not be in the user's path if they are calling this script directly.
-# since it is in Civet bin directory, which is up two directories from
+# since it is in the Civet bin directory, which is up two directories from
 # this file in the Civet install, we can work out the path to the
 # civet_managed_batch_master command.
 # it's sort of ugly
