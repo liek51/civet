@@ -36,10 +36,11 @@ class PipelineFile(object):
         'file',
         'filelist',
         'dir',
-        'string'
+        'string',
         ]
 
-    # these attributes are shared between file, dir, and string tags (but not filelist)
+    # these attributes are shared between file, dir, and string tags (but not
+    # filelist)
     valid_common_attributes = [
         'id',
         'append',
@@ -49,6 +50,7 @@ class PipelineFile(object):
         'based_on',
         'pattern',
         'replace',
+        'description',
     ]
 
     # attributes that only make sense for a file tag
@@ -73,7 +75,7 @@ class PipelineFile(object):
 
     # attributes that only make sense for a string
     valid_string_attributes = [
-        'value'
+        'value',
     ]
 
     # valid attributes for a file list
@@ -83,7 +85,8 @@ class PipelineFile(object):
         'in_dir',
         'pattern',
         'parameter',
-        'input'
+        'input',
+        'description'
     ]
 
     # Track the master output directory.
@@ -97,7 +100,7 @@ class PipelineFile(object):
                  pattern=None, replace=None, append=None,
                  datestamp_prepend=None, datestamp_append=None, in_dir=None,
                  is_parameter=False, is_list=False, from_file=None, create=True,
-                 default_output=False, foreach_dep=None):
+                 default_output=False, foreach_dep=None, description=None):
         self.id = id
         self.path = path
         self._is_file = is_file
@@ -120,6 +123,7 @@ class PipelineFile(object):
         self.consumer_jobs = []
         self.foreach_dep = foreach_dep
         self.from_file = from_file
+        self.description = description
 
         # need a separate variable for this because is_parameter gets reset to
         # False once the param number -> value conversion happens
@@ -410,6 +414,7 @@ class PipelineFile(object):
         default_output = False
         foreach_dep = None
         from_file = None
+        description = None
 
 
         # make sure that the attributes make sense with the type of tag we are
@@ -534,6 +539,9 @@ class PipelineFile(object):
                     raise civet_exceptions.ParseError(msg)
                 append = att['append']
 
+        if 'description' in att:
+            description = att['description']
+
         if is_list and not ((pattern and in_dir) or is_parameter):
             msg = ("'filelist' requires 'in_dir' and 'pattern' or it must be "
                    "passed as a parameter\n\n{}".format(ET.tostring(e)))
@@ -548,7 +556,8 @@ class PipelineFile(object):
             is_string, based_on, pattern, replace, append,
             datestamp_prepend, datestamp_append, in_dir,
             is_parameter, is_list, from_file, create, default_output,
-            foreach_dep)
+            foreach_dep, description)
+
 
 def sumarize_files(files, group):
     import pipeline_parse as PL

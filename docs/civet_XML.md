@@ -103,6 +103,11 @@ used; the pipeline developer must use the  `in_dir` attribute if they
 want the file to be placed anywhere other than the default output 
 directory.
 
+The `description` attribute is optional, it can be used to provide a 
+description of the file.  Pipeline parameters (file tags with the 
+`parameter` attribute) should include a description, which may be used
+by tools to provide submission help for the pipeline.
+
 ***
 
 ###dir
@@ -149,8 +154,9 @@ the parent directory of the file specified in the `from_file`
 attribute. Like a `file`, a `dir` can also be "based_on" another 
 file or directory.
 
-The `based_on`, `pattern`, `replace`, `append`, `datestamp_append` and 
-`datestamp_prepend` attributes are as documented for the `<file>` tag.
+The `based_on`, `pattern`, `replace`, `append`, `datestamp_append`, 
+`datestamp_prepend`, and `description` attributes are as documented for 
+the `<file>` tag.
 
 ***
 
@@ -189,11 +195,14 @@ A `<filelist>` can also be passed as a parameter:
     <filelist id="..." parameter="..."/>
 
 The parameter attribute is, in this case, the list of files is passed 
-as a comma-delimited list on the command line. Paths are assumed to be 
-relative to the current working directory at time of job submission and 
-are converted into absolute paths.
+as a comma-delimited list on the `civet_run` _command line. Paths are 
+assumed to be relative to the current working directory at time of job 
+submission and are converted into absolute paths.
 
 The `<filelist>` tag can be used anywhere the `<file>` tag can be used.
+
+The `description` attribute can be used to include a text description
+of the parameter. 
 
 ***
 
@@ -212,9 +221,10 @@ pipeline parameter.
         append="..." datestamp_append="..." datestamp_prepend="..." />
 
 A string `parameter`, `based_on`, `pattern`, `replace`, `append`, 
-`datestamp_append`, and `datestamp_prepend` are analogous to their 
-counterparts for the `<file>` tag. See the documentation for `<file>` 
-for more information. A string can be used anywhere a file can be used.
+`datestamp_append`, `datestamp_prepend`, and `description`  are 
+analogous to their counterparts for the `<file>` tag. See the 
+documentation for `<file>` for more information. A string can be used 
+anywhere a file can be used.
 
 *** 
   

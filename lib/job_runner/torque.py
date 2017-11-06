@@ -634,6 +634,12 @@ class TorqueJobRunner(object):
         """
             Release all jobs in self.held_jobs list reusing connections.  
         """
+
+        # if we are 'faking' pipeline submission with civet_run -n, then there
+        # is nothing to do
+        if not self.submit:
+            return
+
         # copy the list of held jobs to iterate over because release_job mutates
         # self.held_jobs
         jobs = list(self.held_jobs)  
