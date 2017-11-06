@@ -146,7 +146,12 @@ class JobTimes(object):
     @staticmethod
     def to_seconds(timestr):
         secs = 0
-        timestr = timestr.split('=')[1]
+        try:
+            timestr = timestr.split('=')[1]
+        except AttributeError:
+            print("Received unknown data for to_seconds. {0}".format(timestr),
+                  file=sys.stderr)
+            raise
         parts = timestr.split(':')
         if len(parts) == 4:
             days = int(parts[0])
@@ -191,9 +196,13 @@ def process_file(dir, fn, jobs, nodes, all_nodes):
     job = re.sub('(.*)-status.txt', r'\1', fn)
     if job not in jobs:
         jobs[job] = JobTimes(job)
-    if jobs[job].register_time(used, req):
-        # This is a new longest time.
-        nodes[job] = get_node(dir, job)
+    try:
+        if jobs[job].register_time(used, req):
+            # This is a new longest time.
+            nodes[job] = get_node(dir, job)
+    except AttributeError:
+        print("Problem registering time for {}".format(path), file=sys.stderr)
+        return
 
     if all_nodes is not None:
         collect_node(dir, job, all_nodes)
