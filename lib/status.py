@@ -247,7 +247,7 @@ class PipelineStatus(object):
                 self.cancel_message = "PIPELINE WAS CANCELED by user at {}\n".format(cancel_info['DATESTAMP'])
             else:
                 self.cancel_message = "PIPELINE WAS CANCELED by user.\n"
-            self.jobs_running_at_cancel = cancel_info['RUNNING_JOBS']
+            self.jobs_running_at_cancel = cancel_info.get('RUNNING_JOBS', [])
 
         for job in batch_jobs:
             job_status = Status(log_dir, job[1], job[0], job[2], jm,
@@ -305,6 +305,7 @@ class PipelineStatus(object):
     def to_json_serializable(self):
         return {
             'log_dir': self.log_dir,
+            'status': self.status,
             'jobs': [j.to_json_serializable() for j in self.jobs],
             'aborted': self.aborted,
             'complete_jobs_success': self.complete_jobs_success,
