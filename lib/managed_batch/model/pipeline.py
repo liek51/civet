@@ -53,8 +53,8 @@ class Pipeline(Base):
         :return: Boolean
         """
 
-        # if we already are marked as Complete or Failed, return right away
-        if self.status_id in [Status.FAILED, Status.COMPLETE]:
+        # if we already are marked as Complete, Failed, or Deleted return
+        if self.status_id in [Status.FAILED, Status.COMPLETE, Status.DELETED]:
             return True
 
         # status

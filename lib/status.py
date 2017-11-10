@@ -218,7 +218,8 @@ class PipelineStatus(object):
             self.status = "NO_SUB"
             return
 
-        if os.path.exists(os.path.join(log_dir, "MANAGED_BATCH")):
+        if os.path.exists(os.path.join(log_dir,
+                                       job_runner.common.MANAGED_MODE_FLAG)):
             self.execution_mode = ToolExecModes.BATCH_MANAGED
         else:
             self.execution_mode = ToolExecModes.BATCH_STANDARD

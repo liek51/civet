@@ -430,7 +430,8 @@ class Pipeline(object):
         return tasks
 
     def _write_managed_flag(self):
-        open(os.path.join(self.log_dir, "MANAGED_BATCH"), 'w').close()
+        open(os.path.join(self.log_dir, job_runner.common.MANAGED_MODE_FLAG),
+             'w').close()
 
     @property
     def job_runner(self):
