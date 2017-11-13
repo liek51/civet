@@ -232,6 +232,7 @@ class PipelineStatus(object):
     def to_json_serializable(self):
         return {
             'log_dir': self.log_dir,
+            'status': self.status,
             'jobs': [j.to_json_serializable() for j in self.jobs],
             'aborted': self.aborted,
             'complete_jobs_success': self.complete_jobs_success,
