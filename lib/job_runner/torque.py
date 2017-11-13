@@ -788,11 +788,10 @@ class TorqueJobRunner(object):
         # aren't necessary
         
         env = "".join([env, ",PBS_O_HOST=", socket.getfqdn()])
-        if os.environ['PATH']:
-            env = "".join([env, ",PBS_O_PATH=", os.environ['PATH']])
-        if os.environ['HOME']:
+        env = "".join([env, ",PBS_O_PATH=", os.environ['PATH']])
+        if 'HOME' in os.environ:
             env = "".join([env, ",PBS_O_HOME=", os.environ['HOME']])
-        if os.environ['LOGNAME']:
+        if 'LOGNAME' in os.environ:
             env = "".join([env, ",PBS_O_LOGNAME=", os.environ['LOGNAME']])
         
         return env
