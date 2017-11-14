@@ -529,6 +529,7 @@ class Option(object):
         self.name = name
 
         self.display_name = e.attrib.get('display_name', self.name)
+        self.help_text = e.attrib.get('help', self.name)
 
         if 'command_text' in e.attrib:
             self.command_text = e.attrib['command_text'].strip()
