@@ -204,6 +204,11 @@ The `<filelist>` tag can be used anywhere the `<file>` tag can be used.
 The `description` attribute can be used to include a text description
 of the parameter. 
 
+The optional attribute `paird` indicates that the file list contains 
+one or more pairs of files (there must be an even number of files in the 
+list. This is not currently enforced by the Civet framework, but 
+it is used by some pipeline interfaces. 
+
 ***
 
 ###string
