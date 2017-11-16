@@ -64,7 +64,9 @@ class Tool(object):
         'path',
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None, tool_config_prefix=None):
+    def __init__(self, xml_file, ins, outs, pipeline_files, name,
+                 walltime, tool_config_prefix, step_name):
+
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -83,6 +85,7 @@ class Tool(object):
         self.verify_files = []
         self.tool_files = {}
         self.pipeline_files = pipeline_files
+        self.step_name = step_name
 
         # check the search path for the XML file, otherwise fall back to
         # the same directory as the pipeline XML.  CLIA pipelines do not pass
@@ -121,8 +124,6 @@ class Tool(object):
 
         if bad_inputs or bad_outputs:
             raise civet_exceptions.ParseError("\n".join(msg))
-
-
 
 
         # Verify that the tool definition file has not changed.
@@ -306,7 +307,6 @@ class Tool(object):
         # Do we need to adjust the walltime?
         if PL.walltime_multiplier > 0 and PL.walltime_multiplier != 1:
             self.walltime = BatchJob.adjust_walltime(self.walltime, PL.walltime_multiplier)
-
 
     def search_for_xml(self, xml_file):
         # get current pipeline symbols
@@ -587,9 +587,10 @@ class Option(object):
 
         for attr in e.attrib:
             if attr in deprecated_attributes.keys():
-                print("Warning {}:\n"
+                print("Warning {}::{}::{}:\n"
                       "\tdeprecated attribute '{}' in option '{}'\n"
-                      "\t{}".format(os.path.basename(tool.xml_file), attr,
+                      "\t{}".format(tool.step_name, tool.name_from_pipeline,
+                                    os.path.basename(tool.xml_file), attr,
                                     self.name, deprecated_attributes[attr]))
 
         for child in e:
@@ -732,11 +733,11 @@ class Option(object):
         # TODO do some validation of other types (like numeric) to make sure
         # the values make sense
 
-
         tool.options[name] = self
 
     def __repr__(self):
-        return ' '.join(['Option:', 'n', self.name, 'c', self.command_text, 'v', self.value])
+        return ' '.join(['Option:', 'n', self.name, 'c', self.command_text, 'v',
+                         str(self.value)])
 
     def __str__(self):
         return self.__repr__()
@@ -898,7 +899,7 @@ class Command(object):
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
-            print("\n\nUNKNOWN OPTION OR FILE ID: {} in file {}".format(tok, self.tool.xml_file), file=sys.stderr)
+            print("\n\nUNKNOWN OPTION OR FILE ID: '{}' in file {}".format(tok, self.tool.xml_file), file=sys.stderr)
             print('Tool files: {}'.format(self.tool_files), file=sys.stderr)
             print('Options: {}\n\n'.format(self.options), file=sys.stderr)
             PL.abort_submit('UNKNOWN OPTION OR FILE ID: ' + tok)

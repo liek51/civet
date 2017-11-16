@@ -162,11 +162,11 @@ class PipelineFile(object):
         return self.__str__()
 
     def __str__(self):
-        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DS:{} DSP: {} DSA:{} inD:{}'.format(
+        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DSP: {} DSA:{} inD:{}'.format(
             self.id, self.path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
-            self.in_dir)
+            self.pattern, self.append, self.datestamp_prepend,
+            self.datestamp_append, self.in_dir)
 
     def set_output_dir(self):
         # Register at most one output directory

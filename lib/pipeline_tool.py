@@ -13,8 +13,9 @@
 
 from tool import *
 
+
 class PipelineTool(object):
-    def __init__(self, e, files):
+    def __init__(self, e, files, step_name):
         att = e.attrib
         input = []
         output = []
@@ -43,7 +44,7 @@ class PipelineTool(object):
             tool_config_prefix = att['tool_config_prefix']
 
         self.tool = Tool(self.description, input, output, files, self.name,
-                         walltime, tool_config_prefix)
+                         walltime, tool_config_prefix, step_name)
         
     def submit(self, name_prefix, silent=False):
         return self.tool.submit(name_prefix, silent)
