@@ -531,7 +531,9 @@ class Option(object):
             'from_file',
             'threads',
             'binary',
-            'type'
+            'type',
+            'display_name',
+            'description'
         ]
 
         valid_types = [
