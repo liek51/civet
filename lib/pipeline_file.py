@@ -232,9 +232,13 @@ class PipelineFile(object):
 
         try:
             self.finalize_path()
-        except:
-            print("ERROR CALLING finalize_path() for {}:  {}".format(self.id, self.path))
-            sys.exit()
+        except Exception as e:
+            # this was inserted to help diagnosing a programming error that
+            # caused finalize_path() to fail in certain edge cases.
+            # if it ever happens again this would provide useful information
+            # the user could share with us to help locate the problem
+            sys.exit("ERROR CALLING finalize_path() for {}:  {}\n"
+                     "{}".format(self.id, self.path, e))
         self.finalized = True
 
         # Make sure a directory exists, unless explicitly requested

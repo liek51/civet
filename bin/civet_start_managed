@@ -57,10 +57,10 @@ def main():
                              "prior to reaching this maximum walltime")
 
     parser.add_argument('--max-queued', '-m', type=int, default=100,
-                        help="maximum number of jobs to have in the running "
-                             "state at any one time.")
+                        help="maximum number of jobs to have in the batch "
+                             "queue at any one time.")
 
-    parser.add_argument('-q', '--queue', default=None,
+    parser.add_argument('--queue', '-q',  default=None,
                         help="submission queue [default = TORQUE default]")
 
     parser.add_argument('--force', '-f', action='store_true',
@@ -92,16 +92,9 @@ def main():
 
     # make sure the task file hasn't already been submitted
     if not args.force and FileInfo.is_started():
-        logging.error("A mangement process has already been started for this "
-                      "task file\n"
-                      "\tIf you are sure that management process is no longer "
-                      "running\n"
-                      "\tyou can start another one with civet_start_managed -f")
         sys.exit("\n"
-                 "A mangement process has already been started for this "
-                 "task file\n"
-                 "\tIf you are sure that management process is no longer "
-                 "running\n"
+                 "A mangement process has already been started for this task file\n"
+                 "\tIf you are sure that management process is no longer running\n"
                  "\tyou can start another one with civet_start_managed -f"
                  )
 

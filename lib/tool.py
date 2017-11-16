@@ -574,7 +574,6 @@ class Tool(object):
                     if inf.foreach_dep:
                         task['dependencies'].extend(PL.foreach_tasks[inf.foreach_dep])
 
-
             for output_name in self.outs:
                 outf = self.pipeline_files[output_name]
                 # Any files that we created and that will be passed to other jobs
@@ -598,7 +597,6 @@ class Tool(object):
                              stdout_path = os.path.join(PL.log_dir, task_name + ".o"),
                              stderr_path = os.path.join(PL.log_dir, task_name + ".e"))
 
-
             task['script_path'] = PL.job_runner.write_script(batch_job)
             task['stdout_path'] = batch_job.stdout_path
             task['stderr_path'] = batch_job.stderr_path
@@ -609,6 +607,13 @@ class Tool(object):
             task['module_files'] = self.modules
             task['log_dir'] = PL.job_runner.execution_log_dir
             task['queue'] = PL.job_runner.queue
+
+        else:
+            # trying to call create_task with some type of execution mode
+            # that isn't supported yet
+            raise ValueError("create_task does not support execution "
+                             "mode {} ({})".format(execution_mode,
+                                                   ToolExecModes.to_str(execution_mode)))
 
         return task
 

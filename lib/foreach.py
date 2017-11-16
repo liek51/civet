@@ -289,7 +289,7 @@ class ForEach(object):
             for fid in files_to_delete:
                 tmps.append(self.pipelineFiles[fid].path)
 
-            if len(tmps):
+            if tmps:
                 task = {}
                 cmd = 'rm -f ' + ' '.join(tmps)
 
