@@ -169,8 +169,8 @@ def main():
         # delete jobs, starting with held jobs first
         for job_id in held_jobs + queued_jobs + running_jobs:
             rval = jm.delete_job(job_id)
-            if rval and (rval != batch_system.JobManager.E_UNKNOWN or rval != batch_system.JobManager.E_STATE):
-                # rval is not zero and it is no an unknown job id or invalid state 
+            if rval and rval != batch_system.JobManager.E_UNKNOWN and rval != batch_system.JobManager.E_STATE:
+                # rval is not zero and it is not an unknown job id or invalid state
                 # error (job may have completed between when we last checked and 
                 # now, those return values may be expected)
                 print("Error deleting {0} from queue. ({1}).".format(job_id,
