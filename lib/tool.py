@@ -549,6 +549,13 @@ class Option(object):
             'select'
         ]
 
+        # these attributes are still valied, but are deprecated. we will warn
+        # about them
+        deprecated_attributes = {
+            'threads': 'use type="threads" instead',
+            'binary': 'use type="boolean" instead'
+        }
+
         self.command_text = ''
         self.value = ''
         self.select_choices = []
@@ -572,12 +579,18 @@ class Option(object):
 
         for attr in e.attrib:
             if attr not in valid_attributes:
-                msg = ("Unknown attribute in option '{}:{}': {}\n"
-                       "Valid Attributes: '{}'".format(tool.name_from_pipeline,
-                                                       self.name,
-                                                       attr,
+                msg = ("{}: Unknown attribute in option '{}': {}\n"
+                       "Valid Attributes: '{}'".format(os.path.basename(tool.xml_file),
+                                                       self.name, attr,
                                                        ", ".join(valid_attributes)))
                 raise civet_exceptions.ParseError(msg)
+
+        for attr in e.attrib:
+            if attr in deprecated_attributes.keys():
+                print("Warning {}:\n"
+                      "\tdeprecated attribute '{}' in option '{}'\n"
+                      "\t{}".format(os.path.basename(tool.xml_file), attr,
+                                    self.name, deprecated_attributes[attr]))
 
         for child in e:
             t = child.tag
