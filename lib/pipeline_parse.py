@@ -32,9 +32,11 @@ from tool import *
 
 from job_runner.torque import *
 from job_runner.batch_job import *
+import job_runner.common
 import utilities
 import civet_exceptions
 import config
+from exec_modes import ToolExecModes
 
 
 class Pipeline(object):
@@ -68,6 +70,7 @@ class Pipeline(object):
         'path'
     ]
 
+
     def __init__(self):
         pass
 
@@ -76,27 +79,30 @@ class Pipeline(object):
                   user_override_file=None, keep_temp=False, release_jobs=True,
                   force_conditional_steps=False, delay=None, email_address=None,
                   error_email_address=None, walltime_multiplier=1,
-                  write_pipeline_files=False):
+                  write_pipeline_files=False,
+                  tool_exec_mode=ToolExecModes.BATCH_STANDARD):
 
         try:
             self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
                             completion_mail, search_path, user_override_file,
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
-                            walltime_multiplier, write_pipeline_files=False)
+                            walltime_multiplier, write_pipeline_files,
+                            tool_exec_mode)
         except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
         except civet_exceptions.MissingFile as e:
-            print(e)
+            print(e, file=sys.stderr)
             sys.exit(1)
 
     def _parse_XML(self, xmlfile, params, skip_validation=False, queue=None,
-                  submit_jobs=True, completion_mail=True, search_path="",
-                  user_override_file=None, keep_temp=False, release_jobs=True,
-                  force_conditional_steps=False, delay=None, email_address=None,
-                  error_email_address=None, walltime_multiplier=1,
-                  write_pipeline_files=False):
+                   submit_jobs=True, completion_mail=True, search_path="",
+                   user_override_file=None, keep_temp=False, release_jobs=True,
+                   force_conditional_steps=False, delay=None, email_address=None,
+                   error_email_address=None, walltime_multiplier=1,
+                   write_pipeline_files=False,
+                   tool_exec_mode=ToolExecModes.BATCH_STANDARD):
         try:
             pipe = ET.parse(xmlfile).getroot()
         except ET.ParseError as e:
@@ -129,6 +135,8 @@ class Pipeline(object):
             
         if user_override_file and os.path.exists(user_override_file):
             self.parse_override_file(user_override_file, "user")
+
+        self.execution_mode = tool_exec_mode
             
            
         # Register the parameters that may be file paths
@@ -196,6 +204,7 @@ class Pipeline(object):
         self._steps = []
         self._files = {}
         self.foreach_barriers = {}
+        self.foreach_tasks = {}
 
         # create some implicitly defined file IDs
         PipelineFile.add_simple_dir("PIPELINE_ROOT", self.master_XML_dir,
@@ -274,6 +283,50 @@ class Pipeline(object):
             utilities.make_sure_path_exists(self._log_dir)
         return self._log_dir
 
+    def write_command_info(self):
+         # Capture the CWD and the command line that invoked us.
+        with open(os.path.join(self.log_dir, 'command_line.txt'), 'w') as of:
+            of.write('User:\n')
+            of.write(getpass.getuser() + '\n\n')
+            of.write('Working directory at time of pipeline submission:\n')
+            of.write(os.getcwd() + '\n\n')
+            of.write('Command line used to invoke the pipeline:\n')
+            of.write(' '.join(sys.argv) + '\n\n')
+            of.write('Execution mode: \n')
+            of.write('  {}\n\n'.format(ToolExecModes.to_str(self.execution_mode)))
+            of.write('Parameters to parse_XML:\n')
+            of.write('  xmlfile: {0}\n'.format(self.xmlfile))
+            of.write('  params: {0}\n'.format(self.params))
+            of.write('  skip_validation: {0}\n'.format(
+                self.skip_validation))
+            of.write('  queue: {0}\n'.format(self.queue))
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
+                of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
+            of.write('  completion_mail: {0}\n'.format(
+                self.completion_mail))
+            of.write('  search_path: {0}\n'.format(self.search_path))
+            of.write('  user_override_file: {0}\n'.format(
+                self.user_override_file))
+            of.write('  keep_temp: {0}\n'.format(self.keep_temp))
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
+                of.write('  release_jobs: {0}\n'.format(self.release_jobs))
+            of.write('  force_conditional_steps: {0}\n'.format(
+                self.force_conditional_steps))
+            if self.execution_mode == ToolExecModes.BATCH_STANDARD:
+                of.write('  delay: {0}\n'.format(self.delay))
+            of.write('  email_address: {0}\n'.format(self.email_address))
+            of.write('  error_email_address: {0}\n'.format(
+                self.error_email_address))
+            of.write('  walltime_multiplier: {0}\n'.format(
+                self.walltime_multiplier))
+
+        #capture the overrides loaded into a log file:
+        with open(os.path.join(self.log_dir, 'option_overrides.txt'), 'w') as of:
+            for prefix, overrides in self.option_overrides.iteritems():
+                for opt, (val,source) in overrides.iteritems():
+                    of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt,
+                                                          val, source))
+
     def submit(self, silent=False):
         """
         Submit a constructed pipeline to the batch system for execution
@@ -282,47 +335,7 @@ class Pipeline(object):
         if not silent:
             print('Executing pipeline ' + self.name)
 
-        # Capture the CWD and the command line that invoked us.
-        of = open(os.path.join(self.log_dir, 'command_line.txt'), 'w')
-        of.write('User:\n')
-        of.write(getpass.getuser() + '\n\n')
-        of.write('Working directory at time of pipeline submission:\n')
-        of.write(os.getcwd() + '\n\n')
-        of.write('Command line used to invoke the pipeline:\n')
-        of.write(' '.join(sys.argv) + '\n\n')
-        of.write('Parameters to parse_XML:\n')
-        of.write('  xmlfile: {0}\n'.format(self.xmlfile))
-        of.write('  params: {0}\n'.format(self.params))
-        of.write('  skip_validation: {0}\n'.format(
-            self.skip_validation))
-        of.write('  queue: {0}\n'.format(self.queue))
-        of.write('  submit_jobs: {0}\n'.format(self.submit_jobs))
-        of.write('  completion_mail: {0}\n'.format(
-            self.completion_mail))
-        of.write('  search_path: {0}\n'.format(self.search_path))
-        of.write('  user_override_file: {0}\n'.format(
-            self.user_override_file))
-        of.write('  keep_temp: {0}\n'.format(self.keep_temp))
-        of.write('  release_jobs: {0}\n'.format(self.release_jobs))
-        of.write('  force_conditional_steps: {0}\n'.format(
-            self.force_conditional_steps))
-        of.write('  delay: {0}\n'.format(self.delay))
-        of.write('  email_address: {0}\n'.format(self.email_address))
-        of.write('  error_email_address: {0}\n'.format(
-            self.error_email_address))
-        of.write('  walltime_multiplier: {0}\n'.format(
-            self.walltime_multiplier))
-
-        of.close()
-        
-        #capture the overrides loaded into a log file:
-        of = open(os.path.join(self.log_dir, 'option_overrides.txt'),
-                  'w')
-        for prefix, overrides in self.option_overrides.iteritems():
-            for opt, (val,source) in overrides.iteritems():
-                of.write("{0}.{1}={2}  #{3}\n".format(prefix, opt,
-                                                      val, source))
-        of.close()
+        self.write_command_info()
 
         # Most of the dependencies are file-based; a job can run
         # as soon as the files it needs are ready.  However, we
@@ -330,7 +343,7 @@ class Pipeline(object):
         # files, etc.  That one needs to run last.  So we track 
         # all the batch job ids that are related to this pipeline.
         self.all_batch_jobs = []
-        
+
         # Check that all files marked "input" exist.
         missing = self.check_files_exist()
         if missing:
@@ -347,69 +360,8 @@ class Pipeline(object):
                 self.all_batch_jobs.append(j)
 
         # Submit last cleanup / bookkeeping job
+        self.submit_cleanup_job()
 
-        cmd = []
-        # 1. deletes all the temp files.
-        if not self.keep_temp:
-            tmps = []
-            # This job is about deleting files...
-            # For each temp file, depend on the job(s) that use it in any
-            # way, either creating it or consuming it.
-            # We can't just wait for the last job to complete, because it is 
-            # possible to construct pipelines where the last submitted job
-            # completes before an earlier submitted job.
-            depends = []
-            for fid in self._files:
-                f = self._files[fid]
-                if f.is_temp:
-                    tmps.append(f.path)
-                    if f.consumer_jobs:
-                        for j in f.consumer_jobs:
-                            if j not in depends:
-                                depends.append(j)
-                    if f.creator_job:
-                        if f.creator_job not in depends:
-                            depends.append(f.creator_job)
-            if len(tmps):
-                # Use rm -f because if a command is executed conditionally
-                # due to if_exists and if_not_exists, a temp file may not
-                # exist.  Without -f the rm command would fail, causing
-                # the entire pipeline to fail.
-                # must be recursive because some temp files are actually
-                # directories
-                cmd.append('rm -rf ' + ' '.join(tmps))
-
-        # 2. Consolidate all the log files.
-        cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
-        cmd.append('CONSOLIDATE_STATUS=$?')
-        
-        # 3. And (finally) send completion email
-        if self.completion_mail:
-            cmd.append("echo 'The pipeline running in:\n    " +
-                       PipelineFile.get_output_dir() +
-                       "\nhas completed.'" +
-                       " | mailx -s 'Pipeline completed' " + self.email_address)
-        cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
-        cmd = '\n'.join(cmd)
-
-        # do we need to load a modulefile to execute the Python consolidate log
-        # script ?
-        if config.civet_job_python_module:
-            mod_files = [config.civet_job_python_module]
-        else:
-            mod_files = []
-
-        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
-                             depends_on=self.all_batch_jobs, 
-                             name="rm_temps_consolidate_logs",
-                             modules=mod_files, mail_option='a',
-                             email_list=self.error_email_address,
-                             walltime="00:10:00")
-        try:
-            self.job_runner.queue_job(batch_job)
-        except Exception as e:
-                sys.stderr.write(str(e) + '\n')
-                sys.exit(self.BATCH_ERROR)
 
         # We're done submitting all the jobs.  Release them (if necessary) and 
         # get on with it. This is the last action of the pipeline
@@ -443,6 +395,43 @@ class Pipeline(object):
         sys.stderr.write("Aborting pipeline submission\n"
                          "\t{0}\n".format(message))
         sys.exit(status)
+
+    def create_task_list(self):
+        invocation = 0
+        all_tasks = []
+        for step in self._steps:
+            invocation += 1
+            name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
+            step_tasks = step.create_tasks(name_prefix, self.execution_mode)
+            all_tasks.extend(step_tasks)
+
+        all_tasks.append(self._create_cleanup_task(all_tasks))
+        return all_tasks
+
+    def prepare_managed_tasks(self):
+
+        self.execution_mode = ToolExecModes.BATCH_MANAGED
+
+        print('Preparing pipeline ' + self.name)
+
+        self.write_command_info()
+        self._write_managed_flag()
+
+        tasks = self.create_task_list()
+
+        # create the pipeline_batch_id_list.txt file (normally created when
+        # submitting jobs -- this is needed by civet_status
+        with open(os.path.join(self.log_dir, job_runner.common.BATCH_ID_LOG), mode='w') as job_list:
+            idx = 0
+            for task in tasks:
+                job_list.write(task['name'] + ".managed_task" + '\t' + task['name'] + '\t[' + ", ".join(task['dependencies']) + ']\n')
+                idx += 1
+
+        return tasks
+
+    def _write_managed_flag(self):
+        open(os.path.join(self.log_dir, job_runner.common.MANAGED_MODE_FLAG),
+             'w').close()
 
     @property
     def job_runner(self):
@@ -500,6 +489,106 @@ class Pipeline(object):
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
                 self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
+
+    def _create_cleanup_cmd(self):
+        cmd = []
+        # 1. deletes all the temp files.
+        if not self.keep_temp:
+            tmps = []
+            # This job is about deleting files...
+            # For each temp file, depend on the job(s) that use it in any
+            # way, either creating it or consuming it.
+            # We can't just wait for the last job to complete, because it is
+            # possible to construct pipelines where the last submitted job
+            # completes before an earlier submitted job.
+            for fid in self._files:
+                f = self._files[fid]
+                if f.is_temp:
+                    tmps.append(f.path)
+            if len(tmps):
+                # Use rm -f because if a command is executed conditionally
+                # due to if_exists and if_not_exists, a temp file may not
+                # exist.  Without -f the rm command would fail, causing
+                # the entire pipeline to fail.
+                # must be recursive because some temp files are actually
+                # directories
+                cmd.append('rm -rf ' + ' '.join(tmps))
+
+        # 2. Consolidate all the log files.
+        cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
+        cmd.append('CONSOLIDATE_STATUS=$?')
+
+        # consolidate log job needs to run last -- make sure it depends on all
+        # of the child nodes in the dependency graph
+
+        # 3. And (finally) send completion email
+        if self.completion_mail:
+            cmd.append("echo 'The pipeline running in:\n    " +
+                       PipelineFile.get_output_dir() +
+                       "\nhas completed.'" +
+                       " | mailx -s 'Pipeline completed' " + self.email_address)
+        cmd.append('bash -c "exit ${CONSOLIDATE_STATUS}"')
+        return '\n'.join(cmd)
+
+    def submit_cleanup_job(self):
+
+        cmd = self._create_cleanup_cmd()
+
+        # do we need to load a modulefile to execute the Python consolidate log
+        # script ?
+        if config.civet_job_python_module:
+            mod_files = [config.civet_job_python_module]
+        else:
+            mod_files = []
+
+        batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
+                             depends_on=self.all_batch_jobs,
+                             name="rm_temps_consolidate_logs",
+                             modules=mod_files, mail_option='a',
+                             email_list=self.error_email_address,
+                             walltime="00:10:00")
+        try:
+            self.job_runner.queue_job(batch_job)
+        except Exception as e:
+                sys.stderr.write(str(e) + '\n')
+                sys.exit(self.BATCH_ERROR)
+
+    def _create_cleanup_task(self, all_tasks):
+
+        # Get the current symbols in the pipeline...
+        import pipeline_parse as PL
+
+        cmd = self._create_cleanup_cmd()
+
+        task = {}
+        task['name'] = "rm_temps_consolidate_logs"
+        task['command'] = cmd
+        task['walltime'] = "00:10:00"
+        task['mem'] = 1
+        task['threads'] = 1
+        task['module_files'] = [config.civet_job_python_module] if config.civet_job_python_module else []
+
+        task['dependencies'] = [t['name'] for t in all_tasks]
+
+        batch_job = BatchJob(cmd,
+                             workdir=PipelineFile.get_output_dir(),
+                             walltime=task['walltime'],
+                             modules=task['module_files'],
+                             name=task['name'],
+                             email_list=PL.error_email_address,
+                             stdout_path = os.path.join(PL.log_dir, task['name'] + ".o"),
+                             stderr_path = os.path.join(PL.log_dir, task['name'] + ".e"))
+
+        task['script_path'] = PL.job_runner.write_script(batch_job)
+        task['stdout_path'] = batch_job.stdout_path
+        task['stderr_path'] = batch_job.stderr_path
+        task['epilogue_path'] = PL.job_runner.epilogue_filename
+        task['batch_env'] = PL.job_runner.generate_env(PipelineFile.get_output_dir())
+        task['email_list'] = PL.error_email_address
+        task['mail_options'] = batch_job.mail_option
+        task['queue'] = PL.job_runner.queue
+
+        return task
 
 
 

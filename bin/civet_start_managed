@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+
+# Copyright 2017 The Jackson Laboratory
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# civet pipeline driver program
+
+from __future__ import print_function
+
+import argparse
+import sys
+import inspect
+import os
+import logging
+
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(
+    inspect.currentframe()))[0]))
+lib_folder = os.path.join(cmd_folder, '../lib')
+if lib_folder not in sys.path:
+    sys.path.insert(0, lib_folder)
+
+# The following imports depend on the modifications to sys.path in the lines
+# above. Don't move up with the other imports.
+
+import managed_batch.manager
+from managed_batch.model.session import Session
+from managed_batch.controller.utilities import \
+    initialize_model, write_batch_id_to_log_dir
+from managed_batch.model.file_info import FileInfo
+
+import version
+
+
+def main():
+
+    version.parse_options()
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('task_db',
+                        help="task file created by civet_prepare")
+
+    parser.add_argument('--max-walltime', '-w', type=int, default=24,
+                        help="Maximum walltime, in hours, to run. If this "
+                             "argument is specified, this program will submit "
+                             "a new management job to take over and will exit "
+                             "prior to reaching this maximum walltime")
+
+    parser.add_argument('--max-queued', '-m', type=int, default=100,
+                        help="maximum number of jobs to have in the batch "
+                             "queue at any one time.")
+
+    parser.add_argument('--queue', '-q',  default=None,
+                        help="submission queue [default = TORQUE default]")
+
+    parser.add_argument('--force', '-f', action='store_true',
+                        help="start a management process even if the task file "
+                             "indicates one has already been started")
+
+    parser.add_argument('--log-level', '-l',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                        default='ERROR',
+                        help="Minimum logging level to display. [%(default)s]")
+
+    args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+
+    try:
+        Session.session = initialize_model(args.task_db)
+        logging.debug("Initialized the session")
+    except Exception as e:
+        logging.exception("Error opening task database: " + e.message)
+        sys.exit("Error opening task database: " + e.message)
+
+    if not FileInfo.is_current_schema():
+        msg = "Task database {} is not the current schema version, and " \
+              "cannot be used.".format(args.task_db)
+        logging.error(msg)
+        print(msg, file=sys.stderr)
+        sys.exit(4)
+
+    # make sure the task file hasn't already been submitted
+    if not args.force and FileInfo.is_started():
+        sys.exit("\n"
+                 "A mangement process has already been started for this task file\n"
+                 "\tIf you are sure that management process is no longer running\n"
+                 "\tyou can start another one with civet_start_managed -f"
+                 )
+
+    # mark the task file as "started"
+    FileInfo.set_started(True)
+
+    job_id = managed_batch.manager.submit_management_job(args.task_db,
+                                                         args.queue,
+                                                         args.max_walltime,
+                                                         args.max_queued,
+                                                         args.log_level)
+
+    write_batch_id_to_log_dir(job_id)
+
+    logging.info("Management job started with job id " + job_id)
+    print("Management job started with job id " + job_id)
+
+
+if __name__ == "__main__":
+    main()

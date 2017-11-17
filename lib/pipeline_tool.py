@@ -13,6 +13,7 @@
 
 from tool import *
 
+
 class PipelineTool(object):
     def __init__(self, e, files):
         att = e.attrib
@@ -47,6 +48,9 @@ class PipelineTool(object):
         
     def submit(self, name_prefix, silent=False):
         return self.tool.submit(name_prefix, silent)
+
+    def create_task(self, task_id, execution_mode):
+        return self.tool.create_task(task_id, execution_mode)
 
     def collect_version_commands(self):
         return self.tool.collect_version_commands()

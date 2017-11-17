@@ -401,7 +401,7 @@ The outer tag is `<tool>`.
 ###tool
 
     <tool name="..." tool_config_prefix="..." threads="..."  
-      walltime="..." error_strings="..." mem="..." exit_if_exists="."  
+      walltime="..." error_strings="..." mem="..." exit_if_exists="..."  
       exit_test_logic="..." path="...">  
         <description />  
         <option />  

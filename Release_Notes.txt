@@ -4,6 +4,13 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 redmine:/var/git/civet.git
 
+
+Version 1.9.0
+-------------
+Features
+ - created new "managed batch" runtime -- see documentation for details.
+
+
 Version 1.8.5
 -------------
 Bug Fixes
@@ -20,7 +27,7 @@ Features
    file
  - Enhanced recovery for Torque connection errors (unable to open socket errors)
  - added --write-file-summary option to civet_run
- - added --json options to civet_run and civet_status
+  - added --json options to civet_run and civet_status
 
 
 Version 1.8.4.3

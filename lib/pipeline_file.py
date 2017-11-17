@@ -103,6 +103,7 @@ class PipelineFile(object):
                  default_output=False, foreach_dep=None, description=None):
         self.id = id
         self.path = path
+        self.cloud_path = None
         self._is_file = is_file
         self.is_temp = is_temp
         self.is_input = is_input
@@ -158,7 +159,7 @@ class PipelineFile(object):
         return self.__str__()
 
     def __str__(self):
-        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DS:{} DSP: {} DSA:{} inD:{}'.format(
+        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DSP: {} DSA:{} inD:{}'.format(
             self.id, self.path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
             self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
@@ -233,7 +234,15 @@ class PipelineFile(object):
             # to be handled at a higher level
             self.apply_in_dir_and_create_temp(files, circularity)
 
-        self.finalize_path()
+        try:
+            self.finalize_path()
+        except Exception as e:
+            # this was inserted to help diagnosing a programming error that
+            # caused finalize_path() to fail in certain edge cases.
+            # if it ever happens again this would provide useful information
+            # the user could share with us to help locate the problem
+            sys.exit("ERROR CALLING finalize_path() for {}:  {}\n"
+                     "{}".format(self.id, self.path, e))
         self.finalized = True
 
         # Make sure a directory exists, unless explicitly requested
@@ -355,7 +364,7 @@ class PipelineFile(object):
             my_dir = PipelineFile.get_output_dir()
 
         if self.is_list:
-            return
+            self.path = my_dir
         elif self.is_temp and not self.path:
             # If it is an anonymous temp, we'll create it in
             # the proper directory
@@ -557,6 +566,7 @@ class PipelineFile(object):
             datestamp_prepend, datestamp_append, in_dir,
             is_parameter, is_list, from_file, create, default_output,
             foreach_dep, description)
+
 
 
 def sumarize_files(files, group):
