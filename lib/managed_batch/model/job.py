@@ -32,10 +32,10 @@ class Job(Base):
     script_path = Column(String(512), nullable=False)
     epilog_path = Column(String(512), nullable=False)
     walltime = Column(String(16))
-    mem = Column(Integer)  # Nullable
-    email_list = Column(String(512))  # Nullable
-    mail_options = Column(String(64))  # Nullable
-    queue = Column(String(128))  # Nullable
+    mem = Column(Integer)
+    email_list = Column(String(512))
+    mail_options = Column(String(64))
+    queue = Column(String(128))
     status_id = Column(Integer, default=Status.NOT_SET, nullable=False)
     torque_id = Column(String(512))
     env = Column(String(512))
