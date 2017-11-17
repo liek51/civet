@@ -51,8 +51,8 @@ class ManagedJobStatus(object):
         if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
             status = job_runner.common.get_status_from_file(log_dir, name)
 
-            # with old versions of Civet, it's possible for there it be an empty
-            # or incomplete -status.txt file if the job was canceled/qdel'd
+            # it's possible for there be an empty or incomplete -status.txt
+            # file if the compute node crashed with the job running
             # this will be the state if we can't determine otherwise
             self.state = "Deleted"
 
@@ -82,11 +82,10 @@ class ManagedJobStatus(object):
                         self.state = "Submitted"
 
             else:
-                # no information for job, as of Civet 1.7.0 this should only be
-                # possible if the job is deleted (cancelled because of failed
-                # dependency or qdel'd) prior to running or if the node it is
-                # running on crashes.  As of Civet 1.7.0 all jobs that enter the
-                # R state should produce a -status.txt file
+                # no information for job, it wasn't in the queue and there is
+                # no status file, but civet_managed_batch_master things it is
+                # running. This should only happen if the node crashed or
+                # someone qdel'd the job while it was still queued
                 self.state = "Deleted"
 
 
@@ -218,7 +217,8 @@ class PipelineStatus(object):
             self.status = "NO_SUB"
             return
 
-        if os.path.exists(os.path.join(log_dir, "MANAGED_BATCH")):
+        if os.path.exists(os.path.join(log_dir,
+                                       job_runner.common.MANAGED_MODE_FLAG)):
             self.execution_mode = ToolExecModes.BATCH_MANAGED
         else:
             self.execution_mode = ToolExecModes.BATCH_STANDARD
@@ -246,7 +246,7 @@ class PipelineStatus(object):
                 self.cancel_message = "PIPELINE WAS CANCELED by user at {}\n".format(cancel_info['DATESTAMP'])
             else:
                 self.cancel_message = "PIPELINE WAS CANCELED by user.\n"
-            self.jobs_running_at_cancel = cancel_info['RUNNING_JOBS']
+            self.jobs_running_at_cancel = cancel_info.get('RUNNING_JOBS', [])
 
         for job in batch_jobs:
             job_status = Status(log_dir, job[1], job[0], job[2], jm,
@@ -304,6 +304,7 @@ class PipelineStatus(object):
     def to_json_serializable(self):
         return {
             'log_dir': self.log_dir,
+            'status': self.status,
             'jobs': [j.to_json_serializable() for j in self.jobs],
             'aborted': self.aborted,
             'complete_jobs_success': self.complete_jobs_success,

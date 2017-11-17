@@ -11,8 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
+import job_runner.common
+
 
 class ToolExecModes(object):
+    NO_SUB = 0
     BATCH_STANDARD = 1
     BATCH_MANAGED = 2
     CLOUD_GCP = 3
@@ -30,3 +35,16 @@ class ToolExecModes(object):
     @staticmethod
     def to_str(mode):
         return ToolExecModes._strings[mode]
+
+    @staticmethod
+    def get_exec_mode(log_dir):
+        if os.path.exists(os.path.join(log_dir,
+                                       job_runner.common.MANAGED_MODE_FLAG)):
+            return ToolExecModes.BATCH_MANAGED
+        elif os.path.exists(os.path.join(log_dir,
+                                         job_runner.common.GCP_MODE_FLAG)):
+            return ToolExecModes.CLOUD_GCP
+        elif os.path.exists(os.path.join(log_dir,
+                                         job_runner.common.NO_SUB_FLAG)):
+            return ToolExecModes.NO_SUB
+        return ToolExecModes.BATCH_STANDARD

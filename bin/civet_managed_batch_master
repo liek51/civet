@@ -34,6 +34,7 @@ import version
 import utilities
 import status
 
+import job_runner.common
 from job_runner.torque import TorqueJobRunner as BatchRunner
 
 from managed_batch.model.session import Session
@@ -46,7 +47,7 @@ from managed_batch.controller.utilities import initialize_model,  \
 
 from managed_batch.manager import submit_management_job
 
-_job_manager = status.PipelineStatus.get_job_manager()
+job_manager = status.PipelineStatus.get_job_manager()
 
 
 def update_job_status(job):
@@ -59,7 +60,7 @@ def update_job_status(job):
     if current_status == 'Submitted':
         new_status = status.ManagedJobStatus(job.pipeline.log_directory,
                                              job.job_name, job.torque_id,
-                                             _job_manager)
+                                             job_manager)
         if new_status.state == 'Complete':
             logging.debug("Marking job {} (log dir: {}) 'Complete'.".format(
                 job.job_name, job.pipeline.log_directory))
@@ -80,9 +81,8 @@ def update_job_status(job):
 
 def update_jobs():
     logging.debug("Updating Job states")
-    submitted_status_id = Status.get_id('Submitted')
     submitted_jobs = Session.query(Job).filter_by(
-        status_id=submitted_status_id).all()
+        status_id=Status.SUBMITTED).all()
     for job in submitted_jobs:
         # update status of job
         update_job_status(job)
@@ -130,32 +130,73 @@ def all_complete():
     return is_complete
 
 
+def cancel_running_jobs(pipeline, message=None):
+    """
+    delete all of a pipelines running jobs from the batch queue
+    (similar to running the 'qdel' command on each job)
+    :param pipeline: pipeline to cancel
+    :param message: message to print/log
+    """
+
+    # keep track of if we've printed the message yet -- we only want to
+    # print it if there are jobs to cancel, and we only want to do it once
+    msg_out = False
+
+    for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id, Job.status_id == Status.SUBMITTED).all():
+
+        if message and not msg_out:
+            msg_out = True
+            logging.info(message)
+            print(message)
+
+            logging.debug("deleting {}".format(job.torque_id))
+            job_manager.delete_job(str(job.torque_id))
+            job.status_id = Status.DELETED
+        Session.commit()
+
+
 def cancel_failed_pipelines():
     """
     cancel any running jobs for pipelines that are considered to be failed
     this mirrors the standard behavior where a failed job sends the qdel
     message to all the other jobs in a pipeline
-    :return:
     """
     for pipeline in Session.query(Pipeline).filter_by(
             status_id=Status.FAILED).all():
-        msg_out = False
-        for job in Session.query(Job).filter(Job.pipeline_id == pipeline.id).\
-                filter(Job.status_id == Status.SUBMITTED).all():
-            if not msg_out:
-                msg_out = True
-                logging.info(
-                    "Detected pipeline failure, canceling all submitted jobs "
-                    "for {} (log dir: {})".format(
-                        pipeline.name, pipeline.log_directory))
-                print(
-                    "Detected pipeline failure, canceling all submitted jobs "
-                    "for {} (log dir: {}".format(
-                        pipeline.name, pipeline.log_directory))
 
-            logging.debug("deleting {}".format(job.torque_id))
-            _job_manager.delete_job(str(job.torque_id))
+        message = ("Detected pipeline failure, canceling all submitted jobs "
+                   "for {} (log dir: {})").format(pipeline.name,
+                                                  pipeline.log_directory)
+
+        cancel_running_jobs(pipeline, message)
         # TODO send failure email?
+
+
+def check_for_canceled_pipelines():
+    """
+    check all pipelines under our control to see if the user has called
+    civet_cancel for any of them
+    """
+    #for pipeline in Session.query(Pipeline).\
+    #        filter((Pipeline.status_id == Status.NOT_SUBMITTED) | (Pipeline.status_id == Status.SUBMITTED)).all():
+    for pipeline in Session.query(Pipeline).all():
+        if pipeline.status_id in [Status.NOT_SUBMITTED, Status.SUBMITTED]:
+
+            if os.path.exists(os.path.join(pipeline.log_directory,
+                                           job_runner.common.CANCEL_LOG_FILENAME)):
+                message = ("Detected pipeline cancellation request, deleting all "
+                           "submitted jobs for {} (log dir: {})").format(
+                    pipeline.name, pipeline.log_directory)
+
+                cancel_running_jobs(pipeline, message)
+
+                for job in pipeline.jobs:
+                    if job.status_id == Status.NOT_SUBMITTED:
+                        logging.debug("Marking job {} (log dir: {}) as 'deleted(canceled)'.".format(job.job_name, pipeline.log_directory))
+                        job.status_id = Status.DELETED
+
+                pipeline.status_id = Status.DELETED
+                Session.commit()
 
 
 def check_walltime(max_walltime):
@@ -237,6 +278,10 @@ def main():
         # "Submitted" (these are jobs that were either Queued or Running last
         # iteration
         update_jobs()
+
+        # check all pipelines under our control to see if the user has
+        # called civet_cancel for any of them
+        check_for_canceled_pipelines()
 
         # all_complete() will update Pipeline statuses and return true if they
         # are all now complete

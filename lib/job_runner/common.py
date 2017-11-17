@@ -18,6 +18,8 @@ BATCH_ID_LOG = "pipeline_batch_id_list.txt"
 JOB_STATUS_SUFFIX = "-status.txt"
 CANCEL_LOG_FILENAME = "cancel.log"
 NO_SUB_FLAG = "NO_SUBMIT"
+MANAGED_MODE_FLAG = "MANAGED_BATCH"
+GCP_MODE_FLAG = "CLOUD_GCP"
 
 CIVET_HOME = os.path.normpath(os.path.join(os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0])), "../../"))
 

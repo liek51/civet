@@ -65,6 +65,7 @@ def dispose_engine():
 
 def write_batch_id_to_log_dir(batch_id):
     for pipeline in Session.query(Pipeline):
-        with open(os.path.join(pipeline.log_directory, "MANAGED_BATCH"),
+        with open(os.path.join(pipeline.log_directory,
+                               "civet_managed_batch_master.job_id"),
                   mode='w') as f:
             f.write(batch_id + '\n')
