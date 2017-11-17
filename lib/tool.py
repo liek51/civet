@@ -64,7 +64,9 @@ class Tool(object):
         'path',
         ]
 
-    def __init__(self, xml_file, ins, outs, pipeline_files, name=None, walltime=None, tool_config_prefix=None):
+    def __init__(self, xml_file, ins, outs, pipeline_files, name,
+                 walltime, tool_config_prefix, step_name):
+
         # Don't understand why this has to be here as well to get some
         # symbols. But it seems to be needed.
         import pipeline_parse as PL
@@ -83,6 +85,7 @@ class Tool(object):
         self.verify_files = []
         self.tool_files = {}
         self.pipeline_files = pipeline_files
+        self.step_name = step_name
 
         self.docker_image = None
 
@@ -123,8 +126,6 @@ class Tool(object):
 
         if bad_inputs or bad_outputs:
             raise civet_exceptions.ParseError("\n".join(msg))
-
-
 
 
         # Verify that the tool definition file has not changed.
@@ -620,59 +621,52 @@ class Tool(object):
 
 class Option(object):
     def __init__(self, e, tool):
+
+        # valid attributes for the <option> tag
+        valid_attributes = [
+            'name',
+            'command_text',
+            'value',
+            'from_file',
+            'threads',
+            'binary',
+            'type',
+            'display_name',
+            'description'
+        ]
+
+        valid_types = [
+            'string',
+            'numeric',
+            'select',
+            'boolean',
+            'threads'
+        ]
+
+        # valid child tags
+        valid_tags = [
+            'select'
+        ]
+
+        # these attributes are still valied, but are deprecated. we will warn
+        # about them
+        deprecated_attributes = {
+            'threads': 'use type="threads" instead',
+            'binary': 'use type="boolean" instead'
+        }
+
         self.command_text = ''
         self.value = ''
-        self.binary = False
+        self.select_choices = []
+        self.type = None
+
+
+        if 'name' not in e.attrib:
+            raise civet_exceptions.ParseError(
+                "{}: option missing required 'name' attribute".format(os.path.basename(tool.xml_file)))
 
         name = e.attrib['name'].strip()
         self.name = name
-        if 'command_text' in e.attrib:
-            self.command_text = e.attrib['command_text'].strip()
-        if 'value' in e.attrib:
-            if name in tool.option_overrides:
-                value = tool.option_overrides[name][0]
-            else:
-                value = e.attrib['value'].strip()
-        elif 'from_file' in e.attrib:
-            fid = e.attrib['from_file']
-            try:
-                fn = tool.tool_files[fid].path
-            except KeyError:
-                msg = "{}: Unknown file ID '{}' in option 'from_file' attribute:\n\n{}".format(os.path.basename(tool.xml_file), fid, ET.tostring(e))
-                raise civet_exceptions.ParseError(msg)
-            value = '$(cat ' + fn + ') '
-        elif 'threads' in e.attrib and e.attrib['threads'].upper() == 'TRUE':
-            if name in tool.option_overrides:
-                try:
-                    value = int(tool.option_overrides[name][0])
-                except ValueError:
-                    msg = "{}: Invalid value for option override '{}' (must be integer): {}".format(os.path.basename(tool.xml_file), name, tool.option_overrides[name][0])
-                    raise civet_exceptions.ParseError(msg)
-            else:
-                value = tool.default_threads
-
-            if value > tool.thread_option_max:
-                tool.thread_option_max = value
-
-            # now that we've made sure it is an integer and we've set
-            # thread_option_max we need to turn it back into a string for
-            # substitution in the command line
-            value = str(value)
-
-        if 'binary' in e.attrib:
-            self.binary = True
-
-            if value.upper() == 'TRUE' or value == '1':
-                value = True
-            elif value.upper() == 'FALSE' or value == '0':
-                value = False
-            else:
-                msg = "{}: invalid value '{}' for binary option, must be 'True' or 'False'\n\n{}".format(os.path.basename(tool.xml_file), value, ET.tostring(e))
-                raise civet_exceptions.ParseError(msg)
-
-
-        self.isFile = False
-        self.value = value
 
         # We don't allow the same option name in a tool twice
         if self.name in tool.options:
@@ -681,11 +675,74 @@ class Option(object):
         if self.name in tool.tool_files:
             msg = "{}: Option {} is a duplicate of a file ID".format(os.path.basename(tool.xml_file), self.name)
             raise civet_exceptions.ParseError(msg)
-        
-        # some attributes are mutually exclusive
-        if 'binary' in e.attrib and 'from_file' in e.attrib:
-            msg = ("{}: Option {}: binary and from_file attributes are mutually"
-                   " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
+
+        for attr in e.attrib:
+            if attr not in valid_attributes:
+                msg = ("{}: Unknown attribute in option '{}': {}\n"
+                       "Valid Attributes: '{}'".format(os.path.basename(tool.xml_file),
+                                                       self.name, attr,
+                                                       ", ".join(valid_attributes)))
+                raise civet_exceptions.ParseError(msg)
+
+        for attr in e.attrib:
+            if attr in deprecated_attributes.keys():
+                print("Warning {}::{}::{}:\n"
+                      "\tdeprecated attribute '{}' in option '{}'\n"
+                      "\t{}".format(tool.step_name, tool.name_from_pipeline,
+                                    os.path.basename(tool.xml_file), attr,
+                                    self.name, deprecated_attributes[attr]))
+
+        for child in e:
+            t = child.tag
+
+            if t not in valid_tags:
+                msg = ("{}: unknown child tag '{}' in option '{}'\n"
+                      "Valid child tags: '{}'").format(
+                    os.path.basename(tool.xml_file), t, self.name,
+                    ", ".join(valid_tags))
+                raise civet_exceptions.ParseError(msg)
+
+            if t == 'select':
+                self.select_choices.append(child.text.strip())
+
+
+
+        # these are optional attributes, currently only used by the civet-ui
+        # project, not by the civet framework itself
+        self.display_name = e.attrib.get('display_name', self.name)
+        self.description = e.attrib.get('description', self.name)
+
+        # don't allow mixing newer "type" attribute with "threads",
+        # or "binary" attributes.  they can conflict with "type".
+        # binary and threads are deprecated. type="boolean" or type="threads"
+        # should be used instead.
+        # also 'from_file' can't be combined with type
+        if 'type' in e.attrib and (
+                    'from_file' in e.attrib or 'threads' in e.attrib or 'binary' in e.attrib):
+            msg = ("Error in option '{}:{}':\n"
+                   "Can not combine 'type' attribute with 'from_file', "
+                   "'threads', or 'binary' attributes\n".format(
+                tool.name_from_pipeline, self.name))
+            raise civet_exceptions.ParseError(msg)
+
+        if 'type' in e.attrib:
+            if e.attrib['type'] not in valid_types:
+                msg = ("Unknown option type {} in '{}:{}'\n"
+                       "Valid types: {}".format(e.attrib['type'],
+                                                tool.name_from_pipeline,
+                                                self.name,
+                                                ", ".join(valid_types)))
+                raise civet_exceptions.ParseError(msg)
+            self.type = e.attrib['type']
+        elif 'threads' in e.attrib and e.attrib['threads'].upper() == 'TRUE':
+            self.type = 'threads'
+        elif 'binary' in e.attrib:
+            self.type = 'boolean'
+
+        # some attributes/types are mutually exclusive
+        if self.type == 'boolean' and 'from_file' in e.attrib:
+            msg = ("{}: Option {}: from_file attribute can not be combined "
+                   "with 'boolean' type\n\n{}".format(os.path.basename(tool.xml_file),
                                              self.name, ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
         if 'binary' in e.attrib and 'threads' in e.attrib:
@@ -698,20 +755,88 @@ class Option(object):
                    " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
                                              self.name, ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
-        if 'value' in e.attrib and 'threads' in e.attrib:
-            msg = ("{}: Option {}: value and threads attributes are mutually"
+        if 'value' in e.attrib and self.type == 'threads':
+            msg = ("{}: Option {}: value and threads are mutually"
                    " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
                                              self.name, ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
-        if 'from_file' in e.attrib and 'threads' in e.attrib:
+        if 'from_file' in e.attrib and self.type == 'threads':
             msg = ("{}: Option {}: from_file and threads attributes are mutually"
                    " exclusive\n\n{}".format(os.path.basename(tool.xml_file),
                                              self.name, ET.tostring(e)))
             raise civet_exceptions.ParseError(msg)
+
+        if 'command_text' in e.attrib:
+            self.command_text = e.attrib['command_text'].strip()
+
+        if 'value' in e.attrib:
+            if name in tool.option_overrides:
+                self.value = tool.option_overrides[name][0]
+            else:
+                self.value = e.attrib['value'].strip()
+        elif 'from_file' in e.attrib:
+            fid = e.attrib['from_file']
+            try:
+                fn = tool.tool_files[fid].path
+            except KeyError:
+                msg = "{}: Unknown file ID '{}' in option 'from_file' attribute:\n\n{}".format(os.path.basename(tool.xml_file), fid, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+            self.value = '$(cat ' + fn + ') '
+        elif self.type == 'threads':
+            if name in tool.option_overrides:
+                try:
+                    self.value = int(tool.option_overrides[name][0])
+                except ValueError:
+                    msg = "{}: Invalid value for option override '{}' (must be integer): {}".format(os.path.basename(tool.xml_file), name, tool.option_overrides[name][0])
+                    raise civet_exceptions.ParseError(msg)
+            else:
+                self.value = tool.default_threads
+
+            if self.value > tool.thread_option_max:
+                tool.thread_option_max = self.value
+
+            # now that we've made sure it is an integer and we've set
+            # thread_option_max we need to turn it back into a string for
+            # substitution in the command line
+            self.value = str(self.value)
+
+        if self.type == 'boolean':
+
+            if self.value.upper() == 'TRUE' or self.value == '1':
+                self.value = True
+            elif self.value.upper() == 'FALSE' or self.value == '0':
+                self.value = False
+            else:
+                msg = "{}: invalid value '{}' for boolean option, must be 'True' or 'False'\n\n{}".format(os.path.basename(tool.xml_file), self.value, ET.tostring(e))
+                raise civet_exceptions.ParseError(msg)
+
+        # if self.type == 'select' we need to do a little checking
+        # first make sure the pipeline developer included at least one <select>
+        # tag
+        if self.type == 'select' and not self.select_choices:
+            msg = ("{}\nSelect option '{}.{}' must include one or more "
+                   "<select> tags.").format(os.path.basename(tool.xml_file),
+                                            tool.config_prefix, self.name)
+            raise civet_exceptions.ParseError(msg)
+        # then make sure the value is one of the valid options
+        if self.type == 'select' and self.value not in self.select_choices:
+            msg = ("{}\n"
+                   "invalid value '{}' for option '{}.{}'.\n"
+                   "value must be one the specified choices:\n"
+                   "\t{}").format(os.path.basename(tool.xml_file), self.value,
+                                  tool.config_prefix, self.name,
+                                  ', '.join(["'{}'".format(c) for c in self.select_choices]))
+            raise civet_exceptions.ParseError(msg)
+
+
+        # TODO do some validation of other types (like numeric) to make sure
+        # the values make sense
+
         tool.options[name] = self
 
     def __repr__(self):
-        return ' '.join(['Option:', 'n', self.name, 'c', self.command_text, 'v', self.value])
+        return ' '.join(['Option:', 'n', self.name, 'c', self.command_text, 'v',
+                         str(self.value)])
 
     def __str__(self):
         return self.__repr__()
@@ -853,7 +978,7 @@ class Command(object):
             tok = m.group(1)
             if tok in self.options:
                 o = self.options[tok]
-                if o.binary:
+                if o.type == 'boolean':
                     if o.value:
                         return o.command_text
                     else:
@@ -873,7 +998,7 @@ class Command(object):
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
-            print("\n\nUNKNOWN OPTION OR FILE ID: {} in file {}".format(tok, self.tool.xml_file), file=sys.stderr)
+            print("\n\nUNKNOWN OPTION OR FILE ID: '{}' in file {}".format(tok, self.tool.xml_file), file=sys.stderr)
             print('Tool files: {}'.format(self.tool_files), file=sys.stderr)
             print('Options: {}\n\n'.format(self.options), file=sys.stderr)
             PL.abort_submit('UNKNOWN OPTION OR FILE ID: ' + tok)

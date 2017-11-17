@@ -204,6 +204,11 @@ The `<filelist>` tag can be used anywhere the `<file>` tag can be used.
 The `description` attribute can be used to include a text description
 of the parameter. 
 
+The optional attribute `paired` indicates that the file list contains 
+one or more pairs of files (there must be an even number of files in the 
+list. This is not currently enforced by the Civet framework, but 
+it is used by some pipeline interfaces. 
+
 ***
 
 ###string
@@ -479,18 +484,45 @@ described in a separate document.
 
 The information in the `<option>` tag is used in the `<command>` tag.
 
-    <option name="..." from_file="..." command_text="..." binary="..."  
-        threads="..." value="..." />
+    <option name="..." from_file="..." command_text="..." type="..."  
+        value="..." />
 
-The `<option>` tag must contain the `name` attribute and one of the 
-`from_file`, `value`, or `threads` attributes. The `command_text` 
-attribute is combined with the `value` or `threads` attribute. See the 
-description of the `<command>` tag for how these are used. The `binary` 
-attribute is combined with the `value` attribute and indicates that the 
-value can be True or False. If the value is true, the `command_text` 
-will be used to substitute for the option in the command line. If the 
-value is false then an empty string will be substituted for the option 
-in the command line.
+The `<option>` tag must contain the `name` attribute.
+
+The `command_text` attribute is combined with the `value` of the 
+options. See the description of the `<command>` tag for how these are 
+used. 
+
+The `type` attribute can be one of `string`, `numeric`, `boolean`, 
+`select`, or `threads`.
+
+The `boolean` type is combined with the `value` attribute and 
+indicates that the value can be True or False. If the value is true, 
+the `command_text` will be used to substitute for the option in the 
+command line. If the value is false then an empty string will be 
+substituted for the option in the command line. 
+
+The `threads` type will automatically use the tool's `threads` 
+attribute as the option value. This allows you to specify the number of 
+threads in the command without having to enter the number of 
+threads in multiple places (the tool's `threads` attribute and in the
+`<commmand>`). It also allows the number of threads to be overridden.
+
+If the option type is `select` then the `<option>` tag must contain one
+or more `<select>` tags and the option `value` (default or overridden) 
+must match one of these select options.
+
+    <option name="quals" type="select" value="--phred33-quals">
+        <select>--phred33-quals</select>
+        <select>--phred64-quals</select>
+        <select>--solexa-quals</select>
+        <select>--integer-quals</select>
+    </option>
+
+If an option does not specify a type then it defaults to `string`. This 
+type allows arbitrary text to be entered as the value. Currently the 
+`string` and `numeric` types are equivalent, but Civet  may implement 
+type specific validation in the future.
 
 Option names are in the same name space as the tool file ids, but 
 separate from the name space of the invoking pipeline. All names in 
@@ -502,12 +534,6 @@ specifying read group information during BWA alignment. In this case,
 the `from_file` attribute specifies the id of a file containing a 
 single line which is used as the option's value instead of what would
 have been specified in the `command_text` and value attributes.
-
-The `threads` attribute, if set to "True", will use the tool's
-`threads` attribute as the option value. This allows you to specify the 
-number of threads in the command without having to enter the number of 
-threads in multiple places (the tool's `threads` attribute and in the
-`<commmand>`). It also allows the number of threads to be overridden. 
 
 For each option specified, if the `tool_config_prefix` attribute is 
 specified in the `<tool>` tag, option processing will search for an 

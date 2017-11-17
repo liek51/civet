@@ -38,7 +38,7 @@ class Step(object):
                                                    ET.tostring(child).rstrip(),
                                                    ", ".join(Step.validTags)))
                 raise ParseError(msg)
-            self.tools.append(PipelineTool(child, files))
+            self.tools.append(PipelineTool(child, files, e.attrib['name']))
 
     def submit(self, name_prefix, silent=False):
         invocation = 0

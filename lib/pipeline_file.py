@@ -26,6 +26,7 @@ import civet_exceptions
 
 import pipeline_parse as PL
 
+
 class PipelineFile(object):
     """
     Initialize ourselves from an XML tag that represents some kind
@@ -86,7 +87,8 @@ class PipelineFile(object):
         'pattern',
         'parameter',
         'input',
-        'description'
+        'description',
+        'paired'
     ]
 
     # Track the master output directory.
@@ -100,7 +102,8 @@ class PipelineFile(object):
                  pattern=None, replace=None, append=None,
                  datestamp_prepend=None, datestamp_append=None, in_dir=None,
                  is_parameter=False, is_list=False, from_file=None, create=True,
-                 default_output=False, foreach_dep=None, description=None):
+                 default_output=False, foreach_dep=None, description=None,
+                 paired=False):
         self.id = id
         self.path = path
         self.cloud_path = None
@@ -125,6 +128,7 @@ class PipelineFile(object):
         self.foreach_dep = foreach_dep
         self.from_file = from_file
         self.description = description
+        self.paired = paired
 
         # need a separate variable for this because is_parameter gets reset to
         # False once the param number -> value conversion happens
@@ -162,8 +166,8 @@ class PipelineFile(object):
         return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DSP: {} DSA:{} inD:{}'.format(
             self.id, self.path, self.is_input,
             self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
-            self.in_dir)
+            self.pattern, self.append, self.datestamp_prepend,
+            self.datestamp_append, self.in_dir)
 
     def set_output_dir(self):
         # Register at most one output directory
@@ -403,7 +407,7 @@ class PipelineFile(object):
 
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
-        id = att['id']
+        file_id = att['id']
 
         # What kind of file...
         is_file = t == 'file'
@@ -424,6 +428,7 @@ class PipelineFile(object):
         foreach_dep = None
         from_file = None
         description = None
+        paired = False
 
 
         # make sure that the attributes make sense with the type of tag we are
@@ -551,6 +556,8 @@ class PipelineFile(object):
         if 'description' in att:
             description = att['description']
 
+        paired = att.get('paired', 'FALSE').upper() == 'TRUE'
+
         if is_list and not ((pattern and in_dir) or is_parameter):
             msg = ("'filelist' requires 'in_dir' and 'pattern' or it must be "
                    "passed as a parameter\n\n{}".format(ET.tostring(e)))
@@ -561,11 +568,11 @@ class PipelineFile(object):
             raise civet_exceptions.ParseError(msg)
 
         PipelineFile(
-            id, path, files, is_file, is_temp, is_input, is_dir,
+            file_id, path, files, is_file, is_temp, is_input, is_dir,
             is_string, based_on, pattern, replace, append,
             datestamp_prepend, datestamp_append, in_dir,
             is_parameter, is_list, from_file, create, default_output,
-            foreach_dep, description)
+            foreach_dep, description, paired)
 
 
 
