@@ -51,11 +51,11 @@ def submit_management_job(task_db, queue, walltime_hours, max_queued, log_level)
                " {} --max-walltime {} --max-queued {} --log-level {} {}".format(
                    queue_string, walltime_hours, max_queued, log_level, task_db),
         'walltime': "{}:00:00".format(walltime_hours),
-        'name': "civet_managment",
+        'name': "civet_manager",
         'queue': queue
 
     }
-    logging.debug("About to start management job with: {}".format(task))
+    logging.debug("About to start manager job with: {}".format(task))
     return BatchRunner.submit_simple_job(task)
 
 
