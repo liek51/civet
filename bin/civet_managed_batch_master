@@ -150,8 +150,8 @@ def cancel_running_jobs(pipeline, message=None):
             print(message)
 
             logging.debug("deleting {}".format(job.torque_id))
-            job_manager.delete_job(str(job.torque_id))
-            job.status_id = Status.DELETED
+        job_manager.delete_job(str(job.torque_id))
+        job.status_id = Status.DELETED
         Session.commit()
 
 
