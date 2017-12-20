@@ -101,6 +101,7 @@ class Status(object):
         self.dependencies = deps
         self.id = id
         self.name = name
+        self.excution_mode = excution_mode
 
         if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
             status = job_runner.common.get_status_from_file(log_dir, name)
@@ -140,7 +141,7 @@ class Status(object):
             if 'requested_walltime' in status:
                 self.walltime_requested = status['requested_walltime']
 
-        elif excution_mode == ToolExecModes.BATCH_MANAGED:
+        elif self.excution_mode == ToolExecModes.BATCH_MANAGED:
             # if the pipeline is being run in managed mode, there will be no
             # status information for unfinished jobs
             self.state = "MANAGED"
@@ -304,23 +305,35 @@ class PipelineStatus(object):
         return str(self.__dict__)
 
     def to_json_serializable(self):
-        return {
-            'log_dir': self.log_dir,
-            'status': self.status,
-            'jobs': [j.to_json_serializable() for j in self.jobs],
-            'aborted': self.aborted,
-            'complete_jobs_success': self.complete_jobs_success,
-            'complete_jobs_failure': self.complete_jobs_failure,
-            'canceled_jobs': self.canceled_jobs,
-            'running_jobs': self.running_jobs,
-            'held_jobs': self.held_jobs,
-            'dealyed_jobs': self.delayed_jobs,
-            'queued_jobs': self.queued_jobs,
-            'deleted_jobs': self.deleted_jobs,
-            'cancel_message': self.cancel_message,
-            'jobs_running_at_cancel': self.jobs_running_at_cancel,
-            'managed_pending_jobs': self.managed_unknown,
-            'execution_mode': self.execution_mode
+        if self.execution_mode == ToolExecModes.BATCH_MANAGED:
+            return {
+                'log_dir': self.log_dir,
+                'status': self.status,
+                'jobs': [j.to_json_serializable() for j in self.jobs],
+                'aborted': self.aborted,
+                'complete_jobs_success': self.complete_jobs_success,
+                'complete_jobs_failure': self.complete_jobs_failure,
+                'canceled_jobs': self.canceled_jobs,
+                'cancel_message': self.cancel_message,
+                'pending_jobs': self.managed_unknown
+            }
+        else:
+            return {
+                'log_dir': self.log_dir,
+                'status': self.status,
+                'jobs': [j.to_json_serializable() for j in self.jobs],
+                'aborted': self.aborted,
+                'complete_jobs_success': self.complete_jobs_success,
+                'complete_jobs_failure': self.complete_jobs_failure,
+                'canceled_jobs': self.canceled_jobs,
+                'running_jobs': self.running_jobs,
+                'held_jobs': self.held_jobs,
+                'dealyed_jobs': self.delayed_jobs,
+                'queued_jobs': self.queued_jobs,
+                'deleted_jobs': self.deleted_jobs,
+                'cancel_message': self.cancel_message,
+                'jobs_running_at_cancel': self.jobs_running_at_cancel,
+                'execution_mode': self.execution_mode
         }
 
     @staticmethod
