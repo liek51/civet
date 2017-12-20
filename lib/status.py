@@ -156,6 +156,8 @@ class Status(object):
                         # failed jobs. If this happens, then the job completed
                         # without the job epilogue script running
                         self.state = "EXIT_NO_EPILOGUE"
+                    elif status.exit_status is None:
+                        self.state = "DELETED"
                     else:
                         self.state = "FAILED"
                 else:
