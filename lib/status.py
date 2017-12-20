@@ -319,6 +319,8 @@ class PipelineStatus(object):
             'deleted_jobs': self.deleted_jobs,
             'cancel_message': self.cancel_message,
             'jobs_running_at_cancel': self.jobs_running_at_cancel,
+            'managed_pending_jobs': self.managed_unknown,
+            'execution_mode': self.execution_mode
         }
 
     @staticmethod
