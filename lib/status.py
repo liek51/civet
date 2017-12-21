@@ -306,34 +306,22 @@ class PipelineStatus(object):
 
     def to_json_serializable(self):
         if self.execution_mode == ToolExecModes.BATCH_MANAGED:
-            return {
-                'log_dir': self.log_dir,
-                'status': self.status,
-                'jobs': [j.to_json_serializable() for j in self.jobs],
-                'aborted': self.aborted,
-                'complete_jobs_success': self.complete_jobs_success,
-                'complete_jobs_failure': self.complete_jobs_failure,
-                'canceled_jobs': self.canceled_jobs,
-                'cancel_message': self.cancel_message,
-                'pending_jobs': self.managed_unknown
-            }
-        else:
-            return {
-                'log_dir': self.log_dir,
-                'status': self.status,
-                'jobs': [j.to_json_serializable() for j in self.jobs],
-                'aborted': self.aborted,
-                'complete_jobs_success': self.complete_jobs_success,
-                'complete_jobs_failure': self.complete_jobs_failure,
-                'canceled_jobs': self.canceled_jobs,
-                'running_jobs': self.running_jobs,
-                'held_jobs': self.held_jobs,
-                'dealyed_jobs': self.delayed_jobs,
-                'queued_jobs': self.queued_jobs,
-                'deleted_jobs': self.deleted_jobs,
-                'cancel_message': self.cancel_message,
-                'jobs_running_at_cancel': self.jobs_running_at_cancel,
-                'execution_mode': self.execution_mode
+            pending_jobs = self.managed_unknown
+        else
+            pending_jobs = self.held_jobs + self.delayed_jobs + self.queued_jobs
+        return {
+            'log_dir': self.log_dir,
+            'status': self.status,
+            'jobs': [j.to_json_serializable() for j in self.jobs],
+            'failed_jobs': [j.to_json_serializable() for j in self.jobs if
+                            "FAILED" in j.state],
+            'aborted': self.aborted,
+            'complete_jobs_success': self.complete_jobs_success,
+            'complete_jobs_failure': self.complete_jobs_failure,
+            'canceled_jobs': self.canceled_jobs,
+            'cancel_message': self.cancel_message,
+            'pending_jobs': pending_jobs,
+            'execution_mode': self.execution_mode
         }
 
     @staticmethod
