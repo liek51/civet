@@ -307,7 +307,7 @@ class PipelineStatus(object):
     def to_json_serializable(self):
         if self.execution_mode == ToolExecModes.BATCH_MANAGED:
             pending_jobs = self.managed_unknown
-        else
+        else:
             pending_jobs = self.held_jobs + self.delayed_jobs + self.queued_jobs
         return {
             'log_dir': self.log_dir,
