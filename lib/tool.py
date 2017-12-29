@@ -690,7 +690,8 @@ class Option(object):
                       "\tdeprecated attribute '{}' in option '{}'\n"
                       "\t{}".format(tool.step_name, tool.name_from_pipeline,
                                     os.path.basename(tool.xml_file), attr,
-                                    self.name, deprecated_attributes[attr]))
+                                    self.name, deprecated_attributes[attr]),
+                      file=sys.stderr)
 
         for child in e:
             t = child.tag
