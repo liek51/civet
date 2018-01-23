@@ -640,7 +640,9 @@ class Option(object):
             'numeric',
             'select',
             'boolean',
-            'threads'
+            'threads',
+            'file',
+            'directory'
         ]
 
         # valid child tags
