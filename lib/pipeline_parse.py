@@ -68,7 +68,9 @@ class Pipeline(object):
 
     valid_attributes = [
         'tool_search_path',
-        'path'
+        'path',
+        'name',
+        'display_name'
     ]
 
 
@@ -147,6 +149,10 @@ class Pipeline(object):
         # and must not have text
         if pipe.tag != "pipeline":
             raise civet_exceptions.ParseError("Outermost tag of pipeline definition must be <pipeline></pipeline>")
+
+        if 'name' not in pipe.attrib:
+            raise civet_exceptions.ParseError("<pipeline> 'name' attribute is required")
+
         self.name = pipe.attrib['name']
         if pipe.text.strip():
             raise civet_exceptions.ParseError("<pipeline> tag may not contain text")
@@ -200,6 +206,8 @@ class Pipeline(object):
             self.path = ':'.join(path_dirs)
         else:
             self.path = None
+
+        self.display_name = pipe.attrib.get('display_name', None)
 
         # And track the major components of the pipeline
         self.description = None

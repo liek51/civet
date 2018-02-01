@@ -6,6 +6,7 @@ first.  The most up-to-date version is in the civet git repository
 Version 1.9.1
 Features
  - added pipeline <description></description> tag
+ - added optional pipeline display_name attribute
  - added <option> "type", "description", and "display_name" attributes
  - added "description" attribute for <file>, <filelist>, <dir>, <string> tags
  - added "paired" attribute to <filelist>

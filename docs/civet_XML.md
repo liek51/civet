@@ -7,7 +7,8 @@ tag is `<pipeline>`.
 
 ### pipeline
 
-    <pipeline name="..." tool_search_path="..." path="...">
+    <pipeline name="..." display_name=“...” tool_search_path="..." 
+      path="...">
         <description />
         <file />
         <dir />
@@ -15,13 +16,20 @@ tag is `<pipeline>`.
         <step />
     </pipeline>
 
-A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and 
-`<step>` tags. The `tool_search_path` attribute is optional and it 
+The `name` attribute is required.  It shouldn’t contain any whitespace 
+or special characters. This is used as part of batch job names and log 
+file names. The `display_name` is optional. It is not used by the 
+Civet Pipeline Framework directly, but it can be used by other tools
+that auto-generate pipeline documentation or user interfaces. 
+The `tool_search_path` attribute is optional and it 
 contains a colon-delimited list of directories to search in when 
 looking for tool XML definition files. The search process is described 
 in more detail with the `<tool>` tag documentation. The optional path 
 attribute specifies path information to be prepended onto the user's
 PATH at runtime for each job submitted as part of the pipeline.
+
+A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and 
+`<step>` tags. 
 
 ***
 
@@ -50,7 +58,8 @@ also be based on another file's path; a number of different
 transformation options are available.
 
     <file id="..." input="..." temp="..." in_dir="..." filespec="..." />
-    <file id="..." input="..." temp="..." in_dir="..." parameter="..." />
+    <file id="..." input="..." temp="..." in_dir="..." parameter="..." 
+        description="..." />
     <file id="..." input="..." temp="..." in_dir="..." based_on="..."  
         pattern="..." replace="..." append="..."  
         datestamp_append="..." datestamp_prepend="..." />
@@ -125,15 +134,20 @@ description of the file.  Pipeline parameters (file tags with the
 `parameter` attribute) should include a description, which may be used
 by tools to provide submission help for the pipeline.
 
+**Note:** while any <file> tag can include a `description`, it is most
+important to include descriptions for any file that is passed to the  
+pipeline as a parameter.
+
 ***
 
-###dir
+### dir
 
 The `<dir>` tag specifies a directory. As with files, a `dir` can 
 specify an input or output directory. The difference is that an output 
 directory need not exist on startup.
 
-    <dir id="..." input="..." filespec="..." in_dir="..." create="..."  
+    <dir id="..." input="..." filespec="..." in_dir="..." create="..." 
+        description="..."
         based_on="..." pattern="..." replace="..." append="..."  
         datestamp_prepend="..." datestamp_append="..."
         default_output="..." from_file="..."/>
@@ -238,7 +252,7 @@ may be hardcoded in the tag, or it may be based on another string or
 pipeline parameter.
 
     <string id="..." value="..." />
-    <string id="..." parameter="..." />
+    <string id="..." parameter="..." description="..." />
     <string id="..." based_on="..." pattern="..." replace="..."  
         append="..." datestamp_append="..." datestamp_prepend="..." />
 
