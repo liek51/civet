@@ -15,11 +15,11 @@ tag is `<pipeline>`.
         <step />
     </pipeline>
 
-A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and 
-`<step>` tags. The `tool_search_path` attribute is optional and it 
-contains a colon-delimited list of directories to search in when 
-looking for tool XML definition files. The search process is described 
-in more detail with the `<tool>` tag documentation. The optional path 
+A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and
+`<step>` tags. The `tool_search_path` attribute is optional and it
+contains a colon-delimited list of directories to search in when
+looking for tool XML definition files. The search process is described
+in more detail with the `<tool>` tag documentation. The optional `path`
 attribute specifies path information to be prepended onto the user's
 PATH at runtime for each job submitted as part of the pipeline.
 
@@ -111,7 +111,7 @@ specified in the `based_on` attribute. This capability is needed, for
 instance, using samtools, where some commands need the trailing ".bam" 
 stripped off of a file name.
 
-**Note:** when the `replace` attribute is combined with other attributes, 
+**Note:** when the `replace` attribute is combined with other attributes,
 such as `append` or `datestamp_prepend`, the `replace` will be applied 
 first. 
 

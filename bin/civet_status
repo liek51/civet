@@ -25,11 +25,12 @@ import sys
 import os
 import inspect
 import json
+import shutil
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
-     sys.path.insert(0, lib_folder)
+    sys.path.insert(0, lib_folder)
 
 import job_runner.common
 import version
@@ -50,23 +51,67 @@ def format_state(state):
     return state
 
 
+def recursive_remove(analysis_directory):
+    """
+    Recursively remove a directory specified by path, and all of the
+    contained files.
+    :param analysis_directory: The path to a directory to be removed.
+    :return: None
+    """
+    # I think this is important enough to put it out even if not in
+    # verbose mode...
+    print("Deleting failed analysis directory {}".format(
+        analysis_directory
+    ))
+    try:
+        shutil.rmtree(analysis_directory)
+    except Exception as e:
+        print('Failure removing analysis directory {}:\n    {}'.format(
+            analysis_directory, e), file=sys.stderr)
+
+
+def check_remove_run(dir_status, remove_statuses):
+    """
+    Check whether the user asked for analysis runs with this type of failure
+    should be removed (deleted from the disk).  This routine isn't called
+    at all if the user didn't request some form of failure to be removed.
+    :param dir_status: The dir_status object for this log directory.
+    :param remove_statuses: The list of failure types to be removed.
+    :return: None
+    """
+    if (dir_status.status == 'FAILED' or
+            dir_status.status == 'CANCELED' or
+            'TERMINATED' in dir_status.status):
+        if 'ALL' in remove_statuses or \
+                dir_status.status in remove_statuses or \
+                ('TERMINATED' in remove_statuses and
+                 'TERMINATED' in dir_status.status):
+            analysis_directory = os.path.dirname(
+                os.path.dirname(dir_status.log_dir))
+            recursive_remove(analysis_directory)
+
+
 def main():
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('-r', '--recursive', dest='recursive',
+    parser.add_argument('-r', '--recursive',
                         action='store_true', help="Run in recursive mode")
-    parser.add_argument('--verbose', dest='verbose', action='store_true',
+    parser.add_argument('--verbose', action='store_true',
                         help="More verbose output")
     parser.add_argument('--json', action='store_true',
                         help="Output status in JSON format. "
                              "Overrides --verbose and --quiet options.")
-    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+    parser.add_argument('-q', '--quiet', action='store_true',
                         help="Only produce output for failed runs")
-    parser.add_argument('-f', '--fast', dest='fast', action='store_true',
+    parser.add_argument('-f', '--fast', action='store_true',
                         help="Use 'fast' recursive mode (when recursively "
                              "looking for log directories, if we encounter a "
                              "subdirectory called 'logs' only descend into "
                              "that directory and ignore the others")
+    parser.add_argument('--remove-failed',
+                        help="Remove analysis directories for failed runs.\n"
+                             "    Specify comma-separated list of failed "
+                             "statuses or 'ALL'")
     parser.add_argument('-v', '--version', dest='print_version', action='store_true',
                         help='Print Civet version and exit')
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
@@ -78,6 +123,10 @@ def main():
     # compatibility
     parser.set_defaults(recursive=True)
     args = parser.parse_args()
+
+    remove_statuses = []
+    if args.remove_failed is not None:
+        remove_statuses = [x.upper() for x in args.remove_failed.split(',')]
 
     if not args.json:
         verbose = args.verbose
@@ -100,7 +149,7 @@ def main():
     
     dir_list_arg = []
 
-    if len(args.dirs) > 0:
+    if args.dirs:
         dir_list_arg = args.dirs
     else:
         dir_list_arg.append('.')
@@ -135,7 +184,6 @@ def main():
             return 1
     else:
         all_log_dirs = dir_list_arg
-
 
     for log_dir in all_log_dirs:
     
@@ -240,10 +288,10 @@ def main():
             if dir_status.canceled_jobs:
                 print("\t\tCanceled Jobs: {0}".format(dir_status.canceled_jobs))
             if dir_status.deleted_jobs:
-                #now that a status.txt file should get created for any job that
-                #runs, if we have any "unknown" jobs then it means they were
-                #probably deleted (qdel), other possibility is there was a
-                #node crash that took out the job
+                # now that a status.txt file should get created for any job that
+                # runs, if we have any "unknown" jobs then it means they were
+                # probably deleted (qdel), other possibility is there was a
+                # node crash that took out the job
                 print("\t\tDeleted Jobs: {0}".format(dir_status.deleted_jobs))
 
             if dir_status.complete_jobs_failure:
@@ -255,11 +303,15 @@ def main():
                             print_header = False
                         print("\t\t{} ({}): exit_status={}".format(job.name, job.id, job.exit_status))
 
+        if remove_statuses:
+            check_remove_run(dir_status, remove_statuses)
+
         if verbose:
             print("\n\n")
 
     if args.json:
         print(json.dumps(json_output, indent=2, sort_keys=True))
+
 
 if __name__ == '__main__':
     main()
