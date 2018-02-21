@@ -49,6 +49,7 @@ def parse_args():
     parser.add_argument('-n', '--nodes-list', dest='collect_nodes',
                         action='store_true', help="Show all nodes")
     parser.add_argument('dirs', help="Log directory(ies)",
+                        default='.',
                         nargs=argparse.REMAINDER)
     args = parser.parse_args()
     return args
@@ -373,7 +374,11 @@ def main():
         get_files(dir, jobs, long_nodes, all_nodes)
     print(JobTimes.header(args.collect_nodes))
     # Get rid of the civet utility job rm_temps_consolidate_logs
-    del jobs['rm_temps_consolidate_logs']
+    try:
+        del jobs['rm_temps_consolidate_logs']
+    except KeyError:
+        # Don't care if it is not there...
+        pass
     for job in sorted(jobs.iterkeys()):
         jobs[job].long_node = long_nodes[job]
         sys.stdout.write(str(jobs[job]))
