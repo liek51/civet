@@ -640,7 +640,9 @@ class Option(object):
             'numeric',
             'select',
             'boolean',
-            'threads'
+            'threads',
+            'file',
+            'directory'
         ]
 
         # valid child tags
@@ -659,6 +661,7 @@ class Option(object):
         self.value = ''
         self.select_choices = []
         self.type = None
+        select_default = None
 
 
         if 'name' not in e.attrib:
@@ -690,22 +693,8 @@ class Option(object):
                       "\tdeprecated attribute '{}' in option '{}'\n"
                       "\t{}".format(tool.step_name, tool.name_from_pipeline,
                                     os.path.basename(tool.xml_file), attr,
-                                    self.name, deprecated_attributes[attr]))
-
-        for child in e:
-            t = child.tag
-
-            if t not in valid_tags:
-                msg = ("{}: unknown child tag '{}' in option '{}'\n"
-                      "Valid child tags: '{}'").format(
-                    os.path.basename(tool.xml_file), t, self.name,
-                    ", ".join(valid_tags))
-                raise civet_exceptions.ParseError(msg)
-
-            if t == 'select':
-                self.select_choices.append(child.text.strip())
-
-
+                                    self.name, deprecated_attributes[attr]),
+                      file=sys.stderr)
 
         # these are optional attributes, currently only used by the civet-ui
         # project, not by the civet framework itself
@@ -800,6 +789,63 @@ class Option(object):
             # substitution in the command line
             self.value = str(self.value)
 
+        # process child tags, this needs to be done after we process the
+        # type attribute
+        for child in e:
+            t = child.tag
+
+            if t not in valid_tags:
+                msg = ("{}: unknown child tag '{}' in option '{}'\n"
+                      "Valid child tags: '{}'").format(
+                    os.path.basename(tool.xml_file), t, self.name,
+                    ", ".join(valid_tags))
+                raise civet_exceptions.ParseError(msg)
+
+            if t == 'select':
+                # option contains <select> child tag(s)
+                if self.type != 'select':
+                    msg = ("{}: Option tag {} contains <select> tags, but its "
+                           "type attribute is not 'select'").format(
+                            os.path.basename(tool.xml_file), self.name)
+                    raise civet_exceptions.ParseError(msg)
+
+                select_value = child.text.strip()
+                self.select_choices.append(select_value)
+                if 'default' in child.attrib and utilities.eval_boolean_string(child.attrib['default']):
+                    if not select_default:
+                        select_default = select_value
+                    else:
+                        msg = ("{}: Option tag {} has more than one one "
+                               "default <select> tag").format(os.path.basename(tool.xml_file), self.name)
+                        raise civet_exceptions.ParseError(msg)
+
+        if self.type == 'select':
+            # if self.type == 'select' we need to do a little checking
+            # first make sure the pipeline developer included at least one <select>
+            # tag
+            if not self.select_choices:
+                msg = ("{}\nSelect option '{}.{}' must include one or more "
+                       "<select> tags.").format(os.path.basename(tool.xml_file),
+                                                tool.config_prefix, self.name)
+                raise civet_exceptions.ParseError(msg)
+
+            if name in tool.option_overrides:
+                self.value = tool.option_overrides[name][0]
+
+                #  make sure the value is one of the valid options
+                if self.value not in self.select_choices:
+                    msg = ("{}\n"
+                           "invalid value '{}' for option '{}.{}'.\n"
+                           "value must be one the specified choices:\n"
+                           "\t{}").format(os.path.basename(tool.xml_file), self.value,
+                                          tool.config_prefix, self.name,
+                                          ', '.join(["'{}'".format(c) for c in self.select_choices]))
+                    raise civet_exceptions.ParseError(msg)
+            elif select_default:
+                self.value = select_default
+            else:
+                self.value = self.select_choices[0]
+
         if self.type == 'boolean':
 
             if self.value.upper() == 'TRUE' or self.value == '1':
@@ -807,26 +853,18 @@ class Option(object):
             elif self.value.upper() == 'FALSE' or self.value == '0':
                 self.value = False
             else:
-                msg = "{}: invalid value '{}' for boolean option, must be 'True' or 'False'\n\n{}".format(os.path.basename(tool.xml_file), self.value, ET.tostring(e))
+                msg = "{}: invalid value '{}' for boolean option, must be 'true' or 'false'\n\n{}".format(os.path.basename(tool.xml_file), self.value, ET.tostring(e))
                 raise civet_exceptions.ParseError(msg)
 
-        # if self.type == 'select' we need to do a little checking
-        # first make sure the pipeline developer included at least one <select>
-        # tag
-        if self.type == 'select' and not self.select_choices:
-            msg = ("{}\nSelect option '{}.{}' must include one or more "
-                   "<select> tags.").format(os.path.basename(tool.xml_file),
-                                            tool.config_prefix, self.name)
-            raise civet_exceptions.ParseError(msg)
-        # then make sure the value is one of the valid options
-        if self.type == 'select' and self.value not in self.select_choices:
-            msg = ("{}\n"
-                   "invalid value '{}' for option '{}.{}'.\n"
-                   "value must be one the specified choices:\n"
-                   "\t{}").format(os.path.basename(tool.xml_file), self.value,
-                                  tool.config_prefix, self.name,
-                                  ', '.join(["'{}'".format(c) for c in self.select_choices]))
-            raise civet_exceptions.ParseError(msg)
+        if self.type == 'file' or self.type == 'directory':
+            # this option type specifies a path to an existing file
+            # at least make sure it exists
+            self.value = os.path.abspath(self.value)
+            if not os.path.exists(self.value):
+                msg = "{}: Option {} -- {} '{}' does not exist".format(os.path.basename(tool.xml_file), self.name, self.type, self.value)
+                raise civet_exceptions.ParseError(msg)
+
+
 
 
         # TODO do some validation of other types (like numeric) to make sure

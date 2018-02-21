@@ -1,13 +1,14 @@
-#Civet XML Description
+# Civet XML Description
 This document describes the XML files used to define a Civet pipeline.
 
-##Pipeline XML Description
+## Pipeline XML Description
 Each pipeline will be controlled by an XML description file. The outer 
 tag is `<pipeline>`.
 
-###pipeline
+### pipeline
 
     <pipeline name="..." tool_search_path="..." path="...">
+        <description />
         <file />
         <dir />
         <foreach />
@@ -24,7 +25,23 @@ PATH at runtime for each job submitted as part of the pipeline.
 
 ***
 
-###file
+### description
+
+The `<description>` tag is used to include information about the
+pipeline. Currently this tag is ignored by the Civet framework, and is 
+only used by our in-house Civet UI. Eventually the `civet_run` and 
+`civet_prepare` commands will have a `--description` opiton to show 
+a pipeline's description.
+
+The pipeline can only contain one set of `<description></description>` 
+tags. The description is unformatted plain text, paragraphs can be
+separated by blank lines. Extra whitespace will be ignored. Future 
+versions of Civet may implement markdown formatting.
+
+Note that the contents of the description tag must escape XML special
+characters such as < or >.
+
+### file
 
 The `<file>` tag specifies a file that is to be used in the pipeline. 
 The `filespec` (complete or partial file path) may be hardcoded in the 
@@ -467,7 +484,7 @@ optional.
 
 ***
 
-###description
+### description
 
 The `<description>` tag contains free form information about the tool.
 
@@ -475,7 +492,7 @@ The `<description>` tag contains free form information about the tool.
 
 ***
 
-###option
+### option
 The `<option>` tag is designed to specify command line parameters and 
 their values in a way that allows those values to be derived from a 
 file, from a tool attribute (the `threads` attribute), or as a hard 
@@ -484,17 +501,28 @@ described in a separate document.
 
 The information in the `<option>` tag is used in the `<command>` tag.
 
-    <option name="..." from_file="..." command_text="..." type="..."  
-        value="..." />
+    <option name="..." display_name="..." from_file="..." 
+        command_text="..." type="..." value="..." description="..."/>
 
-The `<option>` tag must contain the `name` attribute.
+The `<option>` tag must contain the `name` attribute. This is a unique 
+identifier and it is used to reference the option in the `<command>`.
+
+The `display_name` attribute is optional. It is used for our in-house 
+UI. Since option names do not allow whitespace, this lets the  pipeline
+developer specify a more readable option name for use in generating a 
+pipeline submission form.  If `display_name` is not present, the 
+Civet UI will display the `name` of the option.
 
 The `command_text` attribute is combined with the `value` of the 
 options. See the description of the `<command>` tag for how these are 
 used. 
 
+#### Option Types
+
 The `type` attribute can be one of `string`, `numeric`, `boolean`, 
-`select`, or `threads`.
+`select`, `threads`, `file`, or `directory`.
+
+#### boolean
 
 The `boolean` type is combined with the `value` attribute and 
 indicates that the value can be True or False. If the value is true, 
@@ -502,31 +530,55 @@ the `command_text` will be used to substitute for the option in the
 command line. If the value is false then an empty string will be 
 substituted for the option in the command line. 
 
+#### threads
+
 The `threads` type will automatically use the tool's `threads` 
 attribute as the option value. This allows you to specify the number of 
 threads in the command without having to enter the number of 
 threads in multiple places (the tool's `threads` attribute and in the
-`<commmand>`). It also allows the number of threads to be overridden.
+`<command>`). It also allows the number of threads to be overridden.
+
+#### select
 
 If the option type is `select` then the `<option>` tag must contain one
-or more `<select>` tags and the option `value` (default or overridden) 
-must match one of these select options.
+or more `<select>` tags. The default value for the option is specified 
+with the `default=“true”` attribute.  If the option value is passed
+through an options file, it must match one of these select options.
 
-    <option name="quals" type="select" value="--phred33-quals">
-        <select>--phred33-quals</select>
+    <option name="quals" type="select">
+        <select default=“true”>—phred33-quals</select>
         <select>--phred64-quals</select>
         <select>--solexa-quals</select>
         <select>--integer-quals</select>
     </option>
 
+**If an option only has a small number of valid values, it is highly 
+encouraged to use the select type. This allows our Civet UI to 
+render a drop down select input field, which is much less error 
+prone.**
+
+#### file and directory
+
+The `file` and `directory` option types indicate the value of the option 
+should be the path to an existing file or directory. 
+
+#### string (default type)
+
 If an option does not specify a type then it defaults to `string`. This 
-type allows arbitrary text to be entered as the value. Currently the 
-`string` and `numeric` types are equivalent, but Civet  may implement 
-type specific validation in the future.
+type allows arbitrary text to be entered as the value.
+
+#### numeric
+
+Currently the `string` and `numeric` types are equivalent, but Civet 
+or the Civet UI may implement type specific validation in the future.
+
+#### Option Names
 
 Option names are in the same name space as the tool file ids, but 
 separate from the name space of the invoking pipeline. All names in 
 the tool's option name / file id name space must be unique.
+
+#### from_file
 
 Occasionally, the value associated with an option is complex and is 
 derived from the processing being done in the pipeline. An example is 
@@ -534,6 +586,8 @@ specifying read group information during BWA alignment. In this case,
 the `from_file` attribute specifies the id of a file containing a 
 single line which is used as the option's value instead of what would
 have been specified in the `command_text` and value attributes.
+
+#### tool_config_prefix
 
 For each option specified, if the `tool_config_prefix` attribute is 
 specified in the `<tool>` tag, option processing will search for an 

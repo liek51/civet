@@ -63,6 +63,7 @@ class Pipeline(object):
         'foreach',
         'step',
         'filelist',
+        'description'
     ]
 
     valid_attributes = [
@@ -201,6 +202,7 @@ class Pipeline(object):
             self.path = None
 
         # And track the major components of the pipeline
+        self.description = None
         self._steps = []
         self._files = {}
         self.foreach_barriers = {}
@@ -220,6 +222,15 @@ class Pipeline(object):
 
             if t == 'step' or t == 'foreach':
                 pending.append(child)
+            elif t == 'description':
+                # currently only used by the Civet UI, ignored by the civet
+                # framework, but we will make sure the tag only occurs once
+                if self.description:
+                    raise civet_exceptions.ParseError("a pipeline can only contain one <description> tag")
+                else:
+                    # since we aren't actually using the description, just
+                    # set it to True for now
+                    self.description = True
             else:
                 # <file> <dir> <filelist> and <string> are all handled by PipelineFile
                 PipelineFile.parse_xml(child, self._files)
