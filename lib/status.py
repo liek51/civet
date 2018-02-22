@@ -25,17 +25,13 @@ import job_runner.common
 from exec_modes import ToolExecModes
 
 
-def format_state(state):
-    if state == 'R':
-        return "Running"
-    elif state == 'Q':
-        return "Queued (eligible to run)"
-    elif state == 'H':
-        return "Queued (waiting on dependency)"
-    elif state == 'W':
-        return "Queued (with delayed start)"
+FORMATTED_STATE = {
+    'R': "Running",
+    'Q': "Queued (eligible to run)",
+    'H': "Queued (waiting on dependency)",
+    'W': "Queued (with delayed start)",
+}
 
-    return state
 
 
 class ManagedJobStatus(object):
@@ -113,7 +109,7 @@ class Status(object):
 
             if 'canceled' in status or 'cancelled' in status:
                 self.state = "CANCELED"
-                self.state_at_cancel = format_state(status['state_at_cancel'])
+                self.state_at_cancel = FORMATTED_STATE[status['state_at_cancel']]
 
             elif id in running_at_cancel:
                 self.state = "CANCELED"

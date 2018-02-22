@@ -37,18 +37,11 @@ import version
 import status
 from exec_modes import ToolExecModes
 
-
-def format_state(state):
-    if state == 'R':
-        return "Running"
-    elif state == 'Q':
-        return "Queued (eligible to run)"
-    elif state == 'H':
-        return "Queued (waiting on dependency)"
-    elif state == 'W':
-        return "Queued (with delayed start)"
-    
-    return state
+FAILURE_STATUSES = [
+    'CANCELED',
+    'FAILED',
+    'TERMINATED',
+]
 
 
 def recursive_remove(analysis_directory):
@@ -79,13 +72,11 @@ def check_remove_run(dir_status, remove_statuses):
     :param remove_statuses: The list of failure types to be removed.
     :return: None
     """
-    if (dir_status.status == 'FAILED' or
-            dir_status.status == 'CANCELED' or
-            'TERMINATED' in dir_status.status):
-        if 'ALL' in remove_statuses or \
-                dir_status.status in remove_statuses or \
-                ('TERMINATED' in remove_statuses and
-                 'TERMINATED' in dir_status.status):
+    # Check whether this is a failed job:
+    if dir_status.status in FAILURE_STATUSES:
+        # Now, check whether the user asked for failures of this type to be
+        # deleted
+        if 'ALL' in remove_statuses or dir_status.status in remove_statuses:
             analysis_directory = os.path.dirname(
                 os.path.dirname(dir_status.log_dir))
             recursive_remove(analysis_directory)
@@ -226,7 +217,8 @@ def main():
                 print("\n{0} ({1}):".format(job.name, job.id))
 
                 if job.state == "CANCELED":
-                    print("\tJob canceled (state at cancel = {0})".format(format_state(job.state_at_cancel)))
+                    print("\tJob canceled (state at cancel = {0})".format(
+                        status.FORMATTED_STATE[job.state_at_cancel]))
 
                 elif "FAILED" in job.state:
                     if job.exit_status == -11:
@@ -252,7 +244,7 @@ def main():
                     print("\tcivet_status can only get information on complete jobs when pipeline is run in managed batch mode")
 
                 else:
-                    print("\t" + status.format_state(job.state))
+                    print("\t" + status.FORMATTED_STATE[job.state])
 
                 if job.walltime is not None:
                     print("\tWalltime={0}".format(job.walltime))
@@ -270,7 +262,7 @@ def main():
 
         if verbose:
             print("\nSummary:")
-        elif not quiet or dir_status.status == 'FAILED' or dir_status.status == 'CANCELED' or 'TERMINATED' in dir_status.status:
+        elif not quiet or dir_status.status in FAILURE_STATUSES:
             print("{0}: {1}".format(log_dir, dir_status.status))
             
         if verbose or (not quiet and dir_status.complete_jobs_success != dir_status.total_jobs):
