@@ -9,6 +9,8 @@ Features
  - added <option> "type", "description", and "display_name" attributes
  - added "description" attribute for <file>, <filelist>, <dir>, <string> tags
  - added "paired" attribute to <filelist>
+ - added configuration option "default_modules" for force certain modules to be
+   loaded by all tools
 
 
 Version 1.9.0
