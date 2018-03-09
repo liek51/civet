@@ -79,7 +79,7 @@ class Tool(object):
         self.skip_validation = PL.skip_validation
         self.option_overrides = {}
         self.thread_option_max = 0
-        self.modules = []
+        self.modules = config.default_modules
         self.name_from_pipeline = name
 
         self.verify_files = []
@@ -290,7 +290,8 @@ class Tool(object):
             elif t == 'command':
                 Command(child, self)
             elif t == 'module':
-                self.modules.append(child.text)
+                if child.text not in self.modules:
+                    self.modules.append(child.text)
             elif t == 'validate':
                 a = child.attrib
                 if 'id' in a:
@@ -662,7 +663,6 @@ class Option(object):
         self.select_choices = []
         self.type = None
         select_default = None
-
 
         if 'name' not in e.attrib:
             raise civet_exceptions.ParseError(

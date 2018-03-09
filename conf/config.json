@@ -24,5 +24,9 @@
     // environment modules.
     // valid values: true or false
     // Default is false
-    "purge_user_modulefiles": true
+    "purge_user_modulefiles": true,
+
+    // these are modules that are automatically loaded for every job, before
+    // any tool specific modules. This should be list
+    "default_modules": ["compsci"]
 }

@@ -25,17 +25,16 @@ import job_runner.common
 from exec_modes import ToolExecModes
 
 
-def format_state(state):
-    if state == 'R':
-        return "Running"
-    elif state == 'Q':
-        return "Queued (eligible to run)"
-    elif state == 'H':
-        return "Queued (waiting on dependency)"
-    elif state == 'W':
-        return "Queued (with delayed start)"
+FORMATTED_STATE = {
+    'R': "Running",
+    'Q': "Queued (eligible to run)",
+    'H': "Queued (waiting on dependency)",
+    'W': "Queued (with delayed start)",
+}
 
-    return state
+
+def format_state(state):
+    return FORMATTED_STATE.get(state, state)
 
 
 class ManagedJobStatus(object):

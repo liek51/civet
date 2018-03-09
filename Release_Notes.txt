@@ -4,12 +4,19 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 
 Version 1.9.1
+-------------
+Bug Fixes
+ - check return value of version command in generated batch script
+
 Features
  - added pipeline <description></description> tag
  - added optional pipeline display_name attribute
  - added <option> "type", "description", and "display_name" attributes
  - added "description" attribute for <file>, <filelist>, <dir>, <string> tags
  - added "paired" attribute to <filelist>
+ - added configuration option "default_modules" for force certain modules to be
+   loaded by all tools
+
 
 
 Version 1.9.0
