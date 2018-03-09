@@ -120,7 +120,7 @@ specified in the `based_on` attribute. This capability is needed, for
 instance, using samtools, where some commands need the trailing ".bam" 
 stripped off of a file name.
 
-**Note:** when the `replace` attribute is combined with other attributes, 
+**Note:** when the `replace` attribute is combined with other attributes,
 such as `append` or `datestamp_prepend`, the `replace` will be applied 
 first. 
 
