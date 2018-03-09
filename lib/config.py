@@ -35,6 +35,7 @@ __valid_params = [
     'io_sync_sleep',
     'civet_job_python_module',
     'purge_user_modulefiles',
+    'default_modules'
 ]
 
 for param in __config.keys():
@@ -60,4 +61,6 @@ if purge_user_modulefiles:
         raise ValueError("purge_user_modulefiles must be a boolean")
 else:
     purge_user_modulefiles = False
+
+default_modules = __config.get('default_modules', [])
 
