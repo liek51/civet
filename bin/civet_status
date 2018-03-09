@@ -218,7 +218,7 @@ def main():
 
                 if job.state == "CANCELED":
                     print("\tJob canceled (state at cancel = {0})".format(
-                        status.FORMATTED_STATE[job.state_at_cancel]))
+                        status.format_state(job.state_at_cancel)))
 
                 elif "FAILED" in job.state:
                     if job.exit_status == -11:
@@ -244,7 +244,7 @@ def main():
                     print("\tcivet_status can only get information on complete jobs when pipeline is run in managed batch mode")
 
                 else:
-                    print("\t" + status.FORMATTED_STATE[job.state])
+                    print("\t" + status.format_state(job.state))
 
                 if job.walltime is not None:
                     print("\tWalltime={0}".format(job.walltime))

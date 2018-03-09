@@ -33,6 +33,9 @@ FORMATTED_STATE = {
 }
 
 
+def format_state(state):
+    return FORMATTED_STATE.get(state, state)
+
 
 class ManagedJobStatus(object):
     """
@@ -109,7 +112,7 @@ class Status(object):
 
             if 'canceled' in status or 'cancelled' in status:
                 self.state = "CANCELED"
-                self.state_at_cancel = FORMATTED_STATE[status['state_at_cancel']]
+                self.state_at_cancel = format_state(status['state_at_cancel'])
 
             elif id in running_at_cancel:
                 self.state = "CANCELED"
