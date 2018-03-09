@@ -575,7 +575,6 @@ class PipelineFile(object):
             foreach_dep, description, paired)
 
 
-
 def sumarize_files(files, group):
     import pipeline_parse as PL
     PL.file_summary[group] = {}
