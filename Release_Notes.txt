@@ -16,6 +16,8 @@ Features
  - added "paired" attribute to <filelist>
  - added configuration option "default_modules" for force certain modules to be
    loaded by all tools
+ - warn user if they have duplicate options in an option file
+   previously user was not warned and previous value was overwritten
 
 
 
