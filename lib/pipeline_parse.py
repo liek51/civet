@@ -505,9 +505,14 @@ class Pipeline(object):
                 line = line.split(' #')[0]
                 prefix = line.split('.', 1)[0]
                 opt, val = line.split('.', 1)[1].split('=')
+                opt = opt.strip()
+                val = val.strip()
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
-                self.option_overrides[prefix][opt.strip()] = (val.strip(), source)
+                if opt in self.option_overrides[prefix]:
+                    print("\nWARNING: duplicate option in option file. {}.{}={} "
+                          "overwrites previous value of {}\n".format(prefix, opt, val, self.option_overrides[prefix][opt][0]), file=sys.stderr)
+                self.option_overrides[prefix][opt] = (val, source)
 
     def _create_cleanup_cmd(self):
         cmd = []
