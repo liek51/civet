@@ -283,59 +283,73 @@ effect on naming of batch jobs.
 The `<foreach>` tag allows a step to be run on several files in a 
 directory identified by the `dir` attribute.
 
-**IMPORTANT NOTE:** The "iterations" of the `<foreach>` processing may 
-happen in parallel. All processing of one set of files must be 
-completely independent of the processing of another set of files.
-
-The files to be used within this directory are identified by pattern 
-matching the file names, so it is useful primarily when the files are 
-systematically named, for instance, the output directory of an Illumina 
-sequencing run. When there are groups of files that need to be 
-processed together, for instance, paired fastq files, the tag allows 
-constructing the name of the other input or output files based on the 
-name of first one, again via regexp pattern matching / pattern 
-replacement. This could be used, for instance, in performing paired 
-end alignment. 
-
-**IMPORTANT NOTE:** Since Civet submits all of the jobs of a pipeline 
-up front, the files matched by a <foreach> tag must exist at pipeline 
-submission time. These could be 'stub' files that get overwritten by
-one or more steps of a pipeline, but the filenames need to at least 
-exist at submission time so Civet knows how many jobs to submit for the 
-`<foreach>`.
-
     <foreach id="..." dir="...">
-        <file id="..." pattern="..." />
+        <file id="..." pattern="..." from_file"..." />
         <related id="..." input="..." pattern="..." replace="..." />
         <step />
     </foreach>
 
-The `<foreach>` tag processes a set of files in the directory whose id 
-is specified in the `dir` attribute. The order in which the files are 
-processed is unspecified; in a cluster environment, they may be 
-processed in parallel. The `id` attribute is used to specify a 
+
+The set of files to iterate over are identified either by pattern 
+matching file names in a directory by specifying the `pattern` 
+attribute on the `<file>` tag, or by providing an input file that
+lists one file per line (either absolute paths, or relative to the 
+foreach dir) by specifying a file id using the `from_file` attribute. 
+
+Pattern matching is useful primarily when the files are systematically 
+named, for instance, the output directory of an Illumina sequencing 
+run. When there are groups of files that need to be processed together, 
+for instance, paired fastq files, the `related` tag allows constructing 
+the name of the other input or output files based on the name of the 
+matched file, again via regexp pattern matching / pattern replacement.
+This could be used, for instance, in performing paired end alignment. 
+
+**IMPORTANT NOTE:** Since Civet submits all of the jobs of a pipeline 
+up front, when using pattern matching, the files matched must exist at 
+pipeline submission time. These could be 'stub' files that get 
+overwritten by one or more steps of a pipeline, but the filenames need 
+to at least exist at submission time so Civet knows how many jobs to 
+submit for the `<foreach>`. If using the `from_file` attribute instead, 
+the file containing the list of files to iterate over must exist and 
+be populated at submission time, but the files do not need to exist
+prior to the foreach job being executed.
+
+The `<foreach>` tag typically processes a set of files in the directory 
+whose id is specified in the `dir` attribute. The order in which the 
+files are processed is unspecified; in a cluster environment, they may 
+be processed in parallel. The `id` attribute is used to specify a 
 `<filelist>` dependency on this `<foreach>` tag.
 
-The `<file>` tag's pattern attribute specifies the Python regex pattern
+The `<file>` tag's `pattern` attribute specifies the Python regex pattern
 that will be used to select files for processing; it will be applied to 
 each filename in the directory as if by using Python's `re.match()`
 function. There must be exactly one `<file>` tag in a `<foreach>` 
 construct. Any filenames that match will be processed. The tag's `id`
 attribute specifies the id this file will be referenced by in foreach 
 block. Since the files identified by this tag must exist to be pattern 
-matched, they are inherently classed as input files.
+matched at submission time, they are inherently classed as input files.
+
+The `<file>` tag's `in_dir` attribute specifies the Civet file id of a 
+text file containing all of the files that should be processed by 
+the foreach. The file contins one file path per line, either relative to
+the directory specified by the foreach `dir` attribute or absolute 
+paths. 
+
+**IMPORTANT NOTE:** The `in_dir` and `pattern` attributes are mutually 
+exclusive. One is required, but they can not be specified together.
 
 The `<related>` tag specifies another file, either an existing input 
 file or a file to be created. The `id` attribute specifies the id by 
 which this file will be referenced in the foreach block. The `input` 
 attribute's value shall be either True or False. Related files that
 are specified as input files will have a default directory of the 
-foreach directory, but this may be overridden by specifying the `in__dir` 
+foreach directory, but this may be overridden by specifying the `in_dir` 
 attribute of the `<related>` file. Output related files will default 
-to the pipeline output directory unless overridden with the `in__dir` 
-attribute. The `pattern` and `replace` attributes specify Python regex 
-patterns which are used to modify the controlling filename into the 
-desired filename as if by Python's `re.sub()` function.
+to the pipeline output directory unless overridden with the `in_dir` 
+attribute. Typically a related file's filename is similar to filename 
+of the `<file>` tag. The `pattern` and `replace` attributes specify 
+Python regex patterns which are used to modify the controlling filename 
+into the desired filename as if by Python's `re.sub()` function.
 
 The operations specified by the `<step>` tag(s) will be executed for 
 each set of files identified.
