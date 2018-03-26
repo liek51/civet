@@ -93,6 +93,22 @@ class ForEach(object):
                    "'{}' is used as a file and related file id in '{}'.\n\n{}")
             raise ParseError(msg.format(self.file.id, self.id, ET.tostring(e)))
 
+    def _get_files_from_file(self):
+        if self.file.from_file not in self.pipelineFiles:
+            raise ParseError("Foreach {} file tag references unknown file id ({})".format(self.id, self.file.from_file))
+
+        source_file = self.pipelineFiles[self.file.from_file]
+
+        if not source_file.is_input:
+            raise ParseError("Foreach {} file tag from_file({}) attribute must specify an input file".format(self.id, self.file.from_file))
+
+        try:
+            with open(source_file.path, 'r') as file_list:
+                foreach_files = file_list.readlines()
+                return [x.strip() for x in foreach_files]
+        except:
+            raise ParseError("Foreach {}: can't open from_file '{}'".format(self.id, self.file.from_file))
+
     def _get_matched_files(self):
         matched_files = []
         all_files = os.listdir(self.pipelineFiles[self.dir].path)
@@ -146,7 +162,11 @@ class ForEach(object):
             # submit step(s)
             # clean up files from pipeline files list
 
-        matched_files = self._get_matched_files()
+        if self.file.pattern:
+            matched_files = self._get_matched_files()
+        else:
+            matched_files = self._get_files_from_file()
+
         job_ids = []
         iteration = 0
 
@@ -167,11 +187,17 @@ class ForEach(object):
             cleanups = []
             files_to_delete = []
             iteration_ids = []
+
+            if fn.startswith('/'):
+                in_dir = None
+            else:
+                in_dir = self.dir
+
             #TODO this is impossible to make sense of, create a static method in
             #PipelineFile that only takes the id, path, file list, and directory
             PipelineFile(self.file.id, fn, self.pipelineFiles, True, False,
                          True, False, False, None, None, None, None,
-                         None, None, self.dir, False, False, None)
+                         None, None, in_dir, False, False, None)
             cleanups.append(self.file.id)
 
             for id in self.relatedFiles:
@@ -255,7 +281,10 @@ class ForEach(object):
     def create_tasks(self, name_prefix, execution_mode):
         import pipeline_parse as PL
 
-        matched_files = self._get_matched_files()
+        if self.file.pattern:
+            matched_files = self._get_matched_files()
+        else:
+            matched_files = self._get_files_from_file()
         iteration = 0
         tasks = []
 
@@ -264,11 +293,17 @@ class ForEach(object):
             cleanups = []
             files_to_delete = []
             iteration_tasks = []
+
+            if fn.startswith('/'):
+                in_dir = None
+            else:
+                in_dir = self.dir
+
             #TODO this is impossible to make sense of, create a static method in
             #PipelineFile that only takes the id, path, file list, and directory
             PipelineFile(self.file.id, fn, self.pipelineFiles, True, False,
                          True, False, False, None, None, None, None,
-                         None, None, self.dir, False, False, None)
+                         None, None, in_dir, False, False, None)
             cleanups.append(self.file.id)
 
             cleanups_new, files_to_delete_new = self._add_related_files(fn)
@@ -340,29 +375,48 @@ class ForEach(object):
 
         
 class ForEachFile(object):
-    requiredAtts = [
+    valid_atts = [
         'id',
-        'pattern' ]
+        'pattern',
+        'from_file']
 
     def __init__(self, e, pipeline_files):
+
+        self.pattern = None
+        self.from_file = None
+
         atts = e.attrib
         for a in atts:
-            if a not in ForEachFile.requiredAtts:
+            if a not in ForEachFile.valid_atts:
                 msg = ("Unknown attribute in foreach file: {}\n\n"
                        "{}\n\nValid Attributes: '{}'".format(a, ET.tostring(e).rstrip(),
                                                              ", ".join(ForEachFile.requiredAtts)))
                 raise ParseError(msg)
-        for a in ForEachFile.requiredAtts:
-            if a not in atts:
-                msg = ("foreach file tag missing required attribute:\n\n{}\n\n"
-                       "Required Attributes: '{}'".format(ET.tostring(e).rstrip(),
-                                                          ", ".join(ForEachFile.requiredAtts)))
-                raise ParseError(msg)
+
+        if 'id' not in atts:
+            msg = ("foreach file tag missing required 'id' attribute:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
+        if 'pattern' not in atts and 'from_file' not in atts:
+            msg = ("foreach file tag must contain 'pattern' or 'from_file' attribute:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
+        if 'pattern' in atts and 'from_file' in atts:
+            msg = ("foreach file tag 'pattern' and 'from_file' attributes are mutually exclusive:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
         self.id = atts['id']
         if self.id in pipeline_files:
             msg = "a foreach file's id must not be the same as a pipeline file id: {}\n\n{}".format(self.id, ET.tostring(e))
             raise ParseError(msg)
-        self.pattern = re.compile(atts['pattern'])
+
+        if 'pattern' in atts:
+            self.pattern = re.compile(atts['pattern'])
+        elif 'from_file' in atts:
+            self.from_file = atts['from_file']
         
 
 class ForEachRelated(object):

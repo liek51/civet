@@ -18,6 +18,8 @@ Features
    loaded by all tools
  - warn user if they have duplicate options in an option file
    previously user was not warned and previous value was overwritten
+ - added "from_file" attribute for foreach <file> tag -- can read files from
+   text file rather than matching filenames in a directory to a pattern
 
 
 
