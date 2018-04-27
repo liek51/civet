@@ -106,8 +106,12 @@ def main():
             message = "Pipeline Submission Error: " + str(e)
             PL.abort_submit(message)
     else:
-        sub_info = PL.submit(silent=True)
-        print(json.dumps(sub_info, indent=2, sort_keys=True))
+        try:
+            sub_info = PL.submit(silent=True)
+            print(json.dumps(sub_info, indent=2, sort_keys=True))
+        except civet_exceptions.ParseError as e:
+            message = "Pipeline Submission Error: " + str(e)
+            PL.abort_submit(message, json=True)
 
 
 if __name__ == "__main__":

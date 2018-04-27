@@ -398,7 +398,7 @@ class Pipeline(object):
             'job_ids': self.all_batch_jobs
         }
 
-    def abort_submit(self, message, status=1):
+    def abort_submit(self, message, status=1, json=False):
         """
         Abort pipeline submission.  Deletes any jobs already queued, prints error
         message, and exits.
@@ -413,6 +413,14 @@ class Pipeline(object):
 
         sys.stderr.write("Aborting pipeline submission\n"
                          "\t{0}\n".format(message))
+
+        if json:
+            print(json.dumps({
+                'log_dir': self.log_dir,
+                'output_dir': PipelineFile.get_output_dir(),
+                'job_ids': []
+            }, indent=2, sort_keys=True))
+
         sys.exit(status)
 
     def create_task_list(self):

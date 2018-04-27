@@ -115,7 +115,11 @@ def main():
 
     initialize_task_file(args.task_db)
 
-    task_count = insert_tasks(PL, args.task_db)
+    try:
+        task_count = insert_tasks(PL, args.task_db)
+    except civet_exceptions.ParseError as e:
+        sys.exit("\nError parsing XML:  {}\n".format(e))
+
 
     print("  {} tasks have been inserted into task file {}\n".format(
         task_count, args.task_db))
