@@ -52,6 +52,7 @@ class PipelineFile(object):
         'pattern',
         'replace',
         'description',
+        'display_name'
     ]
 
     # attributes that only make sense for a file tag
@@ -61,6 +62,7 @@ class PipelineFile(object):
         'in_dir',
         'temp',
         'filespec',
+        'extensions'
         ]
 
     # attributes that only make sense for a dir tag
@@ -88,7 +90,8 @@ class PipelineFile(object):
         'parameter',
         'input',
         'description',
-        'paired'
+        'paired',
+        'extensions'
     ]
 
     # Track the master output directory.

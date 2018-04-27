@@ -337,21 +337,21 @@ class Tool(object):
     def file(self, e):
         atts = e.attrib
 
-        id = atts['id']
+        fid = atts['id']
         # Ensure that the id is unique.
-        if id in self.options:
+        if fid in self.options:
             raise civet_exceptions.ParseError("{}: file id duplicates an option"
-                                              "name: ".format(os.path.basename(self.xml_file), self.id))
-        if id in self.tool_files:
-            raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), self.id))
+                                              "name: ".format(os.path.basename(self.xml_file), fid))
+        if fid in self.tool_files:
+            raise civet_exceptions.ParseError("{}: file id is a duplicate: {}".format(os.path.basename(self.xml_file), fid))
         
 
         PipelineFile.parse_xml(e, self.tool_files)
 
         # Track all the tool temporary files, so that we can
         # delete them at the end of the tool's execution.
-        if self.tool_files[id].is_temp:
-            self.tempfile_ids.append(id)
+        if self.tool_files[fid].is_temp:
+            self.tempfile_ids.append(fid)
 
     def collect_files_to_validate(self):
         v = self.verify_files

@@ -3,6 +3,25 @@ This document describes the high-level changes made to the civet software from
 release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 
+Version 1.9.2
+-------------
+
+Bug Fixes
+ - Fix bug processing return code of tool's version command (introduced 1.9.1)
+ - Fix Python Traceback if tool XML contains mulitple file tags with the same
+   file id
+
+Features
+ - added optional "display_name" attribute for <file>, <filelist>, <dir>,
+   <string> tags.  This is not currently used by the civet framework, but can
+   be used by other tools. For example, a UI may use this attribute to label
+   pipeline parameters in a submission form
+ - added optional "file extensions" attribute for <file> and <filelist> tags.
+   This is currently ignored by the Civet framework, but could be used to
+   check that a user is passing an expected type of file for an input parameter.
+   This can also be used to provide user hints in a pipeline submission UI.
+   Format should be a JSON list of extensions, e.g., '[".fq" ,".fq.gz"]'
+
 Version 1.9.1
 -------------
 Bug Fixes
