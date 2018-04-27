@@ -100,10 +100,15 @@ def main():
         sys.exit(2)
 
     if not args.json:
-        PL.submit()
+        try:
+            PL.submit()
+        except civet_exceptions.ParseError as e:
+            message = "Pipeline Submission Error: " + str(e)
+            PL.abort_submit(message)
     else:
         sub_info = PL.submit(silent=True)
         print(json.dumps(sub_info, indent=2, sort_keys=True))
+
 
 if __name__ == "__main__":
     main()
