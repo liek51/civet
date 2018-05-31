@@ -8,7 +8,7 @@ Version 1.9.2
 
 Bug Fixes
  - Fix bug processing return code of tool's version command (introduced 1.9.1)
- - Fix Python Traceback if tool XML contains mulitple file tags with the same
+ - Fix Python Traceback if tool XML contains multiple file tags with the same
    file id
 
 Features
