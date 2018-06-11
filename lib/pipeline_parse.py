@@ -517,7 +517,7 @@ class Pipeline(object):
                 val = val.strip()
                 if prefix not in self.option_overrides:
                     self.option_overrides[prefix] = {}
-                if opt in self.option_overrides[prefix] and self.option_overrides[prefix][opt][1] == self.option_overrides[prefix][opt][1]:
+                if opt in self.option_overrides[prefix] and self.option_overrides[prefix][opt][1] == source:
                     print("\nWARNING: duplicate option in option file. {}.{}={} "
                           "overwrites previous value of {}\n".format(prefix, opt, val, self.option_overrides[prefix][opt][0]), file=sys.stderr)
                 self.option_overrides[prefix][opt] = (val, source)
