@@ -3,9 +3,15 @@ This document describes the high-level changes made to the civet software from
 release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 
+
 Version 1.9.2
 -------------
+Bug Fixes
+ - Fix bug warning user of duplicate option override if it appears in the
+   pipeline option file and a user option file
 
+Version 1.9.2
+-------------
 Bug Fixes
  - Fix bug processing return code of tool's version command (introduced 1.9.1)
  - Fix Python Traceback if tool XML contains multiple file tags with the same
