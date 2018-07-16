@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2016 The Jackson Laboratory
+# Copyright 2017 The Jackson Laboratory
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,9 +21,10 @@ import argparse
 import sys
 import inspect
 import os
-import json
+import logging
 
-cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(
+    inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
     sys.path.insert(0, lib_folder)
@@ -31,6 +32,10 @@ import civet_exceptions
 import pipeline_parse as PL
 import version
 import utilities
+
+from managed_batch.prepare import initialize_task_file, insert_tasks
+
+
 
 
 def main():
@@ -40,78 +45,90 @@ def main():
     version.parse_options()
     
     parser = argparse.ArgumentParser()
+
     parser.add_argument('-q', '--queue', default=None,
                         help="submission queue [default = TORQUE default]")
-    parser.add_argument('-n', '--no-submit', dest='submit',
-                        action='store_false',
-                        help="Generate batch scripts but don't submit them")
     parser.add_argument('-o', '--option-file', dest='option_file',
                         default=None, help="option override file")
     parser.add_argument('-t', '--keep-temp', dest='keep_temp',
                         action='store_true',
                         help="Don't delete temporary pipeline files")
-    parser.add_argument('--hold', dest='release_jobs', action='store_false',
-                        help="Jobs will be held after pipeline submission")
     parser.add_argument('-f', '--force-conditional', dest='force_conditional',
                         action='store_true',
                         help="Force conditional steps to run")
-    parser.add_argument('-d', '--delay', dest='delay', default=None,
-                        help="job delay")
     parser.add_argument('-e', '--email-address', dest='email_address',
                         default=None,
-                        help="email address for notifications, defaults to user. Can be a comma delimited list of addresses.")
+                        help="email address for notifications, defaults to "
+                             "user. Can be a comma delimited list of "
+                             "addresses.")
     parser.add_argument('--error-email-address', dest='error_email_address',
-                        default=None, help="email address for error emails, defaults to '--email-address' value")
+                        default=None,
+                        help="email address for error emails, defaults to "
+                             "'--email-address' value")
     parser.add_argument('--walltime-multiplier', dest='walltime_multiplier',
                         type=float, default=None,
-                        help="optional walltime multiplier to be applied to every job's walltime")
+                        help="optional walltime multiplier to be applied to "
+                             "every job's walltime")
     parser.add_argument('--write-file-summary', action='store_true',
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
-    parser.add_argument('--json', action='store_true',
-                        help="stdout written in json format")
+    parser.add_argument('--task-db', required=True,
+                        help='filename where civet_prepare will store the tasks'
+                             '. If the file exists, civet_prepare will '
+                             'add new tasks to the file.')
+    parser.add_argument('--log-level', '-l',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                        default='ERROR',
+                        help="Minimum logging level to display. [%(default)s]")
+
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
     parser.add_argument('pipeline_args', help="pipeline arguments",
                         nargs=argparse.REMAINDER)
-    parser.set_defaults(submit=True)
     parser.set_defaults(keep_temp=False)
-    parser.set_defaults(release_jobs=True)
     parser.set_defaults(force_conditional=False)
     args = parser.parse_args()
+
+    logging.basicConfig(level=getattr(logging, args.log_level.upper()))
+
+    logging.debug("Parsed arguments: {}".format(args))
 
     try:
         PL._parse_XML(args.pipeline[0], args.pipeline_args,
                       skip_validation=True,
-                      queue=args.queue, submit_jobs=args.submit,
+                      queue=args.queue,
                       search_path=os.environ.get('CIVET_PATH'),
                       user_override_file=args.option_file,
-                      keep_temp=args.keep_temp, release_jobs=args.release_jobs,
+                      keep_temp=args.keep_temp,
                       force_conditional_steps=args.force_conditional,
-                      delay=args.delay, email_address=args.email_address,
+                      email_address=args.email_address,
                       error_email_address=args.error_email_address,
                       walltime_multiplier=args.walltime_multiplier,
                       write_pipeline_files=args.write_file_summary)
     except civet_exceptions.ParseError as e:
-        print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
-        sys.exit(1)
+        logging.exception("Error parsing XML:  {}\n".format(e))
+        sys.exit("\nError parsing XML:  {}\n".format(e))
     except civet_exceptions.MissingFile as e:
-        print("\nPipeline Submission Error: ", e, "\n", file=sys.stderr)
+        logging.exception("Pipeline Error: {}".format(e))
+        print("\nPipeline Error: {}".format(e), "\n", file=sys.stderr)
         sys.exit(2)
 
-    if not args.json:
-        try:
-            PL.submit()
-        except civet_exceptions.ParseError as e:
-            message = "Pipeline Submission Error: " + str(e)
-            PL.abort_submit(message)
-    else:
-        try:
-            sub_info = PL.submit(silent=True)
-            print(json.dumps(sub_info, indent=2, sort_keys=True))
-        except civet_exceptions.ParseError as e:
-            message = "Pipeline Submission Error: " + str(e)
-            PL.abort_submit(message, json_output=True)
+    initialize_task_file(args.task_db)
+
+    try:
+        task_count = insert_tasks(PL, args.task_db)
+    except civet_exceptions.ParseError as e:
+        sys.exit("\nError parsing XML:  {}\n".format(e))
+
+
+    print("  {} tasks have been inserted into task file {}\n".format(
+        task_count, args.task_db))
+    print("    pipeline log directory: " + PL.log_dir + "\n")
+
+    print("    Pipeline can now be executed in managed mode with the "
+          "'civet_start_managed' command")
+    print("        civet_start_managed {}:".format(args.task_db))
+    print("        See civet_start_managed --help for program options")
 
 
 if __name__ == "__main__":

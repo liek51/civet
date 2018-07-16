@@ -38,17 +38,26 @@ class Step(object):
                                                    ET.tostring(child).rstrip(),
                                                    ", ".join(Step.validTags)))
                 raise ParseError(msg)
-            self.tools.append(PipelineTool(child, files))
+            self.tools.append(PipelineTool(child, files, e.attrib['name']))
 
-    def submit(self, name_prefix):
+    def submit(self, name_prefix, silent=False):
         invocation = 0
         job_ids = []
         for tool in self.tools:
             invocation += 1
-            name = '{0}_{1}_T{2}'.format(name_prefix, self.name, invocation)
-            job_id = tool.submit(name)
+            name = self.generate_name(name_prefix, invocation, tool.tool.name_from_pipeline)
+            job_id = tool.submit(name, silent)
             job_ids.append(job_id)
         return job_ids
+
+    def create_tasks(self, name_prefix, execution_mode):
+        invocation = 0
+        tasks = []
+        for tool in self.tools:
+            invocation += 1
+            name = self.generate_name(name_prefix, invocation, tool.tool.name_from_pipeline)
+            tasks.append(tool.create_task(name, execution_mode))
+        return tasks
 
     def collect_files_to_validate(self):
         fns = []
@@ -76,4 +85,7 @@ class Step(object):
                 if fn not in missing:
                     missing.append(fn)
         return missing
+
+    def generate_name(self, name_prefix, invocation, tool_name):
+        return '{}_{}_T{}_{}'.format(name_prefix, self.name, invocation, tool_name)
 

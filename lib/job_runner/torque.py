@@ -28,12 +28,14 @@ import textwrap
 import socket
 import stat
 import time
+import tempfile
 
 import pbs
 import PBSQuery
 
 from batch_job import *
 import common
+import civet_exceptions
 
 #make sure we look in the parent directory for modules when running as a script
 #so that we can find the utilities module
@@ -51,18 +53,25 @@ _SHELL_SCRIPT_DIR = "submitted_shell_scripts"
 
 _error_strings = None
 
-    
-def _connect_to_server(server):
+_MAX_RETRY = 4
+
+
+def _connect_to_server(server=None):
     """
         open a connection to a pbs_server at hostname server, if server is None 
         then connect to the default server.
         
         This function is shared between JobManager and TorqueJobRunner
     """
-    if server:
-        connection = pbs.pbs_connect(server)
-    else:
-        connection = pbs.pbs_connect(pbs.pbs_default())
+    server_name = server if server else pbs.pbs_default()
+
+    retry = 0
+    connection = pbs.pbs_connect(server_name)
+
+    while connection <= 0 and retry < _MAX_RETRY:
+        retry += 1
+        time.sleep(retry ** 2)
+        connection = pbs.pbs_connect(server_name)
         
     if connection <= 0:
         e, e_msg = pbs.error()
@@ -95,7 +104,22 @@ class JobManager(object):
     E_STATE = 15018
 
     def __init__(self, pbs_server=None):
-        self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
+        self.pbsq = None
+        retry = 0
+        cached_exception = None
+        while not self.pbsq and retry < _MAX_RETRY:
+            try:
+                self.pbsq = PBSQuery.PBSQuery(server=pbs_server)
+            except PBSQuery.PBSError as e:
+                cached_exception = e
+                retry += 1
+                time.sleep(retry ** 2)
+
+        if not self.pbsq:
+            if cached_exception:
+                raise civet_exceptions.CivetException(cached_exception.message)
+            else:
+                raise civet_exceptions.CivetException("Unable to instantiate PBSQuery instance, unknown error.")
         self.pbs_server = pbs_server
 
     def query_job(self, job_id):
@@ -111,7 +135,6 @@ class JobManager(object):
         # with some versions of Torque (Torque 4),  it is fairly common for
         # Torque to fail to establish a connection when making lots of
         # successive queries. If this happens,  wait and retry again
-        max_retry = 5
         retry = 0
         job_status = None
 
@@ -119,9 +142,10 @@ class JobManager(object):
             try:
                 job_status = self.pbsq.getjob(job_id)
             except PBSQuery.PBSError as e:
-                if retry < max_retry:
+                if retry < _MAX_RETRY:
                     retry += 1
-                    time.sleep(2 * retry)
+                    print("Retrying connection...", file=sys.stderr)
+                    time.sleep(retry ** 2)
                     continue
                 else:
                     # TODO use custom exception rather than PBSQuery.PBSError
@@ -248,8 +272,6 @@ class TorqueJobRunner(object):
                    submitted.  Useful for debugging pipelines.
     """
 
-    __MAX_RETRY = 3
-    
     # the template script, which will be customized for each job
     # $VAR will be substituted before job submission $$VAR will become $VAR
     # after substitution
@@ -315,8 +337,18 @@ class TorqueJobRunner(object):
 
         echo "Working directory: $$(pwd)" >> $LOG_DIR/$${PBS_JOBNAME}-run.log
 
-        # optional version command
-        $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1
+        # optional version command, $VERSION_CMDS might be replaced by a noop,
+        # so initialize VERSION_STATUS to 0
+        VERSION_STATUS=0
+        $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1; VERSION_STATUS=$$?
+
+        if [ $$VERSION_STATUS -ne 0 ]; then
+            MESSAGE="Command not run, version command returned non-zero value."
+            echo "$$MESSAGE  Aborting pipeline!" >&2
+            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
+            exit $$VERSION_STATUS
+        fi
 
         # command(s) passed into BatchJob:
         $CMD
@@ -328,7 +360,9 @@ class TorqueJobRunner(object):
         if [ $$CMD_EXIT_STATUS -ne 0 ]; then
             MESSAGE="Command returned non-zero value ($$CMD_EXIT_STATUS)."
             echo "$$MESSAGE  Aborting pipeline!" >&2
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
+            if $SEND_FAILURE_EMAIL; then
+                send_failure_email $EMAIL_LIST "$$MESSAGE"
+            fi
             check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
             exit $$CMD_EXIT_STATUS
         fi
@@ -338,7 +372,9 @@ class TorqueJobRunner(object):
             if grep -q "$$str" $LOG_DIR/$${PBS_JOBNAME}-err.log; then
                 MESSAGE="Found error string in stderr log."
                 echo "$$MESSAGE  Aborting pipeline!" >&2
-                send_failure_email $EMAIL_LIST "$$MESSAGE"
+                if $SEND_FAILURE_EMAIL; then
+                    send_failure_email $EMAIL_LIST "$$MESSAGE"
+                fi
                 check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
                 exit 1
             fi
@@ -382,10 +418,14 @@ class TorqueJobRunner(object):
                 MESSAGE="TORQUE Error ($${EXIT_STATUS})"
             fi
             send_failure_email $EMAIL_LIST "$$MESSAGE"
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         elif [ $$EXIT_STATUS -gt 0 ]; then
             # Job exited with non-zero, Job script should have already sent email
-            abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            if $ABORT; then
+                abort_pipeline $LOG_DIR $$EXIT_STATUS $$WALLTIME $$WALLTIME_REQUESTED
+            fi
         else
             # normal exit
 
@@ -451,9 +491,24 @@ class TorqueJobRunner(object):
             print("\nPIPELINE NOT SUBMITTED\n", file=sys.stderr)
             sys.exit(1)
 
+    @staticmethod
+    def __make_pbs_attrs(resources, attributes):
+        pbs_attrs = pbs.new_attropl(len(attributes) + len(resources))
 
+        # populate pbs_attrs
+        attr_idx = 0
+        for resource, val in resources.iteritems():
+            pbs_attrs[attr_idx].name = pbs.ATTR_l
+            pbs_attrs[attr_idx].resource = resource
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
 
+        for attribute, val in attributes.iteritems():
+            pbs_attrs[attr_idx].name = attribute
+            pbs_attrs[attr_idx].value = str(val)
+            attr_idx += 1
 
+        return pbs_attrs
 
     def queue_job(self, batch_job):
         """
@@ -478,17 +533,11 @@ class TorqueJobRunner(object):
             batch_job.stdout_path =  os.path.join(log_dir, batch_job.name + ".o")
         if not batch_job.stderr_path:
             batch_job.stderr_path = os.path.join(log_dir, batch_job.name + ".e")
-            
-        #create script directory if necessary
-        self._setup_script_dir(batch_job.email_list)
 
         #write batch script
-        filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "{0}.sh".format(batch_job.name))
-        with open(filename, "w") as script_file:
-            script_file.write(self.generate_script(batch_job))
+        filename = self.write_script(batch_job)
         
         if self.submit:
-            
             # build up our torque job attributes and resources
             job_attributes = {}
             job_resources = {}
@@ -502,7 +551,7 @@ class TorqueJobRunner(object):
             if batch_job.mem:
                 job_resources['mem'] = batch_job.mem
         
-            job_attributes[pbs.ATTR_v] = self._generate_env(batch_job)
+            job_attributes[pbs.ATTR_v] = self.generate_env(batch_job.workdir)
         
             if batch_job.name:
                 job_attributes[pbs.ATTR_N] = batch_job.name
@@ -564,9 +613,10 @@ class TorqueJobRunner(object):
                                     self.queue, None)
 
             # if pbs.pbs_submit failed, try again
-            while not job_id and retry < self.__MAX_RETRY:
-                time.sleep(retry * 2)
+            while not job_id and retry < _MAX_RETRY:
                 retry += 1
+                print("Retrying connection...", file=sys.stderr)
+                time.sleep(retry ** 2)
                 job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                         self.queue, None)
 
@@ -593,33 +643,154 @@ class TorqueJobRunner(object):
         self._id_log.flush()
         return job_id
 
-    def release_job(self, id, connection=None):
+    @staticmethod
+    def submit_managed_job(task, pbs_server=None):
+        """
+        submit a managed job from the civet_managed_batch_master program.  Not
+        passed as a BatchJob object, but simply as dictionary describing the
+        task
+        :param task: dictionary describing the task.
+        :return: batch job ID
+        """
+         # build up our torque job attributes and resources
+        job_attributes = {}
+        job_resources = {}
+
+        job_resources['nodes'] = "1:ppn={}".format(task['threads'])
+        job_resources['walltime'] = task['walltime']
+        job_resources['epilogue'] = task['epilogue_path']
+        if task['mem']:
+            job_resources['mem'] = task['mem']
+
+        job_attributes[pbs.ATTR_v] = task['batch_env']
+        job_attributes[pbs.ATTR_N] = task['name']
+        job_attributes[pbs.ATTR_o] = task['stdout_path']
+        job_attributes[pbs.ATTR_e] = task['stderr_path']
+        if task['mail_options']:
+            job_attributes[pbs.ATTR_m] = task['mail_options']
+        if task['email_list']:
+            job_attributes[pbs.ATTR_M] = task['email_list']
+
+        pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
+                                                     job_attributes)
+
+        queue = str(task['queue']) if task['queue'] else None
+        return TorqueJobRunner.submit_with_retry(pbs_attrs, str(task['script_path']),
+                                                 queue)
+
+    @staticmethod
+    def submit_simple_job(task, pbs_server=None):
+        """
+        Submit a basic batch job, without all the extra stuff used in a normal
+        civet job.  This is used to submit the civet_managed_batch_master
+        command.
+        :param task:
+        :param pbs_server:
+        :return:
+        """
+
+        # build up our torque job attributes and resources
+        job_attributes = {}
+        job_resources = {}
+
+        # we will require a number of threads, walltime, workdir, and name
+        # if workdir is not defined, use the current working directory
+        # if threads is not defined, use 1
+        workdir = task.get('workdir', os.getcwd())
+        job_resources['nodes'] = "1:ppn={}".format(task.get('threads', '1'))
+        job_resources['walltime'] = task['walltime']
+        job_attributes[pbs.ATTR_v] = TorqueJobRunner.generate_env(workdir)
+        job_attributes[pbs.ATTR_N] = task['name']
+
+        if 'mem' in task:
+            job_resources['mem'] = task['mem']
+        if 'stdout_path' in task:
+            job_attributes[pbs.ATTR_o] = task['stdout_path']
+        if 'stderr_path' in task:
+            job_attributes[pbs.ATTR_e] = task['stderr_path']
+        if 'mail_options' in task:
+            job_attributes[pbs.ATTR_m] = task['mail_options']
+        if 'email_list' in task:
+            job_attributes[pbs.ATTR_M] = task['email_list']
+
+
+        pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
+                                                     job_attributes)
+
+        queue = str(task['queue']) if task['queue'] else None
+
+        # generate a simple batch submission script to run our command
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write("#!/bin/bash\n")
+            tf.write("cd $PBS_O_WORKDIR\n")
+            tf.write(task['cmd'])
+            script_path = tf.name
+
+        job_id = TorqueJobRunner.submit_with_retry(pbs_attrs, script_path,
+                                                   queue)
+        os.unlink(script_path)
+
+        return job_id
+
+    @staticmethod
+    def submit_with_retry(pbs_attrs, script_path, queue, pbs_server=None):
+        # connect to pbs server
+        connection = _connect_to_server(pbs_server)
+
+        #submit job
+        retry = 0
+        job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                queue, None)
+
+        # if pbs.pbs_submit failed, try again
+        while not job_id and retry < _MAX_RETRY:
+            retry += 1
+            print("Retrying connection...", file=sys.stderr)
+            time.sleep(retry ** 2)
+            job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
+                                    queue, None)
+
+        pbs.pbs_disconnect(connection)
+
+        #check to see if the job was submitted successfully.
+        if not job_id:
+            e, e_msg = pbs.error()
+            # the batch system returned an error, throw exception
+            raise Exception("Error submitting job.  "
+                            "Torque error {0}: '{1}'".format(e, torque_strerror(e)))
+
+        return job_id
+
+    def release_job(self, job_id, connection=None):
         """
             Release a user hold from a held batch job.
             
+            :param job_id: job id to release (short form not allowed)
             :param id: job id to release (short form not allowed)
-            :param server: optional hostname for pbs_server
-            :param conn: optional connection to a pbs_server, if not passed
-                  release_job will establish a new connection
+            :param connection: optional connection to a pbs_server, if not
+                  passed release_job will establish a new connection
         """
-        if connection:
-            c = connection
-        else:
-            c = _connect_to_server(self._server)
+        c = connection if connection else _connect_to_server(self._server)
         
-        rval = pbs.pbs_rlsjob(c, id, 'u', '')
+        rval = pbs.pbs_rlsjob(c, job_id, 'u', '')
         
         if not connection:
             pbs.pbs_disconnect(c)
         
         if rval == 0:
-            self.held_jobs.remove(id)
+            self.held_jobs.remove(job_id)
         return rval
 
     def release_all(self):
         """
             Release all jobs in self.held_jobs list reusing connections.  
         """
+
+        # if we are 'faking' pipeline submission with civet_run -n, then there
+        # is nothing to do
+        if not self.submit:
+            return
+
         # copy the list of held jobs to iterate over because release_job mutates
         # self.held_jobs
         jobs = list(self.held_jobs)  
@@ -628,7 +799,19 @@ class TorqueJobRunner(object):
             self.release_job(id, connection)
         pbs.pbs_disconnect(connection)
 
-    def generate_script(self, batch_job):
+    def write_script(self, batch_job):
+
+        #create script directory if necessary
+        self._setup_script_dir(batch_job.email_list)
+
+        #write batch script
+        filename = os.path.join(self.log_dir, _SHELL_SCRIPT_DIR, "{0}.sh".format(batch_job.name))
+        with open(filename, "w") as script_file:
+            script_file.write(self.generate_script(batch_job))
+
+        return filename
+
+    def generate_script(self, batch_job, send_failure_email=True):
         """
             Generate a Torque batch script based on our template and return as
             a string.
@@ -642,7 +825,7 @@ class TorqueJobRunner(object):
         """  
         tokens = {}
         
-        tokens['PBS_DIRECTIVES'] = self._generate_directives(batch_job)
+        tokens['PBS_DIRECTIVES'] = self._generate_directives(batch_job, self.epilogue_filename)
         
         tokens['CMD'] = batch_job.cmd
         
@@ -700,6 +883,8 @@ class TorqueJobRunner(object):
         else:
             tokens['EMAIL_LIST'] = "${USER}"
 
+        tokens['SEND_FAILURE_EMAIL'] = 'true' if send_failure_email else 'false'
+
         if self.pipeline_path:
             tokens['PIPELINE_PATH'] = self.pipeline_path + ":"
         else:
@@ -721,21 +906,18 @@ class TorqueJobRunner(object):
         
         return string.Template(self.script_template).substitute(tokens)
 
-    def generate_epilogue(self, email_list):
+    def generate_epilogue(self, email_list, abort_on_failure=True):
 
         tokens = {}
         tokens['CIVET_VERSION'] = version.version_from_git()
         tokens['FUNCTIONS'] = os.path.join(common.CIVET_HOME, "lib/job_runner/functions.sh")
+        tokens['EMAIL_LIST'] = email_list if email_list else "${USER}"
+        tokens['ABORT'] = 'true' if abort_on_failure else 'false'
 
         if self.execution_log_dir:
             tokens['LOG_DIR'] = self.execution_log_dir
         else:
             tokens['LOG_DIR'] = self.log_dir
-
-        if email_list:
-            tokens['EMAIL_LIST'] = email_list
-        else:
-            tokens['EMAIL_LIST'] = "${USER}"
 
         if config.io_sync_sleep:
             tokens['SLEEP'] = (
@@ -749,7 +931,7 @@ class TorqueJobRunner(object):
         return string.Template(self.epilogue_template).substitute(tokens)
 
     @staticmethod
-    def _generate_env(batch_job):
+    def generate_env(workdir):
         """
             Generate a basic environment string to send along with the job. 
             
@@ -757,28 +939,27 @@ class TorqueJobRunner(object):
             job's environment when it executes. We define some of the typical 
             PBS_O_* variables
 
-            :param batch_job: BatchJob for which to generate environment
+            :param workdir: working directory of the job
         """
     
         # our script start with "cd $PBS_O_WORKDIR", make sure we set it
-        env = "PBS_O_WORKDIR={0}".format(batch_job.workdir)
+        env = "PBS_O_WORKDIR={0}".format(workdir)
         
         # define some of the other typical PBS_O_* environment variables
         # PBS_O_HOST is used to set default stdout/stderr paths, the rest probably
         # aren't necessary
         
         env = "".join([env, ",PBS_O_HOST=", socket.getfqdn()])
-        if os.environ['PATH']:
-            env = "".join([env, ",PBS_O_PATH=", os.environ['PATH']])
-        if os.environ['HOME']:
+        env = "".join([env, ",PBS_O_PATH=", os.environ['PATH']])
+        if 'HOME' in os.environ:
             env = "".join([env, ",PBS_O_HOME=", os.environ['HOME']])
-        if os.environ['LOGNAME']:
+        if 'LOGNAME' in os.environ:
             env = "".join([env, ",PBS_O_LOGNAME=", os.environ['LOGNAME']])
         
         return env
 
     @staticmethod
-    def _generate_directives(batch_job):
+    def _generate_directives(batch_job, epilogue_filename=None):
         """
             Generate #PBS directives to insert into batch script to facilitate
             rerunning individual scripts by hand (during development)
@@ -789,6 +970,9 @@ class TorqueJobRunner(object):
         """
         directives = ["#PBS -l walltime=" + batch_job.walltime,
                       "#PBS -l nodes={0}:ppn={1}".format(batch_job.nodes, batch_job.ppn)]
+
+        if epilogue_filename:
+            directives.append("#PBS -l epilogue={}".format(epilogue_filename))
         
         if batch_job.mem:
             directives.append("#PBS -l mem=" + batch_job.mem)
@@ -905,7 +1089,7 @@ class TorqueJobRunner(object):
 
         except OSError as exception:
             if exception.errno != errno.EEXIST:
-                print('Error while creating directory ' + path, file=sys.stderr)
+                print('Error while creating directory ' + script_dir, file=sys.stderr)
                 raise
 
 

@@ -24,44 +24,85 @@ import argparse
 import sys
 import os
 import inspect
+import json
+import shutil
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
-     sys.path.insert(0, lib_folder)
+    sys.path.insert(0, lib_folder)
 
 import job_runner.common
 import version
 import status
+from exec_modes import ToolExecModes
+
+FAILURE_STATUSES = [
+    'CANCELED',
+    'FAILED',
+    'TERMINATED',
+]
 
 
-def format_state(state):
-    if state == 'R':
-        return "Running"
-    elif state == 'Q':
-        return "Queued (eligible to run)"
-    elif state == 'H':
-        return "Queued (waiting on dependency)"
-    elif state == 'W':
-        return "Queued (with delayed start)"
-    
-    return state
+def recursive_remove(analysis_directory):
+    """
+    Recursively remove a directory specified by path, and all of the
+    contained files.
+    :param analysis_directory: The path to a directory to be removed.
+    :return: None
+    """
+    # I think this is important enough to put it out even if not in
+    # verbose mode...
+    print("Deleting failed analysis directory {}".format(
+        analysis_directory
+    ))
+    try:
+        shutil.rmtree(analysis_directory)
+    except Exception as e:
+        print('Failure removing analysis directory {}:\n    {}'.format(
+            analysis_directory, e), file=sys.stderr)
+
+
+def check_remove_run(dir_status, remove_statuses):
+    """
+    Check whether the user asked for analysis runs with this type of failure
+    should be removed (deleted from the disk).  This routine isn't called
+    at all if the user didn't request some form of failure to be removed.
+    :param dir_status: The dir_status object for this log directory.
+    :param remove_statuses: The list of failure types to be removed.
+    :return: None
+    """
+    # Check whether this is a failed job:
+    if dir_status.status in FAILURE_STATUSES:
+        # Now, check whether the user asked for failures of this type to be
+        # deleted
+        if 'ALL' in remove_statuses or dir_status.status in remove_statuses:
+            analysis_directory = os.path.dirname(
+                os.path.dirname(dir_status.log_dir))
+            recursive_remove(analysis_directory)
 
 
 def main():
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
-    parser.add_argument('-r', '--recursive', dest='recursive',
+    parser.add_argument('-r', '--recursive',
                         action='store_true', help="Run in recursive mode")
-    parser.add_argument('--verbose', dest='verbose', action='store_true',
+    parser.add_argument('--verbose', action='store_true',
                         help="More verbose output")
-    parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+    parser.add_argument('--json', action='store_true',
+                        help="Output status in JSON format. "
+                             "Overrides --verbose and --quiet options.")
+    parser.add_argument('-q', '--quiet', action='store_true',
                         help="Only produce output for failed runs")
-    parser.add_argument('-f', '--fast', dest='fast', action='store_true',
+    parser.add_argument('-f', '--fast', action='store_true',
                         help="Use 'fast' recursive mode (when recursively "
                              "looking for log directories, if we encounter a "
                              "subdirectory called 'logs' only descend into "
                              "that directory and ignore the others")
+    parser.add_argument('--remove-failed',
+                        help="Remove analysis directories for failed runs.\n"
+                             "    Specify comma-separated list of failed "
+                             "statuses or 'ALL'")
     parser.add_argument('-v', '--version', dest='print_version', action='store_true',
                         help='Print Civet version and exit')
     parser.add_argument('dirs', help="Log directory", nargs=argparse.REMAINDER)
@@ -74,8 +115,18 @@ def main():
     parser.set_defaults(recursive=True)
     args = parser.parse_args()
 
-    verbose = args.verbose
-    quiet = args.quiet
+    remove_statuses = []
+    if args.remove_failed is not None:
+        remove_statuses = [x.upper() for x in args.remove_failed.split(',')]
+
+    if not args.json:
+        verbose = args.verbose
+        quiet = args.quiet
+    else:
+        verbose = False
+        quiet = False
+
+    json_output = {}
 
     job_manager = status.PipelineStatus.get_job_manager()
 
@@ -83,12 +134,13 @@ def main():
         version.print_version_string_and_exit()
     
     if verbose and quiet:
-        print("--quiet (-q) and --verbose options are mutually exclusive\n", file=sys.stderr)
+        print("--quiet (-q) and --verbose options are mutually exclusive\n",
+              file=sys.stderr)
         return 1
     
     dir_list_arg = []
 
-    if len(args.dirs) > 0:
+    if args.dirs:
         dir_list_arg = args.dirs
     else:
         dir_list_arg.append('.')
@@ -101,7 +153,7 @@ def main():
             for root, dirs, files in os.walk(d, topdown=True, followlinks=True):
 
                 # in fast mode we short circuit the directory walk if we find
-                # a directory called 'logs' and we only decend into that dir
+                # a directory called 'logs' and we only descend into that dir
                 if args.fast and 'logs' in dirs:
                     dirs[:] = ['logs']
 
@@ -124,7 +176,6 @@ def main():
     else:
         all_log_dirs = dir_list_arg
 
-
     for log_dir in all_log_dirs:
     
         log_dir = os.path.abspath(log_dir)
@@ -138,6 +189,10 @@ def main():
             dir_status = status.PipelineStatus(log_dir, job_manager)
         except ValueError as e:
             print(e, file=sys.stderr)
+            continue
+
+        if args.json:
+            json_output[log_dir] = dir_status.to_json_serializable()
             continue
 
         if dir_status.status == "SUBMIT_ERROR":
@@ -162,7 +217,8 @@ def main():
                 print("\n{0} ({1}):".format(job.name, job.id))
 
                 if job.state == "CANCELED":
-                    print("\tJob canceled (state at cancel = {0})".format(format_state(job.state_at_cancel)))
+                    print("\tJob canceled (state at cancel = {0})".format(
+                        status.format_state(job.state_at_cancel)))
 
                 elif "FAILED" in job.state:
                     if job.exit_status == -11:
@@ -184,9 +240,11 @@ def main():
                     else:
                         print("\tWARNING=pbs_server returned no information for job {0}.  Job may have been deleted or it may have crashed.".format(job.name))
 
+                elif job.state == "MANAGED":
+                    print("\tcivet_status can only get information on complete jobs when pipeline is run in managed batch mode")
+
                 else:
                     print("\t" + status.format_state(job.state))
-
 
                 if job.walltime is not None:
                     print("\tWalltime={0}".format(job.walltime))
@@ -197,40 +255,55 @@ def main():
                 if job.state == 'H':
                     print("\tDepends on {}".format(job.dependencies))
 
+        if args.json:
+            # no need to print the pipeline summary when we are preparing
+            # JSON ouptut.  Just continue on to the next log directory
+            continue
+
         if verbose:
             print("\nSummary:")
-        elif not quiet or dir_status.status == 'FAILED' or dir_status.status == 'CANCELED' or 'TERMINATED' in dir_status.status:
+        elif not quiet or dir_status.status in FAILURE_STATUSES:
             print("{0}: {1}".format(log_dir, dir_status.status))
             
         if verbose or (not quiet and dir_status.complete_jobs_success != dir_status.total_jobs):
             print("\tTotal Pipeline Jobs: {0}".format(dir_status.total_jobs))
             print("\t\tCompleted Jobs (success): {0}".format(dir_status.complete_jobs_success))
             print("\t\tCompleted Jobs (with error): {0}".format(dir_status.complete_jobs_failure))
-            print("\t\tRunning Jobs: {0}".format(dir_status.running_jobs))
-            print("\t\tPending Jobs (waiting for compute resources): {0}".format(dir_status.queued_jobs))
-            print("\t\tPending Jobs (waiting on dependency): {0}".format(dir_status.held_jobs))
+            if dir_status.execution_mode == ToolExecModes.BATCH_MANAGED:
+                print("\t\tIncomplete jobs: {}".format(dir_status.managed_unknown))
+            else:
+                print("\t\tRunning Jobs: {0}".format(dir_status.running_jobs))
+                print("\t\tPending Jobs (waiting for compute resources): {0}".format(dir_status.queued_jobs))
+                print("\t\tPending Jobs (waiting on dependency): {0}".format(dir_status.held_jobs))
             if dir_status.delayed_jobs:
                 print("\t\tPending Jobs (delayed start): {0}".format(dir_status.delayed_jobs))
             if dir_status.canceled_jobs:
                 print("\t\tCanceled Jobs: {0}".format(dir_status.canceled_jobs))
             if dir_status.deleted_jobs:
-                #now that a status.txt file should get created for any job that
-                #runs, if we have any "unknown" jobs then it means they were
-                #probably deleted (qdel), other possibility is there was a
-                #node crash that took out the job
+                # now that a status.txt file should get created for any job that
+                # runs, if we have any "unknown" jobs then it means they were
+                # probably deleted (qdel), other possibility is there was a
+                # node crash that took out the job
                 print("\t\tDeleted Jobs: {0}".format(dir_status.deleted_jobs))
 
             if dir_status.complete_jobs_failure:
                 print_header = True
                 for job in dir_status.jobs:
-                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD'] and job.exit_status != 0 and job.exit_status != 271:
+                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD', 'MANAGED'] and job.exit_status != 0 and job.exit_status != 271:
                         if print_header:
                             print("\tFailed Jobs:")
                             print_header = False
                         print("\t\t{} ({}): exit_status={}".format(job.name, job.id, job.exit_status))
 
+        if remove_statuses:
+            check_remove_run(dir_status, remove_statuses)
+
         if verbose:
             print("\n\n")
+
+    if args.json:
+        print(json.dumps(json_output, indent=2, sort_keys=True))
+
 
 if __name__ == '__main__':
     main()

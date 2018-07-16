@@ -1,30 +1,55 @@
-#Civet XML Description
+# Civet XML Description
 This document describes the XML files used to define a Civet pipeline.
 
-##Pipeline XML Description
+## Pipeline XML Description
 Each pipeline will be controlled by an XML description file. The outer 
 tag is `<pipeline>`.
 
-###pipeline
+### pipeline
 
-    <pipeline name="..." tool_search_path="..." path="...">
+    <pipeline name="..." display_name=“...” tool_search_path="..." 
+      path="...">
+        <description />
         <file />
         <dir />
         <foreach />
         <step />
     </pipeline>
 
-A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and 
-`<step>` tags. The `tool_search_path` attribute is optional and it 
+The `name` attribute is required.  It shouldn’t contain any whitespace 
+or special characters. This is used as part of batch job names and log 
+file names. The `display_name` is optional. It is not used by the 
+Civet Pipeline Framework directly, but it can be used by other tools
+that auto-generate pipeline documentation or user interfaces. 
+The `tool_search_path` attribute is optional and it 
 contains a colon-delimited list of directories to search in when 
 looking for tool XML definition files. The search process is described 
 in more detail with the `<tool>` tag documentation. The optional path 
 attribute specifies path information to be prepended onto the user's
 PATH at runtime for each job submitted as part of the pipeline.
 
+A `<pipeline>` tag contains one or more each of `<file>`, `<dir>`, and 
+`<step>` tags. 
+
 ***
 
-###file
+### description
+
+The `<description>` tag is used to include information about the
+pipeline. Currently this tag is ignored by the Civet framework, and is 
+only used by our in-house Civet UI. Eventually the `civet_run` and 
+`civet_prepare` commands will have a `--description` opiton to show 
+a pipeline's description.
+
+The pipeline can only contain one set of `<description></description>` 
+tags. The description is unformatted plain text, paragraphs can be
+separated by blank lines. Extra whitespace will be ignored. Future 
+versions of Civet may implement markdown formatting.
+
+Note that the contents of the description tag must escape XML special
+characters such as < or >.
+
+### file
 
 The `<file>` tag specifies a file that is to be used in the pipeline. 
 The `filespec` (complete or partial file path) may be hardcoded in the 
@@ -33,7 +58,8 @@ also be based on another file's path; a number of different
 transformation options are available.
 
     <file id="..." input="..." temp="..." in_dir="..." filespec="..." />
-    <file id="..." input="..." temp="..." in_dir="..." parameter="..." />
+    <file id="..." input="..." temp="..." in_dir="..." parameter="..." 
+        description="..." />
     <file id="..." input="..." temp="..." in_dir="..." based_on="..."  
         pattern="..." replace="..." append="..."  
         datestamp_append="..." datestamp_prepend="..." />
@@ -94,8 +120,8 @@ specified in the `based_on` attribute. This capability is needed, for
 instance, using samtools, where some commands need the trailing ".bam" 
 stripped off of a file name.
 
-**Note:** when the `replace` attribute is combined with other attributes, 
-such as `append` or `datestamp_prepend`,bthe `replace` will be applied 
+**Note:** when the `replace` attribute is combined with other attributes,
+such as `append` or `datestamp_prepend`, the `replace` will be applied 
 first. 
 
 **Note:** when using `based_on` only the basename of the source file is 
@@ -103,15 +129,25 @@ used; the pipeline developer must use the  `in_dir` attribute if they
 want the file to be placed anywhere other than the default output 
 directory.
 
+The `description` attribute is optional, it can be used to provide a 
+description of the file.  Pipeline parameters (file tags with the 
+`parameter` attribute) should include a description, which may be used
+by tools to provide submission help for the pipeline.
+
+**Note:** while any <file> tag can include a `description`, it is most
+important to include descriptions for any file that is passed to the  
+pipeline as a parameter.
+
 ***
 
-###dir
+### dir
 
 The `<dir>` tag specifies a directory. As with files, a `dir` can 
 specify an input or output directory. The difference is that an output 
 directory need not exist on startup.
 
-    <dir id="..." input="..." filespec="..." in_dir="..." create="..."  
+    <dir id="..." input="..." filespec="..." in_dir="..." create="..." 
+        description="..."
         based_on="..." pattern="..." replace="..." append="..."  
         datestamp_prepend="..." datestamp_append="..."
         default_output="..." from_file="..."/>
@@ -123,7 +159,9 @@ The `<dir>` tag with the `default_output="True"` attribute specifies
 the default output directory for output files specified with a relative 
 path. It is also the location where various run logs are stored. If 
 no `<dir default_output="True" ...>` tags are specified, the current 
-working directory will be used.
+working directory will be used. Since the default output directory is 
+always processed first, the `default_output` attribute can not be
+combined with `in_dir`. 
 
 The `in_dir` attribute is optional. If present, it specifies the 
 directory id of the directory in which the file or directory exists or 
@@ -147,8 +185,9 @@ the parent directory of the file specified in the `from_file`
 attribute. Like a `file`, a `dir` can also be "based_on" another 
 file or directory.
 
-The `based_on`, `pattern`, `replace`, `append`, `datestamp_append` and 
-`datestamp_prepend` attributes are as documented for the `<file>` tag.
+The `based_on`, `pattern`, `replace`, `append`, `datestamp_append`, 
+`datestamp_prepend`, and `description` attributes are as documented for 
+the `<file>` tag.
 
 ***
 
@@ -177,18 +216,29 @@ when a `filelist` is the result of files generated in a `<foreach>` tag.
     <filelist id="..." in_dir="..." pattern="..." foreach_id="..."/>
 
 The pattern will be processed as if by Python's `re.match()` function,
-against all files in the specified directory.
+against all files in the specified directory. NOTE: this pattern is not 
+a shell wildcard expression. For example, the pattern attribute to match
+all .txt files would not be `"*.txt"`, but instead would be 
+`".*\.txt$"`.
 
 A `<filelist>` can also be passed as a parameter:
 
     <filelist id="..." parameter="..."/>
 
 The parameter attribute is, in this case, the list of files is passed 
-as a comma-delimited list on the command line. Paths are assumed to be 
-relative to the current working directory at time of job submission and 
-are converted into absolute paths.
+as a comma-delimited list on the `civet_run` _command line. Paths are 
+assumed to be relative to the current working directory at time of job 
+submission and are converted into absolute paths.
 
 The `<filelist>` tag can be used anywhere the `<file>` tag can be used.
+
+The `description` attribute can be used to include a text description
+of the parameter. 
+
+The optional attribute `paired` indicates that the file list contains 
+one or more pairs of files (there must be an even number of files in the 
+list. This is not currently enforced by the Civet framework, but 
+it is used by some pipeline interfaces. 
 
 ***
 
@@ -202,14 +252,15 @@ may be hardcoded in the tag, or it may be based on another string or
 pipeline parameter.
 
     <string id="..." value="..." />
-    <string id="..." parameter="..." />
+    <string id="..." parameter="..." description="..." />
     <string id="..." based_on="..." pattern="..." replace="..."  
         append="..." datestamp_append="..." datestamp_prepend="..." />
 
 A string `parameter`, `based_on`, `pattern`, `replace`, `append`, 
-`datestamp_append`, and `datestamp_prepend` are analogous to their 
-counterparts for the `<file>` tag. See the documentation for `<file>` 
-for more information. A string can be used anywhere a file can be used.
+`datestamp_append`, `datestamp_prepend`, and `description`  are 
+analogous to their counterparts for the `<file>` tag. See the 
+documentation for `<file>` for more information. A string can be used 
+anywhere a file can be used.
 
 *** 
   
@@ -232,59 +283,73 @@ effect on naming of batch jobs.
 The `<foreach>` tag allows a step to be run on several files in a 
 directory identified by the `dir` attribute.
 
-**IMPORTANT NOTE:** The "iterations" of the `<foreach>` processing may 
-happen in parallel. All processing of one set of files must be 
-completely independent of the processing of another set of files.
-
-The files to be used within this directory are identified by pattern 
-matching the file names, so it is useful primarily when the files are 
-systematically named, for instance, the output directory of an Illumina 
-sequencing run. When there are groups of files that need to be 
-processed together, for instance, paired fastq files, the tag allows 
-constructing the name of the other input or output files based on the 
-name of first one, again via regexp pattern matching / pattern 
-replacement. This could be used, for instance, in performing paired 
-end alignment. 
-
-**IMPORTANT NOTE:** Since Civet submits all of the jobs of a pipeline 
-up front, the files matched by a <foreach> tag must exist at pipeline 
-submission time. These could be 'stub' files that get overwritten by
-one or more steps of a pipeline, but the filenames need to at least 
-exist at submission time so Civet knows how many jobs to submit for the 
-`<foreach>`.
-
     <foreach id="..." dir="...">
-        <file id="..." pattern="..." />
+        <file id="..." pattern="..." from_file"..." />
         <related id="..." input="..." pattern="..." replace="..." />
         <step />
     </foreach>
 
-The `<foreach>` tag processes a set of files in the directory whose id 
-is specified in the `dir` attribute. The order in which the files are 
-processed is unspecified; in a cluster environment, they may be 
-processed in parallel. The `id` attribute is used to specify a 
+
+The set of files to iterate over are identified either by pattern 
+matching file names in a directory by specifying the `pattern` 
+attribute on the `<file>` tag, or by providing an input file that
+lists one file per line (either absolute paths, or relative to the 
+foreach dir) by specifying a file id using the `from_file` attribute. 
+
+Pattern matching is useful primarily when the files are systematically 
+named, for instance, the output directory of an Illumina sequencing 
+run. When there are groups of files that need to be processed together, 
+for instance, paired fastq files, the `related` tag allows constructing 
+the name of the other input or output files based on the name of the 
+matched file, again via regexp pattern matching / pattern replacement.
+This could be used, for instance, in performing paired end alignment. 
+
+**IMPORTANT NOTE:** Since Civet submits all of the jobs of a pipeline 
+up front, when using pattern matching, the files matched must exist at 
+pipeline submission time. These could be 'stub' files that get 
+overwritten by one or more steps of a pipeline, but the filenames need 
+to at least exist at submission time so Civet knows how many jobs to 
+submit for the `<foreach>`. If using the `from_file` attribute instead, 
+the file containing the list of files to iterate over must exist and 
+be populated at submission time, but the files do not need to exist
+prior to the foreach job being executed.
+
+The `<foreach>` tag typically processes a set of files in the directory 
+whose id is specified in the `dir` attribute. The order in which the 
+files are processed is unspecified; in a cluster environment, they may 
+be processed in parallel. The `id` attribute is used to specify a 
 `<filelist>` dependency on this `<foreach>` tag.
 
-The `<file>` tag's pattern attribute specifies the Python regex pattern
+The `<file>` tag's `pattern` attribute specifies the Python regex pattern
 that will be used to select files for processing; it will be applied to 
 each filename in the directory as if by using Python's `re.match()`
 function. There must be exactly one `<file>` tag in a `<foreach>` 
 construct. Any filenames that match will be processed. The tag's `id`
 attribute specifies the id this file will be referenced by in foreach 
 block. Since the files identified by this tag must exist to be pattern 
-matched, they are inherently classed as input files.
+matched at submission time, they are inherently classed as input files.
+
+The `<file>` tag's `in_dir` attribute specifies the Civet file id of a 
+text file containing all of the files that should be processed by 
+the foreach. The file contins one file path per line, either relative to
+the directory specified by the foreach `dir` attribute or absolute 
+paths. 
+
+**IMPORTANT NOTE:** The `in_dir` and `pattern` attributes are mutually 
+exclusive. One is required, but they can not be specified together.
 
 The `<related>` tag specifies another file, either an existing input 
 file or a file to be created. The `id` attribute specifies the id by 
 which this file will be referenced in the foreach block. The `input` 
 attribute's value shall be either True or False. Related files that
 are specified as input files will have a default directory of the 
-foreach directory, but this may be overridden by specifying the `indir` 
+foreach directory, but this may be overridden by specifying the `in_dir` 
 attribute of the `<related>` file. Output related files will default 
-to the pipeline output directory unless overridden with the `indir` 
-attribute. The `pattern` and `replace` attributes specify Python regex 
-patterns which are used to modify the controlling filename into the 
-desired filename as if by Python's `re.sub()` function.
+to the pipeline output directory unless overridden with the `in_dir` 
+attribute. Typically a related file's filename is similar to filename 
+of the `<file>` tag. The `pattern` and `replace` attributes specify 
+Python regex patterns which are used to modify the controlling filename 
+into the desired filename as if by Python's `re.sub()` function.
 
 The operations specified by the `<step>` tag(s) will be executed for 
 each set of files identified.
@@ -308,7 +373,7 @@ alignment for each pair:
     <foreach dir="indir">  
         <file id="end1" pattern=".*_R1_.*fastq" />  
         <related id="end2" input="True" pattern="(.*)_R1_(.*fastq)" replace="\1_R2_\2" />  
-        <related id="sam" input="True" pattern="(.*)_R1_(.*)fastq" replace="\1_\2sam" />  
+        <related id="sam" input="False" pattern="(.*)_R1_(.*)fastq" replace="\1_\2sam" />  
         <step name="Alignment">  
             <tool name="bwa" description="run_bwa.xml" input="end1,end2" output="sam" />  
         </step>  
@@ -386,7 +451,7 @@ The outer tag is `<tool>`.
 ###tool
 
     <tool name="..." tool_config_prefix="..." threads="..."  
-      walltime="..." error_strings="..." mem="..." exit_if_exists="."  
+      walltime="..." error_strings="..." mem="..." exit_if_exists="..."  
       exit_test_logic="..." path="...">  
         <description />  
         <option />  
@@ -447,7 +512,7 @@ optional.
 
 ***
 
-###description
+### description
 
 The `<description>` tag contains free form information about the tool.
 
@@ -455,7 +520,7 @@ The `<description>` tag contains free form information about the tool.
 
 ***
 
-###option
+### option
 The `<option>` tag is designed to specify command line parameters and 
 their values in a way that allows those values to be derived from a 
 file, from a tool attribute (the `threads` attribute), or as a hard 
@@ -464,22 +529,84 @@ described in a separate document.
 
 The information in the `<option>` tag is used in the `<command>` tag.
 
-    <option name="..." from_file="..." command_text="..." binary="..."  
-        threads="..." value="..." />
+    <option name="..." display_name="..." from_file="..." 
+        command_text="..." type="..." value="..." description="..."/>
 
-The `<option>` tag must contain the `name` attribute and one of the 
-`from_file`, `value`, or `threads` attributes. The `command_text` 
-attribute is combined with the `value` or `threads` attribute. See the 
-description of the `<command>` tag for how these are used. The `binary` 
-attribute is combined with the `value` attribute and indicates that the 
-value can be True or False. If the value is true, the `command_text` 
-will be used to substitute for the option in the command line. If the 
-value is false then an empty string will be substituted for the option 
-in the command line.
+The `<option>` tag must contain the `name` attribute. This is a unique 
+identifier and it is used to reference the option in the `<command>`.
+
+The `display_name` attribute is optional. It is used for our in-house 
+UI. Since option names do not allow whitespace, this lets the  pipeline
+developer specify a more readable option name for use in generating a 
+pipeline submission form.  If `display_name` is not present, the 
+Civet UI will display the `name` of the option.
+
+The `command_text` attribute is combined with the `value` of the 
+options. See the description of the `<command>` tag for how these are 
+used. 
+
+#### Option Types
+
+The `type` attribute can be one of `string`, `numeric`, `boolean`, 
+`select`, `threads`, `file`, or `directory`.
+
+#### boolean
+
+The `boolean` type is combined with the `value` attribute and 
+indicates that the value can be True or False. If the value is true, 
+the `command_text` will be used to substitute for the option in the 
+command line. If the value is false then an empty string will be 
+substituted for the option in the command line. 
+
+#### threads
+
+The `threads` type will automatically use the tool's `threads` 
+attribute as the option value. This allows you to specify the number of 
+threads in the command without having to enter the number of 
+threads in multiple places (the tool's `threads` attribute and in the
+`<command>`). It also allows the number of threads to be overridden.
+
+#### select
+
+If the option type is `select` then the `<option>` tag must contain one
+or more `<select>` tags. The default value for the option is specified 
+with the `default=“true”` attribute.  If the option value is passed
+through an options file, it must match one of these select options.
+
+    <option name="quals" type="select">
+        <select default=“true”>—phred33-quals</select>
+        <select>--phred64-quals</select>
+        <select>--solexa-quals</select>
+        <select>--integer-quals</select>
+    </option>
+
+**If an option only has a small number of valid values, it is highly 
+encouraged to use the select type. This allows our Civet UI to 
+render a drop down select input field, which is much less error 
+prone.**
+
+#### file and directory
+
+The `file` and `directory` option types indicate the value of the option 
+should be the path to an existing file or directory. 
+
+#### string (default type)
+
+If an option does not specify a type then it defaults to `string`. This 
+type allows arbitrary text to be entered as the value.
+
+#### numeric
+
+Currently the `string` and `numeric` types are equivalent, but Civet 
+or the Civet UI may implement type specific validation in the future.
+
+#### Option Names
 
 Option names are in the same name space as the tool file ids, but 
 separate from the name space of the invoking pipeline. All names in 
 the tool's option name / file id name space must be unique.
+
+#### from_file
 
 Occasionally, the value associated with an option is complex and is 
 derived from the processing being done in the pipeline. An example is 
@@ -488,11 +615,7 @@ the `from_file` attribute specifies the id of a file containing a
 single line which is used as the option's value instead of what would
 have been specified in the `command_text` and value attributes.
 
-The `threads` attribute, if set to "True", will use the tool's
-`threads` attribute as the option value. This allows you to specify the 
-number of threads in the command without having to enter the number of 
-threads in multiple places (the tool's `threads` attribute and in the
-`<commmand>`). It also allows the number of threads to be overridden. 
+#### tool_config_prefix
 
 For each option specified, if the `tool_config_prefix` attribute is 
 specified in the `<tool>` tag, option processing will search for an 

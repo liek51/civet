@@ -40,23 +40,33 @@ description. Command line parameters that are specified as an
 `<option>` can have their value pulled from a file, from a value given 
 in the XML, or from an override file.
 
-    <option name="..." from_file="..." command_text="..." binary="..." 
-        threads="..." value="..." />
+    <option name="..." from_file="..." command_text="..." type="..." 
+        value="..." />
 
-Note that the `from_file`, `threads`, and `value` attributes are 
-mutually exclusive and cannot be specified for the same option tag. 
-Currently options with the `from_file` attribute cannot be overridden; 
-only the `value` or `threads` attribute of an option can be overridden. 
-The `binary` attribute is combined with the `value` attribute and 
+Note that the `from_file` attribute can not be combined with the
+`type` or `value` attributes. Currently options with the `from_file` 
+attribute can not be overridden; only the `value` attribute 
+of an option can be overridden.
+
+The `type` attribute can be one of `string`, `numeric`, `boolean`, 
+`select`, or `threads`.
+
+The `boolean` type is combined with the `value` attribute and 
 indicates that the value can be True or False. If the value is true, 
 the `command_text` will be used to substitute for the option in the 
 command line. If the value is false then an empty string will be 
 substituted for the option in the command line.
 
-If a `threads="True"` option is overridden, then this may override the 
-Tool's `threads` attribute when submitting the job. The maximum value
-for any thread option will be used as the `ppn` value during job 
+If if the option type is `threads` then value is automatically taken 
+from the tool's `threads` attribute. If the option is overridden, then 
+this may override the tool's `threads` attribute when submitting the 
+job. If a tool has multiple `thread` options then the maximum value for 
+the different thread options will be used as the `ppn` value during job 
 submission.
+
+If the option type is `select` then the `<option>` tag must contain one
+or more `<select>` tags. The option `value` (default or overridden) 
+must match one of these select options.
 
 Option names are in the same namespace as tool file IDs, and can be 
 used in the command in the same way file IDs can.
@@ -66,6 +76,15 @@ For example, this option:
     <option name="foo" command_text="-f" value="10" />
 
 would substitute `-f 10` for `{foo}` in the generated command line.
+
+Select example:
+
+    <option name="quals" type="select" value="--phred33-quals">
+        <select>--phred33-quals</select>
+        <select>--phred64-quals</select>
+        <select>--solexa-quals</select>
+        <select>--integer-quals</select>
+    </option>
 
 ###Option File Format
 

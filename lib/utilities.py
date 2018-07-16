@@ -20,7 +20,6 @@ import errno
 import sys
 import unicodedata
 
-
 # in a couple cases we need to differentiate between a string and some other
 # iterable type.  We use isinstance to see if it is a string.
 # this is slightly different between python 2 and 3

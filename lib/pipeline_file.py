@@ -26,6 +26,7 @@ import civet_exceptions
 
 import pipeline_parse as PL
 
+
 class PipelineFile(object):
     """
     Initialize ourselves from an XML tag that represents some kind
@@ -36,10 +37,11 @@ class PipelineFile(object):
         'file',
         'filelist',
         'dir',
-        'string'
+        'string',
         ]
 
-    # these attributes are shared between file, dir, and string tags (but not filelist)
+    # these attributes are shared between file, dir, and string tags (but not
+    # filelist)
     valid_common_attributes = [
         'id',
         'append',
@@ -49,6 +51,8 @@ class PipelineFile(object):
         'based_on',
         'pattern',
         'replace',
+        'description',
+        'display_name'
     ]
 
     # attributes that only make sense for a file tag
@@ -58,6 +62,7 @@ class PipelineFile(object):
         'in_dir',
         'temp',
         'filespec',
+        'extensions'
         ]
 
     # attributes that only make sense for a dir tag
@@ -73,7 +78,7 @@ class PipelineFile(object):
 
     # attributes that only make sense for a string
     valid_string_attributes = [
-        'value'
+        'value',
     ]
 
     # valid attributes for a file list
@@ -83,7 +88,10 @@ class PipelineFile(object):
         'in_dir',
         'pattern',
         'parameter',
-        'input'
+        'input',
+        'description',
+        'paired',
+        'extensions'
     ]
 
     # Track the master output directory.
@@ -97,9 +105,11 @@ class PipelineFile(object):
                  pattern=None, replace=None, append=None,
                  datestamp_prepend=None, datestamp_append=None, in_dir=None,
                  is_parameter=False, is_list=False, from_file=None, create=True,
-                 default_output=False, foreach_dep=None):
+                 default_output=False, foreach_dep=None, description=None,
+                 paired=False):
         self.id = id
         self.path = path
+        self.cloud_path = None
         self._is_file = is_file
         self.is_temp = is_temp
         self.is_input = is_input
@@ -115,18 +125,17 @@ class PipelineFile(object):
         self.is_parameter = is_parameter
         self.is_list = is_list
         self.create = create
-        self._is_fixed_up = False
+        self.finalized = False
         self.creator_job = None
         self.consumer_jobs = []
         self.foreach_dep = foreach_dep
         self.from_file = from_file
+        self.description = description
+        self.paired = paired
 
         # need a separate variable for this because is_parameter gets reset to
         # False once the param number -> value conversion happens
-        if is_list and is_parameter:
-            self.list_from_param = True
-        else:
-            self.list_from_param = False
+        self.list_from_param = True if is_list and is_parameter else False
 
         if self.id in files:
             # We've already seen this file ID.
@@ -150,26 +159,258 @@ class PipelineFile(object):
         self.consumer_jobs.append(j)
 
     @staticmethod
-    def add_simple_dir(id, path, files):
-        PipelineFile(id, path, files, False, False, True, True, False,
-                     None, None, None, None, None, None, None, False, False,
-                     None)
+    def add_simple_dir(id, path, files, input=False):
+        PipelineFile(id, path, files, is_input=input, is_dir=True)
 
-    @staticmethod        
-    def parse_XML(e, files):
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DSP: {} DSA:{} inD:{}'.format(
+            self.id, self.path, self.is_input,
+            self.is_temp, self._is_dir, self.based_on, self.replace,
+            self.pattern, self.append, self.datestamp_prepend,
+            self.datestamp_append, self.in_dir)
+
+    def set_output_dir(self):
+        # Register at most one output directory
+        if PipelineFile.output_dir:
+            raise civet_exceptions.ParseError("ERROR: only one directory can "
+                                               "be marked as the default output directory")
+        PipelineFile.output_dir = self
+
+    @staticmethod
+    def get_output_dir():
+        assert PipelineFile.output_dir.finalized, "Using output_dir before fixed up..."
+        return PipelineFile.output_dir.path
+
+    @staticmethod
+    def register_params(params):
+        PipelineFile.params = params
+
+    @staticmethod
+    def finalize_file_paths(files):
+
+        circularity = []
+
+        # First off, fix the output dir if we have one; others
+        # may depend on it.
+        if not PipelineFile.output_dir:
+            # there is no output_dir specified in the pipeline
+            # create a default one in our current working directory
+            PipelineFile.output_dir = PipelineFile('default_output', '.', files,
+                                                   is_dir=True, is_input=False,
+                                                   default_output=True)
+
+        PipelineFile.output_dir.finalize_file(files, circularity)
+
+        if PipelineFile.output_dir.is_input or not PipelineFile.output_dir.create:
+            if not os.path.exists(PipelineFile.output_dir.path):
+                raise civet_exceptions.MissingFile("default output directory flagged as input must exist at pipeline submission time")
+        else:
+            utilities.make_sure_path_exists(PipelineFile.output_dir.path)
+
+        for fid in files:
+            files[fid].finalize_file(files, circularity)
+
+    def finalize_file(self, files, circularity):
+        """
+        Take care of all the inter-file dependencies such as
+        in_dir and based_on, as well as files passed in as
+        parameters.
+        """
+
+        if self.finalized:
+            return
+
+        # detect dependency cycles
+        if self in circularity:
+            msg = "File dependency cycle detected processing '{}' ".format(self.id)
+            for f in circularity:
+                msg = msg + "\n" + str(f)
+            msg = msg + "\n\n" + str(self)
+            raise civet_exceptions.ParseError(msg)
+
+        circularity.append(self)
+
+        self.parameter_to_path()
+        self.apply_from_file(files, circularity)
+        self.apply_based_on(files, circularity)
+        if not self.is_string:
+            # might raise civet_exception.ParseError
+            # to be handled at a higher level
+            self.apply_in_dir_and_create_temp(files, circularity)
+
+        try:
+            self.finalize_path()
+        except Exception as e:
+            # this was inserted to help diagnosing a programming error that
+            # caused finalize_path() to fail in certain edge cases.
+            # if it ever happens again this would provide useful information
+            # the user could share with us to help locate the problem
+            sys.exit("ERROR CALLING finalize_path() for {}:  {}\n"
+                     "{}".format(self.id, self.path, e))
+        self.finalized = True
+
+        # Make sure a directory exists, unless explicitly requested
+        # to not do so.
+        if self._is_dir and self.create:
+            utilities.make_sure_path_exists(self.path)
+
+        check = circularity.pop()
+
+        if check != self:
+            print("circularity.pop() failed!\ncheck:{}".format(check),
+                  file=sys.stderr)
+            print(" self:{}".format(self), file=sys.stderr)
+            sys.exit(1)
+
+    def finalize_path(self):
+        # Turn all the paths into an absolute path, so changes in
+        # working directory throughout the pipeline lifetime don't
+        # foul us up. First check if the file doesn't have a path at all
+        # i.e., just a filename.  If so, and it is not an input file,
+        # place it in the output directory.
+        if self.is_list and self.list_from_param:
+            # file list is passed as a parameter represented as a comma
+            # delimited list.
+            # convert paths in list to absolute path
+            file_list = []
+            for f in self.path.split(','):
+                file_list.append(os.path.abspath(f))
+            self.path = ','.join(file_list)
+        elif not self.is_string:
+            path = self.path
+            if (os.path.split(path)[0] == '' and (not self.is_input) and
+                self != PipelineFile.output_dir and
+                PipelineFile.output_dir and PipelineFile.output_dir.finalized):
+                path = os.path.join(PipelineFile.get_output_dir(), path)
+            self.path = os.path.abspath(path)
+
+    def parameter_to_path(self):
+        if self.is_parameter:
+            idx = self.path - 1
+            if idx >= len(PipelineFile.params):
+                msg = ("Parameter out of range, File: {} referenced parameter: "
+                       "{} (pipeline was passed {} parameters)").format(self.id,
+                                                                        self.path,
+                                                                        len(PipelineFile.params))
+                raise civet_exceptions.ParseError(msg)
+
+            self.path = PipelineFile.params[idx]
+            self.is_parameter = False
+
+    def apply_from_file(self, files, circularity):
+        if not self.from_file:
+            return
+            
+        if self.from_file not in files:
+            sys.exit("ERROR: 'from_file' specifies unknown file id: {0}".format(self.from_file))
+        ff = files[self.from_file]
+        ff.finalize_file(files, circularity)
+        
+        # get the directory from ff, strip any trailing slashes so
+        # os.path.dirname does what we want
+        self.path = os.path.dirname(ff.path.rstrip(os.path.sep))
+
+    def apply_based_on(self, files, circularity):
+        if not self.based_on:
+            return
+
+        # the based_on attribute is the fid of another file
+        # whose path we're going to mangle to create ours.
+
+        # make sure this references an actual file id:
+        if self.based_on not in files:
+            msg = "ERROR: '{}' is based on unknown file: '{}'".format(self.id,
+                                                                      self.based_on)
+            raise civet_exceptions.ParseError(msg)
+
+        bof = files[self.based_on]
+        bof.finalize_file(files, circularity)
+
+        if bof.list_from_param:
+            # based on a filelist passed as a parameter,  use first file in the
+            # filelist
+            path = bof.path.split(',')[0]
+        else:
+            path = bof.path
+
+        # strip out any path - based_on only operates on filenames
+        temp_path = os.path.basename(path)
+        now = datetime.datetime.now()
+
+        # do the replace first,  so there is no chance other based_on
+        # actions could affect the pattern matching
+        if self.replace:
+            temp_path = re.sub(self.pattern, self.replace, temp_path)
+
+        if self.append:
+            temp_path = temp_path + self.append
+        if self.datestamp_append:
+            temp_path += now.strftime(self.datestamp_append)
+        if self.datestamp_prepend:
+            temp_path = now.strftime(self.datestamp_prepend) + temp_path
+
+        self.path = temp_path
+
+    def apply_in_dir_and_create_temp(self, files, circularity):
+        ind = self.in_dir
+        if (not ind) and (not self.is_temp):
+            return
+
+        if ind:
+            if ind not in files:
+                msg = ("ERROR: while processing file with id: '{}', "
+                       "in_dir is unknown file: '{}'".format(self.id, ind))
+                raise civet_exceptions.ParseError(msg)
+            indf = files[ind]
+            indf.finalize_file(files, circularity)
+            my_dir = indf.path
+        else:
+            my_dir = PipelineFile.get_output_dir()
+
+        if self.is_list:
+            self.path = my_dir
+        elif self.is_temp and not self.path:
+            # If it is an anonymous temp, we'll create it in
+            # the proper directory
+            if self._is_dir:
+                self.path = tempfile.mkdtemp(dir=my_dir)
+            else:
+                t = tempfile.NamedTemporaryFile(dir=my_dir, delete=False)
+                name = t.name
+                t.close()
+                self.path = name
+            if ind:
+                self.in_dir = None
+        elif ind:
+            if os.path.isabs(self.path):
+                raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
+
+            # Apply the containing directory to the path...
+            self.path = os.path.join(my_dir, self.path)
+
+            # in_dir has been applied, clear it.
+            self.in_dir = None
+
+    @staticmethod
+    def parse_xml(e, files):
 
         import pipeline_parse as PL
 
         t = e.tag
         att = e.attrib
+
         # Make sure that we have the right kind of tag.
         if t not in PipelineFile.validFileTags:
-            msg = "{}: Invalid tag '{}:'\n\n{}".format(os.path.basename(PL.xmlfile), t, ET.tostring(e))
+            msg = "{}: Invalid tag '{}:'\n\n{}".format(os.path.basename(PL.xmlfile),
+                                                       t, ET.tostring(e))
             raise civet_exceptions.ParseError(msg)
 
         # id attribute is required, make sure this id is not already
         # in use, or, if it is, that it has the same attributes.
-        id = att['id']
+        file_id = att['id']
 
         # What kind of file...
         is_file = t == 'file'
@@ -189,6 +430,8 @@ class PipelineFile(object):
         default_output = False
         foreach_dep = None
         from_file = None
+        description = None
+        paired = False
 
 
         # make sure that the attributes make sense with the type of tag we are
@@ -313,6 +556,11 @@ class PipelineFile(object):
                     raise civet_exceptions.ParseError(msg)
                 append = att['append']
 
+        if 'description' in att:
+            description = att['description']
+
+        paired = att.get('paired', 'FALSE').upper() == 'TRUE'
+
         if is_list and not ((pattern and in_dir) or is_parameter):
             msg = ("'filelist' requires 'in_dir' and 'pattern' or it must be "
                    "passed as a parameter\n\n{}".format(ET.tostring(e)))
@@ -323,235 +571,19 @@ class PipelineFile(object):
             raise civet_exceptions.ParseError(msg)
 
         PipelineFile(
-            id, path, files, is_file, is_temp, is_input, is_dir,
+            file_id, path, files, is_file, is_temp, is_input, is_dir,
             is_string, based_on, pattern, replace, append,
             datestamp_prepend, datestamp_append, in_dir,
             is_parameter, is_list, from_file, create, default_output,
-            foreach_dep)
+            foreach_dep, description, paired)
 
-    def __repr__(self):
-        return self.__str__()
 
-    def __str__(self):
-        return 'File:{} p:{} iI:{} it:{} iD:{} BO:{} Rep:{} Pat:{} Ap:{} DS:{} DSA:{} inD:{}'.format(
-            self.id, self.path, self.is_input,
-            self.is_temp, self._is_dir, self.based_on, self.replace,
-            self.pattern, self.append, self.datestamp_prepend, self.datestamp_append,
-            self.in_dir)
+def sumarize_files(files, group):
+    import pipeline_parse as PL
+    PL.file_summary[group] = {}
 
-    def set_output_dir(self):
-        # Register at most one output directory
-        if PipelineFile.output_dir:
-            raise civet_exceptions.ParseError("ERROR: only one directory can "
-                                               "be marked as the default output directory")
-        PipelineFile.output_dir = self
+    for f in files:
+        PL.file_summary[group][f] = {'local path': files[f].path}
+        if files[f].creator_job:
+            PL.file_summary[group][f]['producer job'] = files[f].creator_job
 
-    @staticmethod
-    def get_output_dir():
-        assert PipelineFile.output_dir._is_fixed_up, "Using output_dir before fixed up..."
-        return PipelineFile.output_dir.path
-
-    @staticmethod
-    def register_params(params):
-        PipelineFile.params = params
-
-    @staticmethod
-    def fix_up_files(files):
-
-        circularity = []
-
-        # First off, fix up the output dir if we have one; others
-        # may depend on it.
-        if not PipelineFile.output_dir:
-            # there is no output_dir
-            # create a default one in our current working directory
-            PipelineFile.output_dir = PipelineFile('default_output', ".", files,
-                                                   False, False, False, True,
-                                                   False, None, None,
-                                                   None, None, None, None, None,
-                                                   False, False, None,
-                                                   create=True,
-                                                   default_output=True,
-                                                   foreach_dep=None)
-
-        PipelineFile.output_dir.fix_up_file(files, circularity)
-
-        for fid in files:
-            files[fid].fix_up_file(files, circularity)
-
-    def fix_up_file(self, files, circularity):
-        """
-        Take care of all the inter-file dependencies such as
-        in_dir and based_on, as well as files passed in as
-        parameters.
-        """
-        import pipeline_parse as PL
-
-        if self._is_fixed_up:
-            return
-
-        # detect dependency cycles
-        if self in circularity:
-            msg = "File dependency cycle detected processing '{}' ".format(self.id)
-            for f in circularity:
-                msg = msg + "\n" + str(f)
-            msg = msg + "\n\n" + str(self)
-            raise civet_exceptions.ParseError(msg)
-
-        circularity.append(self)
-
-        self.parameter_to_path()
-        self.apply_from_file(files, circularity)
-        self.apply_based_on(files, circularity)
-
-        if self is PipelineFile.output_dir:
-            if PL.directory_version == 2:
-                stamp_dir = "{0}-{1}".format(datetime.datetime.now().strftime('%Y%m%d_%H%M%S'), os.getpid())
-                self.path = os.path.join(self.path, stamp_dir)
-            utilities.make_sure_path_exists(self.path)
-        else:
-            # might raise civet_exception.ParseError, to be handled at a higher level
-            self.apply_in_dir_and_create_temp(files, circularity)
-
-        # Turn all the paths into an absolute path, so changes in
-        # working directory throughout the pipeline lifetime don't
-        # foul us up. First check if the file doesn't have a path at all
-        # i.e., just a filename.  If so, and it is not an input file,
-        # place it in the output directory.
-        if self.is_list:
-            if self.in_dir:
-                #filelist is comprised of a directory and pattern,
-                #convert the directory to an absolute path
-                self.in_dir = os.path.abspath(files[self.in_dir].path)
-            elif self.list_from_param:
-                # file list is passed as a parameter,  might be comma delimited
-                # convert paths in list to absolute path
-                file_list = []
-                for f in self.path.split(','):
-                    file_list.append(os.path.abspath(f))
-                self.path = ','.join(file_list)
-        elif not self.is_string:
-            path = self.path
-            if (os.path.split(path)[0] == '' and
-                (not self.is_input) and
-                self != PipelineFile.output_dir and
-                (PipelineFile.output_dir is None or
-                     PipelineFile.output_dir._is_fixed_up)):
-                path = os.path.join(PipelineFile.get_output_dir(), path)
-            self.path = os.path.abspath(path)
-
-        self._is_fixed_up = True
-
-        # Make sure a directory exists, unless explicitly requested
-        # to not do so.
-        if self._is_dir and self.create:
-            utilities.make_sure_path_exists(self.path)
-
-        check = circularity.pop()
-
-        if check != self:
-            print("circularity.pop() failed!\ncheck:{}".format(check),
-                  file=sys.stderr)
-            print(" self:{}".format(self), file=sys.stderr)
-            sys.exit(1)
-
-    def parameter_to_path(self):
-        if self.is_parameter:
-            idx = self.path - 1
-            params = PipelineFile.params
-            if idx >= len(params):
-                print("Too few parameters...\n"
-                      "    len(params): {}\n"
-                      "    File: {}\n"
-                      "    referenced parameter: {}"
-                      "".format(len(params), self.id, self.path),
-                                  file=sys.stderr)
-                sys.exit(1)
-            self.path = params[idx]
-            self.is_parameter = False
-
-    def apply_from_file(self, files, circularity):
-        if not self.from_file:
-            return
-            
-        if self.from_file not in files:
-            sys.exit("ERROR: 'from_file' specifies unknown file id: {0}".format(self.from_file))
-        ff = files[self.from_file]
-        ff.fix_up_file(files, circularity)
-        
-        # get the directory from ff, strip any trailing slashes so
-        # os.path.dirname does what we want
-        self.path = os.path.dirname(ff.path.rstrip(os.path.sep))
-
-    def apply_based_on(self, files, circularity):
-        bo = self.based_on
-        if not bo:
-            return
-        # the based_on attribute is the fid of another file
-        # whose path we're going to mangle to create ours.
-        #print >> sys.stderr, 'processing based_on\n', self
-        if bo not in files:
-            sys.exit('ERROR: based on unknown file: {0}'.format(bo))
-        bof = files[bo]
-        bof.fix_up_file(files, circularity)
-
-        if bof.list_from_param:
-            sys.exit("ERROR: file can not be based on a list: {0} is based on {1}".format(self.id, bo))
-
-        # strip out any path - based_on only operates on filenames
-        temp_path = os.path.basename(bof.path)
-        now = datetime.datetime.now()
-
-        # do the replace first,  so there is no chance other based_on
-        # actions could affect the pattern matching
-        if self.replace:
-            temp_path = re.sub(self.pattern, self.replace, temp_path)
-
-        if self.append:
-            temp_path = temp_path + self.append
-        if self.datestamp_append:
-            temp_path += now.strftime(self.datestamp_append)
-        if self.datestamp_prepend:
-            temp_path = now.strftime(self.datestamp_prepend) + temp_path
-
-        self.path = temp_path
-
-    def apply_in_dir_and_create_temp(self, files, circularity):
-        ind = self.in_dir
-        if (not ind) and (not self.is_temp):
-            return
-        dir = PipelineFile.get_output_dir()
-
-        utilities.make_sure_path_exists(dir)
-        if ind:
-            if ind not in files:
-                msg = ("ERROR: while processing file with id: '{}', "
-                       "in_dir is unknown file: '{}'".format(self.id, ind))
-                raise civet_exceptions.ParseError(msg)
-            indf = files[ind]
-            indf.fix_up_file(files, circularity)
-            dir = indf.path
-
-        if self.is_list:
-            return
-        elif self.is_temp and not self.path:
-            # If it is an anonymous temp, we'll create it in
-            # the proper directory
-            if self._is_dir:
-                self.path = tempfile.mkdtemp(dir=dir)
-            else:
-                t = tempfile.NamedTemporaryFile(dir=dir, delete=False)
-                name = t.name
-                t.close()
-                self.path = name
-            if ind:
-                self.in_dir = None
-        elif ind:
-            if os.path.isabs(self.path):
-                raise civet_exceptions.ParseError("Can't combine 'in_dir' attribute with absolute path")
-
-            # Apply the containing directory to the path...
-            self.path = os.path.join(dir, self.path)
-
-            # in_dir has been applied, clear it.
-            self.in_dir = None

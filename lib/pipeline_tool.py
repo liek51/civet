@@ -13,8 +13,9 @@
 
 from tool import *
 
+
 class PipelineTool(object):
-    def __init__(self, e, files):
+    def __init__(self, e, files, step_name):
         att = e.attrib
         input = []
         output = []
@@ -42,10 +43,14 @@ class PipelineTool(object):
         if 'tool_config_prefix' in att:
             tool_config_prefix = att['tool_config_prefix']
 
-        self.tool = Tool(self.description, input, output, files, self.name, walltime, tool_config_prefix)
+        self.tool = Tool(self.description, input, output, files, self.name,
+                         walltime, tool_config_prefix, step_name)
         
-    def submit(self, name_prefix):
-        return self.tool.submit(name_prefix)
+    def submit(self, name_prefix, silent=False):
+        return self.tool.submit(name_prefix, silent)
+
+    def create_task(self, task_id, execution_mode):
+        return self.tool.create_task(task_id, execution_mode)
 
     def collect_version_commands(self):
         return self.tool.collect_version_commands()

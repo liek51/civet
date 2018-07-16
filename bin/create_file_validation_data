@@ -103,8 +103,11 @@ def main():
     for fn in fns:
         files.add_file(fn)
 
-    # Add the appropriate version of python. files.add_file() detects
-    # duplicates, so we can do this arbitrarily without checking.
+    # In some cases, the civet infrastructure arbitrarily adds its own
+    # version of python. This isn't reflected in any of the XML files
+    # we just parsed, so we have to manually add it here.
+    # files.add_file() detects duplicates, so we can do this arbitrarily
+    # without checking.
     files.add_file(get_python_path())
 
     # Figure out whether we're creating a new file or merging with an

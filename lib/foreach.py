@@ -19,6 +19,7 @@ from step import *
 from pipeline_file import *
 from job_runner.torque import *
 from civet_exceptions import *
+from exec_modes import ToolExecModes
 
 
 
@@ -27,14 +28,18 @@ class ForEach(object):
         'file',
         'related',
         'step',
-        'id' ]
+    ]
+
+    valid_attributes = [
+        'dir',
+        'id'
+    ]
 
     # to prevent a user from flooding the system we impose a limit on the
     # maximum number of jobs that can be created by one foreach instance
-    # perhaps someday we will have a more sophisticated Civet run time and
-    # possibly have the ability to throttle job submission or bundle jobs
-    # together
-    MAX_JOBS = 1200
+    # when we are executing in the standard batch mode. Does not currently apply
+    # for managed or cloud run-times
+    MAX_JOBS = 500
 
     def __init__(self, e, pipeline_files):
         self.file = None
@@ -64,7 +69,7 @@ class ForEach(object):
             t = child.tag
             if t not in ForEach.validTags:
                 msg = ("Unknown tag in foreach '{}': \n\n"
-                       "{}\n\nValid Tags: '{}'".format(self.name,
+                       "{}\n\nValid Tags: '{}'".format(self.id,
                                                        ET.tostring(child).rstrip(),
                                                        ", ".join(ForEach.validTags)))
                 raise ParseError(msg)
@@ -88,7 +93,65 @@ class ForEach(object):
                    "'{}' is used as a file and related file id in '{}'.\n\n{}")
             raise ParseError(msg.format(self.file.id, self.id, ET.tostring(e)))
 
-    def submit(self, name_prefix):
+    def _get_files_from_file(self):
+        if self.file.from_file not in self.pipelineFiles:
+            raise ParseError("Foreach {} file tag references unknown file id ({})".format(self.id, self.file.from_file))
+
+        source_file = self.pipelineFiles[self.file.from_file]
+
+        if not source_file.is_input:
+            raise ParseError("Foreach {} file tag from_file({}) attribute must specify an input file".format(self.id, self.file.from_file))
+
+        try:
+            with open(source_file.path, 'r') as file_list:
+                foreach_files = file_list.readlines()
+                return [x.strip() for x in foreach_files]
+        except:
+            raise ParseError("Foreach {}: can't open from_file '{}'".format(self.id, self.file.from_file))
+
+    def _get_matched_files(self):
+        matched_files = []
+        all_files = os.listdir(self.pipelineFiles[self.dir].path)
+        for fn in all_files:
+            if self.file.pattern.match(fn):
+                matched_files.append(fn)
+
+        return matched_files
+
+    def _add_related_files(self, filename):
+
+        # cleanups are file ids we will clean up from the file namespace after
+        # we process this foreach file.
+        cleanups = []
+        files_to_delete = []
+
+        for related_id in self.relatedFiles:
+            rel = self.relatedFiles[related_id]
+            rfn = rel.pattern.sub(rel.replace, filename)
+            if rel.is_input and not rel.indir:
+                #if no dir we assume related input files are in the same
+                #directory as the foreach file it is related to
+                directory = self.dir
+            elif rel.indir:
+                directory = rel.indir
+            else:
+                #related file is an output file and indir not specified
+                #write it to the default output directory
+                directory = None
+            #TODO see comments for PipelineFile above. this is wicked ugly
+            PipelineFile(rel.id, rfn, self.pipelineFiles,  True, False,
+                         rel.is_input, False, False, None, None, None,
+                         None, None, None, directory, False, False, None)
+            cleanups.append(rel.id)
+            if rel.is_temp:
+                files_to_delete.append(rel.id)
+
+        # finalize all of the files we just added
+        PipelineFile.finalize_file_paths(self.pipelineFiles)
+
+        return cleanups, files_to_delete
+
+    def submit(self, name_prefix, silent=False):
 
         import pipeline_parse as PL
 
@@ -98,13 +161,14 @@ class ForEach(object):
             # register file and related in pipeline files list
             # submit step(s)
             # clean up files from pipeline files list
-        matched_files = []
+
+        if self.file.pattern:
+            matched_files = self._get_matched_files()
+        else:
+            matched_files = self._get_files_from_file()
+
         job_ids = []
         iteration = 0
-        all_files = os.listdir(self.pipelineFiles[self.dir].path)
-        for fn in all_files:
-            if self.file.pattern.match(fn):
-                matched_files.append(fn)
 
         # figure out if this foreach loop will exceed the limit
         total_jobs = 0
@@ -123,11 +187,17 @@ class ForEach(object):
             cleanups = []
             files_to_delete = []
             iteration_ids = []
+
+            if fn.startswith('/'):
+                in_dir = None
+            else:
+                in_dir = self.dir
+
             #TODO this is impossible to make sense of, create a static method in
             #PipelineFile that only takes the id, path, file list, and directory
             PipelineFile(self.file.id, fn, self.pipelineFiles, True, False,
                          True, False, False, None, None, None, None,
-                         None, None, self.dir, False, False, None)
+                         None, None, in_dir, False, False, None)
             cleanups.append(self.file.id)
 
             for id in self.relatedFiles:
@@ -150,7 +220,7 @@ class ForEach(object):
                 cleanups.append(rel.id)
                 if rel.is_temp:
                     files_to_delete.append(rel.id)
-            PipelineFile.fix_up_files(self.pipelineFiles)
+            PipelineFile.finalize_file_paths(self.pipelineFiles)
 
             step_iteration = 0
             for s in self.steps:
@@ -173,6 +243,7 @@ class ForEach(object):
                                name="{}-{}_temp_file_cleanup".format(name_prefix, iteration),
                                walltime="00:30:00",
                                email_list=PL.error_email_address)
+
                 try:
                     cleanup_job_id = PL.job_runner.queue_job(cleanup_job)
                 except Exception as e:
@@ -207,31 +278,145 @@ class ForEach(object):
             missing.append(self.pipelineFiles[self.dir].path)
         return missing
 
+    def create_tasks(self, name_prefix, execution_mode):
+        import pipeline_parse as PL
+
+        if self.file.pattern:
+            matched_files = self._get_matched_files()
+        else:
+            matched_files = self._get_files_from_file()
+        iteration = 0
+        tasks = []
+
+        for fn in matched_files:
+            iteration += 1
+            cleanups = []
+            files_to_delete = []
+            iteration_tasks = []
+
+            if fn.startswith('/'):
+                in_dir = None
+            else:
+                in_dir = self.dir
+
+            #TODO this is impossible to make sense of, create a static method in
+            #PipelineFile that only takes the id, path, file list, and directory
+            PipelineFile(self.file.id, fn, self.pipelineFiles, True, False,
+                         True, False, False, None, None, None, None,
+                         None, None, in_dir, False, False, None)
+            cleanups.append(self.file.id)
+
+            cleanups_new, files_to_delete_new = self._add_related_files(fn)
+            cleanups.extend(cleanups_new)
+            files_to_delete.extend(files_to_delete_new)
+
+            step_iteration = 0
+            for s in self.steps:
+                step_iteration += 1
+                step = Step(s, self.pipelineFiles)
+                prefix = "{}-{}_S{}".format(name_prefix, iteration, step_iteration)
+                for task in step.create_tasks(prefix, execution_mode):
+                    tasks.append(task)
+                    iteration_tasks.append(task['name'])
+
+            #create a task that deletes all of the temporary files
+            tmps = []
+            for fid in files_to_delete:
+                tmps.append(self.pipelineFiles[fid].path)
+
+            if tmps:
+                task = {}
+                cmd = 'rm -f ' + ' '.join(tmps)
+
+                task['name'] = "{}-{}_temp_file_cleanup".format(name_prefix, iteration)
+                task['command'] = cmd
+                task['mem'] = "1"
+                task['walltime'] = "00:30:00"
+                task['threads'] = 1
+
+                if execution_mode == ToolExecModes.CLOUD_GCP:
+                    # TODO
+                    raise Exception("TODO Finish foreach for cloud")
+
+                elif execution_mode == ToolExecModes.BATCH_MANAGED:
+
+                    task['dependencies'] = iteration_tasks
+
+                    # need to make a BatchJob object so we can generate a job
+                    # script for this
+                    batch_job = BatchJob(cmd,
+                                     workdir=PipelineFile.get_output_dir(),
+                                     ppn=task['threads'], walltime=task["walltime"],
+                                     name=task["name"],
+                                     mem=task["mem"],
+                                     email_list=PL.error_email_address,
+                                     stdout_path = os.path.join(PL.log_dir, task["name"] + ".o"),
+                                     stderr_path = os.path.join(PL.log_dir, task["name"] + ".e"))
+
+                    task['script_path'] = PL.job_runner.write_script(batch_job)
+                    task['stdout_path'] = batch_job.stdout_path
+                    task['stderr_path'] = batch_job.stderr_path
+                    task['epilogue_path'] = PL.job_runner.epilogue_filename
+                    task['batch_env'] = PL.job_runner.generate_env(PipelineFile.get_output_dir())
+                    task['email_list'] = PL.error_email_address
+                    task['mail_options'] = batch_job.mail_option
+                    task['module_files'] = []
+                    task['log_dir'] = PL.job_runner.execution_log_dir
+                    task['queue'] = PL.job_runner.queue
+
+                tasks.append(task)
+
+            # need to get rid of all the Files created for this foreach iteration
+            for fid in cleanups:
+                del self.pipelineFiles[fid]
+
+        PL.foreach_tasks[self.id] = [task['name'] for task in tasks]
+        return tasks
+
         
 class ForEachFile(object):
-    requiredAtts = [
+    valid_atts = [
         'id',
-        'pattern' ]
+        'pattern',
+        'from_file']
 
     def __init__(self, e, pipeline_files):
+
+        self.pattern = None
+        self.from_file = None
+
         atts = e.attrib
         for a in atts:
-            if a not in ForEachFile.requiredAtts:
+            if a not in ForEachFile.valid_atts:
                 msg = ("Unknown attribute in foreach file: {}\n\n"
                        "{}\n\nValid Attributes: '{}'".format(a, ET.tostring(e).rstrip(),
                                                              ", ".join(ForEachFile.requiredAtts)))
                 raise ParseError(msg)
-        for a in ForEachFile.requiredAtts:
-            if a not in atts:
-                msg = ("foreach file tag missing required attribute:\n\n{}\n\n"
-                       "Required Attributes: '{}'".format(ET.tostring(e).rstrip(),
-                                                          ", ".join(ForEachFile.requiredAtts)))
-                raise ParseError(msg)
+
+        if 'id' not in atts:
+            msg = ("foreach file tag missing required 'id' attribute:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
+        if 'pattern' not in atts and 'from_file' not in atts:
+            msg = ("foreach file tag must contain 'pattern' or 'from_file' attribute:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
+        if 'pattern' in atts and 'from_file' in atts:
+            msg = ("foreach file tag 'pattern' and 'from_file' attributes are mutually exclusive:\n\n{}"
+                   "\n\n".format(ET.tostring(e).rstrip()))
+            raise ParseError(msg)
+
         self.id = atts['id']
         if self.id in pipeline_files:
             msg = "a foreach file's id must not be the same as a pipeline file id: {}\n\n{}".format(self.id, ET.tostring(e))
             raise ParseError(msg)
-        self.pattern = re.compile(atts['pattern'])
+
+        if 'pattern' in atts:
+            self.pattern = re.compile(atts['pattern'])
+        elif 'from_file' in atts:
+            self.from_file = atts['from_file']
         
 
 class ForEachRelated(object):

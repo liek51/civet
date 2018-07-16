@@ -11,13 +11,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-class CivetException(Exception):
-    pass
-
-
-class ParseError(CivetException):
-    pass
-
-class MissingFile(CivetException):
-    pass
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()

@@ -84,6 +84,7 @@ class BatchJob(object):
         self.info = info
         self.tool_path = tool_path
 
+
     @property
     def workdir(self):
         return self._workdir
