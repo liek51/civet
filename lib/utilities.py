@@ -75,8 +75,12 @@ def cleanup_command_line():
         # create a unicode string with the decoded contents of the corresponding
         # sys.argv string
         decoded = unicode(sys.argv[i], sys.stdin.encoding)
-        for key,val in conversion_pairs.iteritems():
+        for key, val in conversion_pairs.iteritems():
             decoded = unicode.replace(decoded, unicodedata.lookup(key), val)
         # Should we be doing 'strict' here instead of 'replace'?
         sys.argv[i] = decoded.encode(sys.stdin.encoding, 'replace')
 
+
+def eval_boolean_string(s):
+    upper_string = s.upper()
+    return upper_string in ['TRUE', 'T', '1', 'Y', 'YES']

@@ -29,10 +29,10 @@ import os
 import inspect
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
-                              inspect.getfile( inspect.currentframe() ))[0]))
+                              inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
-     sys.path.insert(0, lib_folder)
+    sys.path.insert(0, lib_folder)
 
 import validity
 import version
@@ -43,30 +43,36 @@ def process_options():
 
     master = os.path.join(cmd_folder, '../data/master_file_list')
 
-    parser = argparse.ArgumentParser('Validate files', 
+    parser = argparse.ArgumentParser(
+        'Validate files',
         epilog='--generate overrides --add and --update; '
                '--add overrides --update')
-    parser.add_argument('-a', '--add', dest='add', action='store_true',
+    parser.add_argument(
+        '-a', '--add', dest='add', action='store_true',
         default=False, help='Add file info to an existing master list.')
-    parser.add_argument('-g', '--generate', dest='gen', action='store_true',
+    parser.add_argument(
+        '-g', '--generate', dest='gen', action='store_true',
         default=False, help='Generate a file containing info about the '
                             'current state of the files.')
-    parser.add_argument('-m', '--master-list', dest='master_list',
-                        default=master,
-                        help='Specify an alternate file when creating '
-                             'or modifying the master list.')
-    parser.add_argument('-u', '--update', dest='update', action='store_true',
+    parser.add_argument(
+        '-m', '--master-list', dest='master_list',
+        default=master,
+        help='Specify an alternate file when creating '
+             'or modifying the master list.')
+    parser.add_argument(
+        '-u', '--update', dest='update', action='store_true',
         default=False, help='Update master list, replacing current info.')
-    parser.add_argument('files', metavar='F', type=str, nargs='+',
-                        help='List of files to validate.')
+    parser.add_argument(
+        'files', metavar='F', type=str, nargs='+',
+        help='List of files to validate.')
     args = parser.parse_args()
     if args.gen and (args.add or args.update):
         args.add = False
-        arts.update = False
+        args.update = False
         print('--generate is incompatible with --add and --update.\n'
               'using --generate', file=sys.stderr)
     if args.add and args.update:
-        arts.update = False
+        args.update = False
         print('--add is incompatible with --update.\n'
               'using --add', file=sys.stderr)
 
@@ -74,50 +80,69 @@ def process_options():
 
     
 def main():
+    """
+    Depending on the command line arguments, create, update, merge, or use
+    a validation data file.
+    See the in line comments.
+    """
     version.parse_options()
 
     args = process_options()
 
+    # Create a FileCollection object and populate it from the command line file
+    # list.
     files = validity.FileCollection()
     for fn in args.files:
         files.add_file(fn)
 
     if args.gen:
-        #Generate list.
-        f = args.master_list
+        # Generate list.
         dir = os.path.split(args.master_list)[0]
         # If the master list path is just a file, directory is empty.
         if dir:
             try:
                 utilities.make_sure_path_exists(dir)
-            except:
+            except Exception:
+                # make_sure_path_exists() handles any expected exceptions,
+                # therefore if one propagates out, "something bad happened".
+                # Bail out.
                 print("Could not create directory " + dir +
                       "\nExiting...", file=sys.stderr)
                 sys.exit(1)
-        files.to_JSON_file(args.master_list)
+
+        files.to_json_file(args.master_list)
     else:
-        # We're going to do something requiring us to read the master list.
+        # We're going to do something requiring us to read the master list:
+        # - add,
+        # - update, or
+        # - actually perform a validation at pipeline run time.
         # Go ahead and do it.
         if not os.path.exists(args.master_list):
             if not (args.add or args.update):
+                # Can't actually do a validation if we cannot find the master
+                # file.  Exit with non-zero; this will cause the pipeline to
+                # fail.
                 print('Validation failure:\n'
-                      'master file list ' + args.master_list +
-                      ' does not exist.', file=sys.stderr)
+                      'master file list {} does not exist.'.format(
+                        args.master_list
+                      ), file=sys.stderr)
             sys.exit(2)
 
+        # Create a FileCollection object and populate it from the master file.
         m = validity.FileCollection()
-        m.from_JSON_file(args.master_list)
+        m.from_json_file(args.master_list)
 
         if args.add or args.update:
             # merge doesn't change existing entries unless update==True
             m.merge(files, args.update)
-            m.to_JSON_file(args.master_list)
+            m.to_json_file(args.master_list)
         else:
             # Validate files.
             validation_failures = files.validate(m)
             if validation_failures:
                 print(validation_failures, file=sys.stderr)
                 sys.exit(1)
-    sys.exit(0)
 
-main()
+
+if __name__ == '__main__':
+    main()
