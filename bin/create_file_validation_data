@@ -15,7 +15,7 @@
 from __future__ import print_function
 
 """
-This is an alternate maim program for the pipeline code, that 
+This is an alternate main program for the pipeline code, that 
 collects all the files that need to be validated, and 
 generates a json file with their data.  The created file
 must be moved into the proper directory for the pipeline's use
@@ -28,10 +28,10 @@ execution, and it must be run on one of the cluster's execution
 nodes, i.e., it must be run as part of a qsub'd job.
 """
 
+import subprocess
 import os
 import sys
 import inspect
-import subprocess
 
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
                               inspect.getfile(inspect.currentframe()))[0]))
@@ -50,8 +50,13 @@ def get_python_path():
     Civet itself uses python.  Detect whether the pipe already uses python, in
     which case we're all set.  If not, get the python indicated in the civet
     config file.
-    :return: The path to the python indicated in the civet config file, or None
-        if the pipeline already has loaded a python version.
+    :return:
+        - If there is a python module loaded, return 'python', and let the
+          validation code figure out which one by using the 'which' command.
+        - If there is no python module loaded, or if the command to check
+          failed, load the python version defined in the config file.
+        - If there is no python version in the config file, or if for any reason
+          the path is still null or None, return 'python'.
     """
     path = None
 
@@ -63,19 +68,15 @@ def get_python_path():
                          shell=True)
     out = p.communicate()[0]
 
-    if p.returncode != 0:
-        # That is unexpected, but try to continue on anyway.
-        # Return "python", and let the system use whatever python is in the
-        # path.
-        return 'python'
-
     # If there is already a python module loaded, we don't need to load an
     # arbitrary version. Just return "python". The validation code will find out
     # which one.
-    if 'python' in out:
+    if p.returncode == 0 and 'python' in out:
         return 'python'
 
-    # Load the python version contained in the config file.
+    # Either there is not a python module loaded, or the command to check that
+    # failed.  Either way, load the python version contained in the config file
+    # (if any).
     if config.civet_job_python_module:
         command = ("module load {}; "
                    "which python").format(config.civet_job_python_module)
@@ -86,7 +87,11 @@ def get_python_path():
         out = p.communicate()[0]
         if p.returncode == 0:
             path = out
-
+    # If the command to determine the default python failed, or returned a
+    # null string, or there was none defined in the config file, imply fall
+    # back to 'python'.
+    if not path:
+        path = 'python'
     return path
 
 
