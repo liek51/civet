@@ -88,7 +88,7 @@ def get_python_path():
         if p.returncode == 0:
             path = out
     # If the command to determine the default python failed, or returned a
-    # null string, or there was none defined in the config file, imply fall
+    # null string, or there was none defined in the config file, simply fall
     # back to 'python'.
     if not path:
         path = 'python'
