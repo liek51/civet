@@ -311,8 +311,8 @@ class FileCollection(object):
     def validate(self, master):
         msg = ''
         for fi in self.file_list:
-            if fi.name in master.fileDict:
-                m = master.fileDict[fi.name]
+            if fi.name in master.file_dict:
+                m = master.file_dict[fi.name]
                 if fi != m:
                     msg += 'Validation failure:' + fi.name + '\n'
                     msg += fi.compare_failures
