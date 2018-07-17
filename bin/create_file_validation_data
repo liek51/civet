@@ -12,9 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import print_function
 
 """
-This is an alternate maim program for the pipeline code, that 
+This is an alternate main program for the pipeline code, that 
 collects all the files that need to be validated, and 
 generates a json file with their data.  The created file
 must be moved into the proper directory for the pipeline's use
@@ -32,9 +33,8 @@ import os
 import sys
 import inspect
 
-
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(
-                              inspect.getfile( inspect.currentframe() ))[0]))
+                              inspect.getfile(inspect.currentframe()))[0]))
 lib_folder = os.path.join(cmd_folder, '../lib')
 if lib_folder not in sys.path:
     sys.path.insert(0, lib_folder)
@@ -46,10 +46,39 @@ import config
 
 
 def get_python_path():
+    """
+    Civet itself uses python.  Detect whether the pipe already uses python, in
+    which case we're all set.  If not, get the python indicated in the civet
+    config file.
+    :return:
+        - If there is a python module loaded, return 'python', and let the
+          validation code figure out which one by using the 'which' command.
+        - If there is no python module loaded, or if the command to check
+          failed, load the python version defined in the config file.
+        - If there is no python version in the config file, or if for any reason
+          the path is still null or None, return 'python'.
+    """
     path = None
+
+    # Determine whether there is already python in the loaded modules.
+    command = 'module list'
+    p = subprocess.Popen(command,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT,
+                         shell=True)
+    out = p.communicate()[0]
+
+    # If there is already a python module loaded, we don't need to load an
+    # arbitrary version. Just return "python". The validation code will find out
+    # which one.
+    if p.returncode == 0 and 'python' in out:
+        return 'python'
+
+    # Either there is not a python module loaded, or the command to check that
+    # failed.  Either way, load the python version contained in the config file
+    # (if any).
     if config.civet_job_python_module:
-        command = ("module unload python; "
-                   "module load {}; "
+        command = ("module load {}; "
                    "which python").format(config.civet_job_python_module)
         p = subprocess.Popen(command,
                              stdout=subprocess.PIPE,
@@ -58,11 +87,16 @@ def get_python_path():
         out = p.communicate()[0]
         if p.returncode == 0:
             path = out
-
+    # If the command to determine the default python failed, or returned a
+    # null string, or there was none defined in the config file, simply fall
+    # back to 'python'.
+    if not path:
+        path = 'python'
     return path
 
 
 def main():
+    # Handle the case of -v or --version
     version.parse_options()
     
     # Pass in dummy arguments to let the parse succeed.
@@ -77,21 +111,22 @@ def main():
     # In some cases, the civet infrastructure arbitrarily adds its own
     # version of python. This isn't reflected in any of the XML files
     # we just parsed, so we have to manually add it here.
-    python_path = get_python_path()
-    if python_path:
-        files.add_file(python_path)
+    # files.add_file() detects duplicates, so we can do this arbitrarily
+    # without checking.
+    files.add_file(get_python_path())
 
     # Figure out whether we're creating a new file or merging with an
     # an existing file.
     name = 'master_file_list'
     if os.path.exists(name):
-         print ('Existing file info file found.  '
-                'Merging with and updating existing contents.')
-         existing = validity.FileCollection()
-         existing.from_JSON_file(name)
-         existing.merge(files, True)
-         files = existing
-    files.to_JSON_file(name)
+        print ('Existing file info file found.  '
+               'Merging with and updating existing contents.')
+        existing = validity.FileCollection()
+        existing.from_json_file(name)
+        existing.merge(files, True)
+        files = existing
+    files.to_json_file(name)
+
 
 if __name__ == "__main__":
     main()

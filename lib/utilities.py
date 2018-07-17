@@ -82,6 +82,4 @@ def cleanup_command_line():
 
 def eval_boolean_string(s):
     upper_string = s.upper()
-    if upper_string in ['TRUE', 'T', '1', 'Y', 'YES']:
-        return True
-    return False
+    return upper_string in ['TRUE', 'T', '1', 'Y', 'YES']
