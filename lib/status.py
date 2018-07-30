@@ -47,44 +47,45 @@ class ManagedJobStatus(object):
     """
     def __init__(self, log_dir, name, batch_id, job_manager):
 
-        if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
-            status = job_runner.common.get_status_from_file(log_dir, name)
+        status = job_manager.query_job(str(batch_id))
 
-            # it's possible for there be an empty or incomplete -status.txt
-            # file if the compute node crashed with the job running
-            # this will be the state if we can't determine otherwise
-            self.state = "Deleted"
+        if status:
+            # always use information from Torque if the job still exists
+            # in the queue.
 
-            if 'canceled' in status or 'cancelled' in status:
-                self.state = "Deleted"
-            elif 'exit_status' in status:
-                if status['exit_status'] == '0':
+            if status.state == 'C':
+                if status.exit_status == '0':
                     self.state = "Complete"
                 else:
                     self.state = "Failed"
+            else:
+                # as far as we are concerned, if the job is in the queue and
+                # it's state is not C, we consider its state to be "Submitted"
+                # (could be in ['Q', 'H', 'W', 'R', 'E'])
+                self.state = "Submitted"
 
         else:
-            status = job_manager.query_job(str(batch_id))
+            # no information for job in the queue. check to see if there is
+            # a status file
 
-            if status:
-                if status.state == 'C':
+            if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
+                status = job_runner.common.get_status_from_file(log_dir, name)
 
-                    if status.exit_status == '0':
-                        # as of Civet 1.7.0 this shouldn't happen, even for
-                        # failed jobs. If this happens, then the job completed
-                        # without the job epilogue script running
+                # it's possible for there be an empty or incomplete -status.txt
+                # file if the compute node crashed with the job running
+                # this will be the state if we can't determine otherwise
+                self.state = "Deleted"
+
+                if 'canceled' in status or 'cancelled' in status:
+                    self.state = "Deleted"
+                elif 'exit_status' in status:
+                    if status['exit_status'] == '0':
                         self.state = "Complete"
                     else:
                         self.state = "Failed"
-                else:
-                    if status.state in ['Q', 'H', 'W', 'R']:
-                        self.state = "Submitted"
 
             else:
-                # no information for job, it wasn't in the queue and there is
-                # no status file, but civet_managed_batch_master things it is
-                # running. This should only happen if the node crashed or
-                # someone qdel'd the job while it was still queued
+                # no status file, job "disappeared" from queue
                 self.state = "Deleted"
 
 
