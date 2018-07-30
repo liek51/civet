@@ -103,45 +103,8 @@ class Status(object):
         self.name = name
         self.excution_mode = excution_mode
 
-        if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
-            status = job_runner.common.get_status_from_file(log_dir, name)
 
-            # with old versions of Civet, it's possible for there it be an empty
-            # or incomplete -status.txt file if the job was canceled/qdel'd
-            # this will be the state if we can't determine otherwise
-            self.state = "DELETED"
-
-            if 'canceled' in status or 'cancelled' in status:
-                self.state = "CANCELED"
-                self.state_at_cancel = format_state(status['state_at_cancel'])
-
-            elif id in running_at_cancel:
-                self.state = "CANCELED"
-                self.state_at_cancel = "Running"
-
-            elif 'exit_status' in status:
-                if status['exit_status'] == '0':
-                    self.state = "SUCCESS"
-                elif status['exit_status'] == '-11':
-                    self.state = "FAILED (WALLTIME)"
-                elif status['exit_status'] == '271':
-                    # running torque jobs canceled with qdel have exit status 271
-                    self.state = "CANCELED"
-                    self.state_at_cancel = "Running"
-                else:
-                    self.state = "FAILED"
-
-            self.exit_status = status.get('exit_status', None)
-            if self.exit_status:
-                # exit status is a string pulled from a file, turn it into an integer
-                self.exit_status = int(self.exit_status)
-
-            if 'walltime' in status:
-                self.walltime = status['walltime']
-            if 'requested_walltime' in status:
-                self.walltime_requested = status['requested_walltime']
-
-        elif self.excution_mode == ToolExecModes.BATCH_MANAGED:
+        if self.excution_mode == ToolExecModes.BATCH_MANAGED:
             # if the pipeline is being run in managed mode, there will be no
             # status information for unfinished jobs
             self.state = "MANAGED"
@@ -174,13 +137,53 @@ class Status(object):
                 self.exit_status = status.exit_status
                 if self.exit_status is not None:
                     self.exit_status = int(self.exit_status)
-            else:
-                # no information for job, as of Civet 1.7.0 this should only be
-                # possible if the job is deleted (cancelled because of failed
-                # dependency or qdel'd) prior to running or if the node it is
-                # running on crashes.  As of Civet 1.7.0 all jobs that enter the
-                # R state should produce a -status.txt file
-                self.state = "DELETED"
+
+            if not status or status.state == 'C':
+
+                if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
+                    status = job_runner.common.get_status_from_file(log_dir, name)
+
+                    # with old versions of Civet, it's possible for there it be an empty
+                    # or incomplete -status.txt file if the job was canceled/qdel'd
+                    # this will be the state if we can't determine otherwise
+                    self.state = "DELETED"
+
+                    if 'canceled' in status or 'cancelled' in status:
+                        self.state = "CANCELED"
+                        self.state_at_cancel = format_state(status['state_at_cancel'])
+
+                    elif id in running_at_cancel:
+                        self.state = "CANCELED"
+                        self.state_at_cancel = "Running"
+
+                    elif 'exit_status' in status:
+                        if status['exit_status'] == '0':
+                            self.state = "SUCCESS"
+                        elif status['exit_status'] == '-11':
+                            self.state = "FAILED (WALLTIME)"
+                        elif status['exit_status'] == '271':
+                            # running torque jobs canceled with qdel have exit status 271
+                            self.state = "CANCELED"
+                            self.state_at_cancel = "Running"
+                        else:
+                            self.state = "FAILED"
+
+                    self.exit_status = status.get('exit_status', None)
+                    if self.exit_status:
+                        # exit status is a string pulled from a file, turn it into an integer
+                        self.exit_status = int(self.exit_status)
+
+                    if 'walltime' in status:
+                        self.walltime = status['walltime']
+                    if 'requested_walltime' in status:
+                        self.walltime_requested = status['requested_walltime']
+
+                else:
+                    # no information for job, as of Civet 1.7.0 this should
+                    # only be possible if the job is deleted (cancelled because
+                    # of failed dependency or qdel'd) prior to running or if
+                    # the node it is running on crashes.
+                    self.state = "DELETED"
 
     def __str__(self):
         return "{}, {}, {}, {}".format(self.state, self.exit_status,
