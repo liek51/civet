@@ -28,6 +28,7 @@ from pipeline_file import *
 import config
 from exec_modes import ToolExecModes
 
+
 class Tool(object):
     # This script parses all of a tool definition.  Tools may be invoked
     # by the pipeline.
@@ -126,7 +127,6 @@ class Tool(object):
 
         if bad_inputs or bad_outputs:
             raise civet_exceptions.ParseError("\n".join(msg))
-
 
         # Verify that the tool definition file has not changed.
         self.verify_files.append(os.path.abspath(self.xml_file))
@@ -233,8 +233,6 @@ class Tool(object):
             self.path = ':'.join(path_dirs)
         else:
             self.path = None
-            
-
 
         # We can't process any non-file tags until all our files
         # are processed and fixed up.  Rather than force an order
@@ -276,7 +274,6 @@ class Tool(object):
                     raise civet_exceptions.ParseError("unkown file ID in exit_if_exists attribute: {}".format(f))
                 files_to_test.append(self.tool_files[f].path)
             self.exit_if_exists = files_to_test  
-                    
 
         # Now, finally, we can process the rest of the tags.
         for child in pending:
@@ -315,7 +312,7 @@ class Tool(object):
         # get current pipeline symbols
         import pipeline_parse as PL
 
-        #is the path absolute?
+        # is the path absolute?
         if os.path.isabs(xml_file):
             if os.path.exists(xml_file):
                 return xml_file
@@ -396,7 +393,7 @@ class Tool(object):
 
         if not self.skip_validation:
             verify_file_list = self.verify_files
-            #do we need to load a Python modulefile?
+            # do we need to load a Python modulefile?
             need_python = True
             for m in self.modules:
                 if m.startswith('python'):
@@ -421,8 +418,6 @@ class Tool(object):
         # Get the current symbols in the pipeline...
         import pipeline_parse as PL
 
-
-        # 
         # Now it is time to fix up the commands and write the script file.
         # We couldn't do this before, because we have to ensure that ALL 
         # pipeline XML processing is done. (Tempfiles need an output dir,
@@ -482,7 +477,6 @@ class Tool(object):
             job_id = PL.job_runner.queue_job(batch_job)
         except Exception as e:
             PL.abort_submit(e, PL.BATCH_ERROR)
-
 
         # Any files that we created and that will be passed to other jobs
         # need to be marked with our job id.  It is OK if we overwrite
