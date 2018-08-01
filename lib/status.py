@@ -151,7 +151,8 @@ class Status(object):
                         elif status['exit_status'] == '-11':
                             self.state = "FAILED (WALLTIME)"
                         elif status['exit_status'] == '271':
-                            # running torque jobs canceled with qdel have exit status 271
+                            # running torque jobs canceled with qdel have exit
+                            # status 271
                             self.state = "CANCELED"
                             self.state_at_cancel = "Running"
                         else:
