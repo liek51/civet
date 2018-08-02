@@ -74,10 +74,7 @@ class ManagedJobStatus(object):
             if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
                 status = job_runner.common.get_status_from_file(log_dir, name)
                 if 'exit_status' in status:
-                    if status['exit_status'] == '0':
-                        self.state = "Complete"
-                    else:
-                        self.state = "Failed"
+                    self.state = "Completed" if status['exit_status'] == '0' else "Failed"
 
 
 class Status(object):
@@ -135,7 +132,6 @@ class Status(object):
 
                 if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
                     status = job_runner.common.get_status_from_file(log_dir, name)
-
 
                     if 'canceled' in status or 'cancelled' in status:
                         self.state = "CANCELED"
