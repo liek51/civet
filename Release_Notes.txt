@@ -4,11 +4,13 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 
 
-Version 1.9.2
+Version 1.9.3
 -------------
 Bug Fixes
  - Fix bug warning user of duplicate option override if it appears in the
    pipeline option file and a user option file
+ - Fix potential civet_status race condition where it could try to read a
+   status.txt file before it is finished being written
 
 Version 1.9.2
 -------------
