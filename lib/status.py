@@ -80,7 +80,7 @@ class ManagedJobStatus(object):
 class Status(object):
 
     def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel,
-                 excution_mode):
+                 execution_mode):
 
         self.state = None
         self.exit_status = None
@@ -89,9 +89,9 @@ class Status(object):
         self.dependencies = deps
         self.id = id
         self.name = name
-        self.excution_mode = excution_mode
+        self.execution_mode = execution_mode
 
-        if self.excution_mode == ToolExecModes.BATCH_MANAGED:
+        if self.execution_mode == ToolExecModes.BATCH_MANAGED:
             # if the pipeline is being run in managed mode, there will be no
             # status information for unfinished jobs
             self.state = "MANAGED"
