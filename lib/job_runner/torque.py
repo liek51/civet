@@ -316,7 +316,7 @@ class TorqueJobRunner(object):
         cd $$PBS_O_WORKDIR
 
         # run validate command, if configured to do so
-        $$RUN_VALIDATION=$RUN_VALIDATION
+        RUN_VALIDATION=$RUN_VALIDATION
         if [ $$RUN_VALIDATION -ne 0 ]; then
             $CIVET_PYTHON $VALIDATE -m $MASTER_FILE $FILES_TO_CHECK >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             VALIDATION_STATUS=$$?
