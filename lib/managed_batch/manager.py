@@ -45,7 +45,7 @@ def submit_management_job(task_db, queue, walltime_hours, max_queued, log_level)
 
     task = {
 
-        'cmd': "\n".join(modules_commands) + "\n" + config.civet_pytho +
+        'cmd': "\n".join(modules_commands) + "\n" + config.civet_python +
                " " + manager_cmd +
                " {} --max-walltime {} --max-queued {} --log-level {} {}".format(
                    queue_string, walltime_hours, max_queued, log_level, task_db),
