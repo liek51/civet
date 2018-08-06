@@ -33,7 +33,7 @@ except Exception as e:
 
 __valid_params = [
     'io_sync_sleep',
-    'civet_job_python_module',
+    'civet_python',
     'purge_user_modulefiles',
     'default_modules'
 ]
@@ -51,9 +51,9 @@ if io_sync_sleep:
     if io_sync_sleep < 0:
         raise ValueError("io_sync_sleep must be an integer >= 0")
 
-civet_job_python_module = __config.get('civet_job_python_module')
-if civet_job_python_module and not isinstance(civet_job_python_module, utilities.string_types):
-        raise ValueError("civet_job_python_modules must be a string")
+civet_python = __config.get('civet_python', 'python')
+if not isinstance(civet_python, utilities.string_types):
+        raise ValueError("civet_python must be a string")
 
 purge_user_modulefiles = __config.get('purge_user_modulefiles')
 if purge_user_modulefiles:

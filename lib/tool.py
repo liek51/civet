@@ -393,15 +393,7 @@ class Tool(object):
 
         if not self.skip_validation:
             verify_file_list = self.verify_files
-            # do we need to load a Python modulefile?
-            need_python = True
-            for m in self.modules:
-                if m.startswith('python'):
-                    need_python = False
-            if need_python:
-                if config.civet_job_python_module:
-                    self.modules.append(config.civet_job_python_module)
-                verify_file_list.append('python')
+            verify_file_list.append(config.civet_python)
 
         return verify_file_list
 

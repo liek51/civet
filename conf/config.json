@@ -4,11 +4,9 @@
 // this file lists some settings that may need to be changed for your environment
 
 {
-    // The 'validate' and 'consolidate_logs.py' scripts require Python 2.7
-    // if your system requires a modulefile, for example - to load a compatible
-    // Python, specify that here.
-    // Default is not to load any module files for the validate or consolidate_logs.py scripts
-    "civet_job_python_module": "python/2.7.3",
+    // The 'validate' and 'consolidate_logs.py' scripts require require a
+    // compatible python interpreter (currently only tested with python 2.7)
+    "civet_python_path": "python",
 
     // this option causes jobs to sleep for the specified number of seconds
     // after they execute their command(s). This allows other nodes' NFS file
@@ -27,6 +25,6 @@
     "purge_user_modulefiles": true,
 
     // these are modules that are automatically loaded for every job, before
-    // any tool specific modules. This should be list
+    // any tool specific modules. This should be a list
     "default_modules": ["compsci"]
 }

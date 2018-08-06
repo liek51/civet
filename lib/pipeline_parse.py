@@ -547,7 +547,8 @@ class Pipeline(object):
                 cmd.append('rm -rf ' + ' '.join(tmps))
 
         # 2. Consolidate all the log files.
-        cmd.append('consolidate_logs.py {0}'.format(self._log_dir))
+        cmd.append('{} consolidate_logs.py {0}'.format(config.civet_python,
+                                                       self._log_dir))
         cmd.append('CONSOLIDATE_STATUS=$?')
 
         # consolidate log job needs to run last -- make sure it depends on all
@@ -566,17 +567,10 @@ class Pipeline(object):
 
         cmd = self._create_cleanup_cmd()
 
-        # do we need to load a modulefile to execute the Python consolidate log
-        # script ?
-        if config.civet_job_python_module:
-            mod_files = [config.civet_job_python_module]
-        else:
-            mod_files = []
-
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs,
                              name="rm_temps_consolidate_logs",
-                             modules=mod_files, mail_option='a',
+                             mail_option='a',
                              email_list=self.error_email_address,
                              walltime="00:10:00")
         try:
@@ -598,18 +592,18 @@ class Pipeline(object):
         task['walltime'] = "00:10:00"
         task['mem'] = 1
         task['threads'] = 1
-        task['module_files'] = [config.civet_job_python_module] if config.civet_job_python_module else []
 
         task['dependencies'] = [t['name'] for t in all_tasks]
 
         batch_job = BatchJob(cmd,
                              workdir=PipelineFile.get_output_dir(),
                              walltime=task['walltime'],
-                             modules=task['module_files'],
                              name=task['name'],
                              email_list=PL.error_email_address,
-                             stdout_path = os.path.join(PL.log_dir, task['name'] + ".o"),
-                             stderr_path = os.path.join(PL.log_dir, task['name'] + ".e"))
+                             stdout_path=os.path.join(PL.log_dir,
+                                                      task['name'] + ".o"),
+                             stderr_path=os.path.join(PL.log_dir,
+                                                      task['name'] + ".e"))
 
         task['script_path'] = PL.job_runner.write_script(batch_job)
         task['stdout_path'] = batch_job.stdout_path

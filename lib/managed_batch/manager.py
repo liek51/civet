@@ -42,12 +42,11 @@ def submit_management_job(task_db, queue, walltime_hours, max_queued, log_level)
     modules_commands = []
     if config.purge_user_modulefiles:
         modules_commands.append("module purge")
-    if config.civet_job_python_module:
-        modules_commands.append("module load " + config.civet_job_python_module)
 
     task = {
 
-        'cmd': "\n".join(modules_commands) + "\n" + manager_cmd +
+        'cmd': "\n".join(modules_commands) + "\n" + config.civet_pytho +
+               " " + manager_cmd +
                " {} --max-walltime {} --max-queued {} --log-level {} {}".format(
                    queue_string, walltime_hours, max_queued, log_level, task_db),
         'walltime': "{}:00:00".format(walltime_hours),
