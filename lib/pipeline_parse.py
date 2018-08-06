@@ -547,7 +547,7 @@ class Pipeline(object):
                 cmd.append('rm -rf ' + ' '.join(tmps))
 
         # 2. Consolidate all the log files.
-        cmd.append('{} consolidate_logs.py {0}'.format(config.civet_python,
+        cmd.append('{} consolidate_logs.py {}'.format(config.civet_python,
                                                        self._log_dir))
         cmd.append('CONSOLIDATE_STATUS=$?')
 
