@@ -465,8 +465,8 @@ class Pipeline(object):
         # The pipeline will use a single Torque job runner.
         if not self._job_runner:
             self._job_runner = TorqueJobRunner(self.log_dir,
-                                               validation_cmd="validate -m "
-                                               + self.validation_file,
+                                               validate=(not self.skip_validation),
+                                               validation_file=self.validation_file,
                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
                                                queue=self.queue, submit=self.submit_jobs,
                                                pipeline_path=self.path)

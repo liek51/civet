@@ -318,7 +318,7 @@ class TorqueJobRunner(object):
         # run validate command, if configured to do so
         $$RUN_VALIDATION=$RUN_VALIDATION
         if [ $$RUN_VALIDATION -ne 0 ]; then
-            $CIVET_PYTHON $VALIDATE -m $FILES_TO_CHECK >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            $CIVET_PYTHON $VALIDATE -m $MASTER_FILE $FILES_TO_CHECK >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             VALIDATION_STATUS=$$?
 
             if [ $$VALIDATION_STATUS -ne 0 ]; then
@@ -447,7 +447,7 @@ class TorqueJobRunner(object):
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validate=False,
                  execution_log_dir=None, queue=None, submit=True,
-                 epilogue_email=None, pipeline_path=None):
+                 epilogue_email=None, pipeline_path=None, validation_file=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validate = validate
@@ -462,6 +462,7 @@ class TorqueJobRunner(object):
         self.need_to_write_epilogue = True
         self.epilogue_email=epilogue_email
         self.pipeline_path = pipeline_path
+        self.validation_file = validation_file
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
@@ -845,6 +846,7 @@ class TorqueJobRunner(object):
         if self.validate and batch_job.files_to_check:
             tokens['RUN_VALIDATION'] = 1
             tokens['FILES_TO_CHECK'] = ' '.join(batch_job.files_to_check)
+            tokens['MASTER_LIST'] = self.validation_file
         else:
             tokens['RUN_VALIDATION'] = 0
             
