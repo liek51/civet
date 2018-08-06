@@ -846,9 +846,11 @@ class TorqueJobRunner(object):
         if self.validate and batch_job.files_to_check:
             tokens['RUN_VALIDATION'] = 1
             tokens['FILES_TO_CHECK'] = ' '.join(batch_job.files_to_check)
-            tokens['MASTER_LIST'] = self.validation_file
+            tokens['MASTER_FILE'] = self.validation_file
         else:
             tokens['RUN_VALIDATION'] = 0
+            tokens['FILES_TO_CHECK'] = ""
+            tokens['MASTER_FILE'] = ""
             
         if batch_job.version_cmds:
             tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmds))
