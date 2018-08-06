@@ -6,7 +6,7 @@
 {
     // The 'validate' and 'consolidate_logs.py' scripts require require a
     // compatible python interpreter (currently only tested with python 2.7)
-    "civet_python_path": "python",
+    "civet_python": "python",
 
     // this option causes jobs to sleep for the specified number of seconds
     // after they execute their command(s). This allows other nodes' NFS file
