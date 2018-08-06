@@ -33,15 +33,14 @@ import tempfile
 import pbs
 import PBSQuery
 
-from batch_job import *
-import common
-import civet_exceptions
-
 #make sure we look in the parent directory for modules when running as a script
 #so that we can find the utilities module
 if __name__ == "__main__":
     sys.path.insert(0, "..")
     
+from batch_job import *
+import common
+import civet_exceptions
 import utilities
 import version
 import config
