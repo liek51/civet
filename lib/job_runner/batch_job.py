@@ -39,7 +39,7 @@ class BatchJob(object):
     email_list        :  email address to send resource manager notification emails
     files_to_test: list of file paths to check for before running command. if 
                    the file test returns true, the job will exit with success 
-    file_test_logic : logic used to join file tests geneerated.  Can be "AND" or "OR"
+    file_test_logic : logic used to join file tests generated.  Can be "AND" or "OR"
     mem     : batch job mem attribute (in GB)
     date_time: datetime job will be eligible at this time (for delayed job)
     info: extra information recorded as comment in generated batch script
