@@ -265,7 +265,7 @@ class TorqueJobRunner(object):
         pipeline_bin : allow a pipeline bin directory to be added to PATH.
                        if set, this string will be prepended to the user's PATH 
                        at job run time
-        run_validation : if true, run validate command
+        validate : if true, run validate command
         queue  : optional Torque queue, if None Torque default will be used
         submit  :  If False job scripts will be generated but jobs will not be
                    submitted.  Useful for debugging pipelines.
@@ -315,7 +315,20 @@ class TorqueJobRunner(object):
         
         cd $$PBS_O_WORKDIR
 
-        $VALIDATION
+        # run validate command, if configured to do so
+        $$RUN_VALIDATION=$RUN_VALIDATION
+        if [ $$RUN_VALIDATION -ne 0 ]; then
+            {} validate -m {} >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            VALIDATION_STATUS=$$?
+
+            if [ $$VALIDATION_STATUS -ne 0 ]; then
+                MESSAGE="Command not run, pre-run validation returned non-zero value."
+                echo "$$MESSAGE  Aborting pipeline!" >&2
+                send_failure_email $EMAIL_LIST "$$MESSAGE"
+                check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
+                exit $$VALIDATION_STATUS
+            fi
+        fi
         
         $FILE_TEST
 
@@ -435,7 +448,7 @@ class TorqueJobRunner(object):
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validate=False,
                  execution_log_dir=None, queue=None, submit=True,
-                 epilogue_email=None, pipeline_path=None, python_path="python"):
+                 epilogue_email=None, pipeline_path=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validate = validate
@@ -829,21 +842,9 @@ class TorqueJobRunner(object):
                 tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)   
         
         if self.validate and batch_job.files_to_check:
-            tokens['VALIDATE'] = textwrap.dedent("""\
-            # run validate command
-            {} validate -m {} >> $LOG_DIR/$${PBS_JOBNAME}-run.log
-            VALIDATION_STATUS=$$?
-
-            if [ $$VALIDATION_STATUS -ne 0 ]; then
-                MESSAGE="Command not run, pre-run validation returned non-zero value."
-                echo "$$MESSAGE  Aborting pipeline!" >&2
-                send_failure_email $EMAIL_LIST "$$MESSAGE"
-                check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
-                exit $$VALIDATION_STATUS
-            fi""".format(self.python_path, batch_job.files_to_check))
-
+            tokens['RUN_VALIDATION'] = 1
         else:
-            tokens['VALIDATION'] = ""
+            tokens['RUN_VALIDATION'] = 0
             
         if batch_job.version_cmds:
             tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmds))
