@@ -452,7 +452,7 @@ class Tool(object):
 
         batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
-                             files_to_check=verify_file_list,
+                             files_to_validate=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules, depends_on=depends_on,
                              name=name_prefix, error_strings=self.error_strings,
@@ -571,7 +571,7 @@ class Tool(object):
 
             batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
-                             files_to_check=verify_file_list,
+                             files_to_validate=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules,
                              name=task_name, error_strings=self.error_strings,

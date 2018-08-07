@@ -318,7 +318,7 @@ class TorqueJobRunner(object):
         # run validate command, if configured to do so
         RUN_VALIDATION=$RUN_VALIDATION
         if [ $$RUN_VALIDATION -ne 0 ]; then
-            $CIVET_PYTHON $VALIDATE -m $MASTER_FILE $FILES_TO_CHECK >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            $CIVET_PYTHON $VALIDATE -m $MASTER_FILE $FILES_TO_VALIDATE >> $LOG_DIR/$${PBS_JOBNAME}-run.log
             VALIDATION_STATUS=$$?
 
             if [ $$VALIDATION_STATUS -ne 0 ]; then
@@ -843,13 +843,13 @@ class TorqueJobRunner(object):
         
         tokens['CIVET_PYTHON'] = config.civet_python
         tokens['VALIDATE'] = os.path.join(common.CIVET_HOME, "bin/validate")
-        if self.validate and batch_job.files_to_check:
+        if self.validate and batch_job.files_to_validate:
             tokens['RUN_VALIDATION'] = 1
-            tokens['FILES_TO_CHECK'] = ' '.join(batch_job.files_to_check)
+            tokens['FILES_TO_VALIDATE'] = ' '.join(batch_job.files_to_validate)
             tokens['MASTER_FILE'] = self.validation_file
         else:
             tokens['RUN_VALIDATION'] = 0
-            tokens['FILES_TO_CHECK'] = ""
+            tokens['FILES_TO_VALIDATE'] = ""
             tokens['MASTER_FILE'] = ""
             
         if batch_job.version_cmds:
