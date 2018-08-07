@@ -612,13 +612,13 @@ class Pipeline(object):
         task['stdout_path'] = batch_job.stdout_path
         task['stderr_path'] = batch_job.stderr_path
         task['epilogue_path'] = PL.job_runner.epilogue_filename
-        task['batch_env'] = PL.job_runner.generate_env(PipelineFile.get_output_dir())
+        task['batch_env'] = PL.job_runner.generate_env(
+            PipelineFile.get_output_dir())
         task['email_list'] = PL.error_email_address
         task['mail_options'] = batch_job.mail_option
         task['queue'] = PL.job_runner.queue
 
         return task
-
 
 
 sys.modules[__name__] = Pipeline()
