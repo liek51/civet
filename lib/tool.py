@@ -393,15 +393,7 @@ class Tool(object):
 
         if not self.skip_validation:
             verify_file_list = self.verify_files
-            # do we need to load a Python modulefile?
-            need_python = True
-            for m in self.modules:
-                if m.startswith('python'):
-                    need_python = False
-            if need_python:
-                if config.civet_job_python_module:
-                    self.modules.append(config.civet_job_python_module)
-                verify_file_list.append('python')
+            verify_file_list.append(config.civet_python)
 
         return verify_file_list
 
@@ -460,7 +452,7 @@ class Tool(object):
 
         batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
-                             files_to_check=verify_file_list,
+                             files_to_validate=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules, depends_on=depends_on,
                              name=name_prefix, error_strings=self.error_strings,
@@ -579,7 +571,7 @@ class Tool(object):
 
             batch_job = BatchJob(multi_command,
                              workdir=PipelineFile.get_output_dir(),
-                             files_to_check=verify_file_list,
+                             files_to_validate=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules,
                              name=task_name, error_strings=self.error_strings,

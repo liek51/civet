@@ -33,15 +33,14 @@ import tempfile
 import pbs
 import PBSQuery
 
-from batch_job import *
-import common
-import civet_exceptions
-
 #make sure we look in the parent directory for modules when running as a script
 #so that we can find the utilities module
 if __name__ == "__main__":
     sys.path.insert(0, "..")
     
+from batch_job import *
+import common
+import civet_exceptions
 import utilities
 import version
 import config
@@ -266,7 +265,7 @@ class TorqueJobRunner(object):
         pipeline_bin : allow a pipeline bin directory to be added to PATH.
                        if set, this string will be prepended to the user's PATH 
                        at job run time
-        validation_cmd : command used to validate files
+        validate : if true, run validate command
         queue  : optional Torque queue, if None Torque default will be used
         submit  :  If False job scripts will be generated but jobs will not be
                    submitted.  Useful for debugging pipelines.
@@ -316,21 +315,22 @@ class TorqueJobRunner(object):
         
         cd $$PBS_O_WORKDIR
 
+        # run validate command, if configured to do so
+        RUN_VALIDATION=$RUN_VALIDATION
+        if [ $$RUN_VALIDATION -ne 0 ]; then
+            $CIVET_PYTHON $VALIDATE -m $MASTER_FILE $FILES_TO_VALIDATE >> $LOG_DIR/$${PBS_JOBNAME}-run.log
+            VALIDATION_STATUS=$$?
 
-        # run any supplied pre-job check
-        $PRE_RUN_VALIDATION >> $LOG_DIR/$${PBS_JOBNAME}-run.log 
-        VALIDATION_STATUS=$$?
-        
-        if [ $$VALIDATION_STATUS -ne 0 ]; then
-            MESSAGE="Command not run, pre-run validation returned non-zero value."
-            echo "$$MESSAGE  Aborting pipeline!" >&2
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
-            check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
-            exit $$VALIDATION_STATUS
+            if [ $$VALIDATION_STATUS -ne 0 ]; then
+                MESSAGE="Command not run, pre-run validation returned non-zero value."
+                echo "$$MESSAGE  Aborting pipeline!" >&2
+                send_failure_email $EMAIL_LIST "$$MESSAGE"
+                check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
+                exit $$VALIDATION_STATUS
+            fi
         fi
         
         $FILE_TEST
-
 
         # all pre-job checks passed, run any supplied version commands and
         # execute command(s)
@@ -445,12 +445,12 @@ class TorqueJobRunner(object):
     """)
 
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
-                 pipeline_bin=None, validation_cmd="ls -l", 
+                 pipeline_bin=None, validate=False,
                  execution_log_dir=None, queue=None, submit=True,
-                 epilogue_email=None, pipeline_path=None):
+                 epilogue_email=None, pipeline_path=None, validation_file=None):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
-        self.validation_cmd = validation_cmd
+        self.validate = validate
         self.log_dir = os.path.abspath(log_dir)
         self._job_names = []
         self._server = pbs_server
@@ -462,6 +462,7 @@ class TorqueJobRunner(object):
         self.need_to_write_epilogue = True
         self.epilogue_email=epilogue_email
         self.pipeline_path = pipeline_path
+        self.validation_file = validation_file
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
@@ -826,7 +827,6 @@ class TorqueJobRunner(object):
         tokens = {}
         
         tokens['PBS_DIRECTIVES'] = self._generate_directives(batch_job, self.epilogue_filename)
-        
         tokens['CMD'] = batch_job.cmd
         
         if self.execution_log_dir:
@@ -841,11 +841,16 @@ class TorqueJobRunner(object):
             for module in batch_job.modules:
                 tokens['MODULE_LOAD_CMDS'] = "{0}module load {1}\n".format(tokens['MODULE_LOAD_CMDS'], module)   
         
-        if batch_job.files_to_check:
-            tokens['PRE_RUN_VALIDATION'] = "{0} {1}".format(self.validation_cmd, ' '.join(batch_job.files_to_check))
+        tokens['CIVET_PYTHON'] = config.civet_python
+        tokens['VALIDATE'] = os.path.join(common.CIVET_HOME, "bin/validate")
+        if self.validate and batch_job.files_to_validate:
+            tokens['RUN_VALIDATION'] = 1
+            tokens['FILES_TO_VALIDATE'] = ' '.join(batch_job.files_to_validate)
+            tokens['MASTER_FILE'] = self.validation_file
         else:
-            #force "empty" validation command to return 0
-            tokens['PRE_RUN_VALIDATION'] = "true"
+            tokens['RUN_VALIDATION'] = 0
+            tokens['FILES_TO_VALIDATE'] = ""
+            tokens['MASTER_FILE'] = ""
             
         if batch_job.version_cmds:
             tokens['VERSION_CMDS'] = "({0})".format('; '.join(batch_job.version_cmds))
@@ -1102,11 +1107,6 @@ def main():
     job_runner = TorqueJobRunner()
     jm = JobManager()
     modules = []
-
-    # python module isn't really needed for this test job, but this just makes
-    # sure that modulefiles are correctly included in the batch script
-    if config.civet_job_python_module:
-        modules = [config.civet_job_python_module]
 
     job = BatchJob("hostname", walltime="00:02:00", name="test_job", 
                    modules=modules, mail_option="be")

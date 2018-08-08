@@ -1,32 +1,36 @@
 // this config file is a modified form of json.
-// full line comments are allowed using //.  Inline comments are not allowed
+// full line comments are allowed using //.  Inline comments are NOT allowed
+// lines starting with // are stripped and then the remaining text is parsed as
+// JSON
 
 // this file lists some settings that may need to be changed for your environment
 
 {
-    // The 'validate' and 'consolidate_logs.py' scripts require Python 2.7
-    // if your system requires a modulefile, for example - to load a compatible
-    // Python, specify that here.
-    // Default is not to load any module files for the validate or consolidate_logs.py scripts
-    "civet_job_python_module": "python/2.7.3",
+    // The 'validate' and 'consolidate_logs.py' scripts require require a
+    // compatible python interpreter (currently only tested with python 2.7)
+    // you can put a full path here if your system has multiple version of
+    // Python installed
+    // default is "python" (use first python in PATH)
+    "civet_python": "python",
 
     // this option causes jobs to sleep for the specified number of seconds
     // after they execute their command(s). This allows other nodes' NFS file
     // attribute caches to become aware of the existence/size of files created
-    // by a job.
+    // by a job before dependencies are cleared.
     // Default is 0.
     "io_sync_sleep": 60,
 
-    // some users might load modulefiles in their .bashrc or other shell startup file
-    // these could conflict with modulefiles specified by the Civet tool.  This will
-    // cause a Civet job to purge all loaded modulefiles before loading those
-    // specified by the tool's configuration.  Turn this off if you don't use
-    // environment modules.
+    // some users might load modulefiles in their .bashrc or other shell
+    // startup file these could conflict with modulefiles specified by the
+    // Civet tool. This willcause a Civet job to purge all loaded modulefiles
+    // before loading those specified by the tool's configuration.  Turn this
+    // off if you don't use environment modules.
     // valid values: true or false
     // Default is false
     "purge_user_modulefiles": true,
 
     // these are modules that are automatically loaded for every job, before
-    // any tool specific modules. This should be list
+    // any tool specific modules. This should be a list
+    // default is an empty list []
     "default_modules": ["compsci"]
 }
