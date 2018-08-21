@@ -45,6 +45,8 @@ the included file named `LICENSE`.
 ## Installation
 
 ### Requirements
+Currently only the [TORQUE resource manager](https://github.com/adaptivecomputing/torque) is supported, but others may be supported in the future.
+
 Civet has been tested with several versions of Python 2.7.  It has not
 been tested with Python 3, but there are potentially some 
 incompatibilities. We have slowly been making the code more Python 3 
@@ -54,6 +56,9 @@ Civet uses one Python module that is not part of a standard Python 2.7
 installation: `pbs_python`. This module can be obtained from 
 https://oss.trac.surfsara.nl/pbs_python and must be installed before 
 you can use Civet.
+
+### Disclaimer
+We’ve provided this software with the hopes that others may find it useful. However, this software may not work, and in fact will likely not work as-is, if your HPC environment differs significantly from ours. 
 
 ### Installing Civet
 To install civet, you simply need a copy of the Civet source code. We 
