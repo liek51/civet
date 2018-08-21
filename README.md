@@ -3,9 +3,11 @@ A Lightweight Pipeline Framework
 
 ## Overview
 Civet is a framework for developing command line analysis pipelines 
-that execute through a batch system common on High Performance 
-Computing (HPC) systems.  Currently only the TORQUE resource manager is 
-supported, but others may be supported in the future.
+that execute through a batch system on High Performance 
+Computing (HPC) systems.  Currently only the TORQUE* resource manager is 
+supported, but others may be supported in the future. 
+
+***Note** As of June 2018, new releases of TORQUE are no longer open-source software and are available only for purchase from Adaptive Computing. 
 
 A Civet pipeline is defined by an XML file that describes the files 
 operated on by the pipeline (the files can be input from the user, 
