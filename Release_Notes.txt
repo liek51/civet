@@ -11,6 +11,11 @@ Bug Fixes
    pipeline option file and a user option file
  - Fix potential civet_status race condition where it could try to read a
    status.txt file before it is finished being written
+ - Use full path to python for validation and consolidate log scripts,
+   path is set in config file. If not set, default to python in path. This
+   allows a tool to load a Python modulefile that is not compatible with
+   these scripts.
+
 
 Version 1.9.2
 -------------
@@ -30,6 +35,7 @@ Features
    This can also be used to provide user hints in a pipeline submission UI.
    Format should be a JSON list of extensions, e.g., '[".fq" ,".fq.gz"]'
 
+
 Version 1.9.1
 -------------
 Bug Fixes
@@ -47,6 +53,7 @@ Features
    previously user was not warned and previous value was overwritten
  - added "from_file" attribute for foreach <file> tag -- can read files from
    text file rather than matching filenames in a directory to a pattern
+
 
 Version 1.9.0
 -------------
