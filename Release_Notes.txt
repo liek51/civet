@@ -10,7 +10,8 @@ Bug Fixes
  - Fix bug warning user of duplicate option override if it appears in the
    pipeline option file and a user option file
  - Fix potential civet_status race condition where it could try to read a
-   status.txt file before it is finished being written
+   status.txt file before it is finished being written. Race condition could
+   also cause the civet_managed_batch_master process to terminate.
  - Use full path to python for validation and consolidate log scripts,
    path is set in config file. If not set, default to python in path. This
    allows a tool to load a Python modulefile that is not compatible with
