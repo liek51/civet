@@ -69,6 +69,8 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
+    parser.add_argument('--no-email', action='store_true',
+                        help="suppress email messages sent by Civet")
     parser.add_argument('--json', action='store_true',
                         help="stdout written in json format")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
@@ -86,6 +88,7 @@ def main():
                       queue=args.queue, submit_jobs=args.submit,
                       search_path=os.environ.get('CIVET_PATH'),
                       user_override_file=args.option_file,
+                      completion_mail=not args.no_email,
                       keep_temp=args.keep_temp, release_jobs=args.release_jobs,
                       force_conditional_steps=args.force_conditional,
                       delay=args.delay, email_address=args.email_address,

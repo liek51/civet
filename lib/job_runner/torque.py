@@ -254,21 +254,23 @@ class TorqueJobRunner(object):
         submitting jobs to a TORQUE cluster.
        
         attributes
-        held_jobs  : a list of job_id,server pairs that were submitted with a 
-                     user hold
-        submit_with_hold : if True any root job (job with no dependency) will be
-                           submitted with a user hold
-        log_dir : directory to store log files, will be created if it doesn't 
-                  exist
-        execution_log_dir : log directory on execution host if different 
-                            than log_dir
-        pipeline_bin : allow a pipeline bin directory to be added to PATH.
-                       if set, this string will be prepended to the user's PATH 
-                       at job run time
-        validate : if true, run validate command
-        queue  : optional Torque queue, if None Torque default will be used
-        submit  :  If False job scripts will be generated but jobs will not be
-                   submitted.  Useful for debugging pipelines.
+        held_jobs: a list of job_id,server pairs that were submitted with a
+            user hold
+        submit_with_hold: if True any root job (job with no dependency) will be
+            submitted with a user hold
+        log_dir: directory to store log files, will be created if it doesn't
+            exist
+        execution_log_dir: log directory on execution host if different
+            than log_dir
+        pipeline_bin: allow a pipeline bin directory to be added to PATH.
+            if set, this string will be prepended to the user's PATH
+            at job run time
+        validate: if true, run validate command
+        queue: optional Torque queue, if None Torque default will be used
+        submit:  If False job scripts will be generated but jobs will not be
+            submitted.  Useful for debugging pipelines.
+        send_failure_email: if true, send user email if a pipeline tool exits
+            with non zero value and aborts the pipeline
     """
 
     # the template script, which will be customized for each job
@@ -447,7 +449,8 @@ class TorqueJobRunner(object):
     def __init__(self, log_dir="log", submit_with_hold=True, pbs_server=None, 
                  pipeline_bin=None, validate=False,
                  execution_log_dir=None, queue=None, submit=True,
-                 epilogue_email=None, pipeline_path=None, validation_file=None):
+                 epilogue_email=None, pipeline_path=None, validation_file=None,
+                 send_failure_email=True):
         self.held_jobs = []
         self.submit_with_hold = submit_with_hold
         self.validate = validate
@@ -463,6 +466,7 @@ class TorqueJobRunner(object):
         self.epilogue_email=epilogue_email
         self.pipeline_path = pipeline_path
         self.validation_file = validation_file
+        self.send_failure_email = send_failure_email
 
         if self.execution_log_dir:
             self.execution_log_dir = os.path.abspath(self.execution_log_dir)
@@ -812,7 +816,7 @@ class TorqueJobRunner(object):
 
         return filename
 
-    def generate_script(self, batch_job, send_failure_email=True):
+    def generate_script(self, batch_job):
         """
             Generate a Torque batch script based on our template and return as
             a string.
@@ -888,7 +892,7 @@ class TorqueJobRunner(object):
         else:
             tokens['EMAIL_LIST'] = "${USER}"
 
-        tokens['SEND_FAILURE_EMAIL'] = 'true' if send_failure_email else 'false'
+        tokens['SEND_FAILURE_EMAIL'] = 'true' if self.send_failure_email else 'false'
 
         if self.pipeline_path:
             tokens['PIPELINE_PATH'] = self.pipeline_path + ":"
