@@ -539,7 +539,7 @@ class TorqueJobRunner(object):
         if not batch_job.stderr_path:
             batch_job.stderr_path = os.path.join(log_dir, batch_job.name + ".e")
 
-        #write batch script
+        # write batch script
         filename = self.write_script(batch_job)
         
         if self.submit:
@@ -610,9 +610,9 @@ class TorqueJobRunner(object):
             # now we can connect to the server and submit the job
             connection = _connect_to_server(self._server)
 
-            #connected to pbs_server
+            # connected to pbs_server
 
-            #submit job
+            # submit job
             retry = 0
             job_id = pbs.pbs_submit(connection, pbs_attrs, filename,
                                     self.queue, None)
@@ -718,7 +718,6 @@ class TorqueJobRunner(object):
         if 'email_list' in task:
             job_attributes[pbs.ATTR_M] = task['email_list']
 
-
         pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
                                                      job_attributes)
 
@@ -742,7 +741,7 @@ class TorqueJobRunner(object):
         # connect to pbs server
         connection = _connect_to_server(pbs_server)
 
-        #submit job
+        # submit job
         retry = 0
         job_id = pbs.pbs_submit(connection, pbs_attrs, script_path,
                                 queue, None)
