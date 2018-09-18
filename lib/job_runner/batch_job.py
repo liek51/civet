@@ -55,7 +55,6 @@ class BatchJob(object):
                  file_test_logic="AND", mem=None, date_time=None, info=None,
                  tool_path=None):
 
-        #initialize some of the hidden properties
         self._name = None
         self._workdir = None
         self._mail_option = None
