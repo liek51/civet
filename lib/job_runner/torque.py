@@ -541,14 +541,12 @@ class TorqueJobRunner(object):
         if self.submit:
             # build up our torque job attributes and resources
             job_attributes = {}
-            job_resources = {}
-        
-            job_resources['nodes'] = "{0}:ppn={1}".format(batch_job.nodes, 
-                                                          batch_job.ppn)
-            job_resources['walltime'] = batch_job.walltime
+            job_resources = {
+                'nodes': "{0}:ppn={1}".format(batch_job.nodes, batch_job.ppn),
+                'walltime':  batch_job.walltime,
+                'epilogue': self.epilogue_filename
+            }
 
-            job_resources['epilogue'] = self.epilogue_filename
-            
             if batch_job.mem:
                 job_resources['mem'] = batch_job.mem
         
@@ -623,7 +621,7 @@ class TorqueJobRunner(object):
 
             pbs.pbs_disconnect(connection)
 
-            #check to see if the job was submitted successfully. 
+            # check to see if the job was submitted successfully.
             if not job_id:
                 e, e_msg = pbs.error()
                 # the batch system returned an error, throw exception 
@@ -639,8 +637,9 @@ class TorqueJobRunner(object):
             self._id_seq += 1
             
         self._job_names.append(batch_job.name)
-        
-        self._id_log.write(job_id + '\t' + batch_job.name + '\t' + str(self._printable_dependencies(batch_job.depends_on)) + '\n')
+
+        self._id_log.write(job_id + '\t' + batch_job.name + '\t' + str(
+            self._printable_dependencies(batch_job.depends_on)) + '\n')
         self._id_log.flush()
         return job_id
 
@@ -713,7 +712,6 @@ class TorqueJobRunner(object):
             job_attributes[pbs.ATTR_m] = task['mail_options']
         if 'email_list' in task:
             job_attributes[pbs.ATTR_M] = task['email_list']
-
 
         pbs_attrs = TorqueJobRunner.__make_pbs_attrs(job_resources,
                                                      job_attributes)

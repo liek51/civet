@@ -69,6 +69,9 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
+    parser.add_argument('-p', '--job-prefix',
+                        help="Prefix for batch job names (default 'CIVET__')",
+                        default="CIVET__")
     parser.add_argument('--json', action='store_true',
                         help="stdout written in json format")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
@@ -91,7 +94,8 @@ def main():
                       delay=args.delay, email_address=args.email_address,
                       error_email_address=args.error_email_address,
                       walltime_multiplier=args.walltime_multiplier,
-                      write_pipeline_files=args.write_file_summary)
+                      write_pipeline_files=args.write_file_summary,
+                      job_name_prefix=args.job_prefix)
     except civet_exceptions.ParseError as e:
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)

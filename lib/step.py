@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 from pipeline_tool import *
 from civet_exceptions import *
 
+
 class Step(object):
     validTags = [
         'tool']
