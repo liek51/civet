@@ -5,8 +5,9 @@ first.  The most up-to-date version is in the civet git repository
 
 
 Version 1.10.0
--------------
+--------------
 Features
+ - add --no-email option to civet_run
  - Add prefix to submitted job names (Defaults to "CIVET__", can be changed with
    civet_run --job-prefix option)
 

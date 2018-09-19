@@ -73,7 +73,6 @@ class Pipeline(object):
         'display_name'
     ]
 
-
     def __init__(self):
         pass
 
@@ -83,7 +82,8 @@ class Pipeline(object):
                   force_conditional_steps=False, delay=None, email_address=None,
                   error_email_address=None, walltime_multiplier=1,
                   write_pipeline_files=False,
-                  tool_exec_mode=ToolExecModes.BATCH_STANDARD):
+                  tool_exec_mode=ToolExecModes.BATCH_STANDARD,
+                  error_email=True):
 
         try:
             self._parse_XML(xmlfile, params, skip_validation, queue, submit_jobs,
@@ -91,7 +91,7 @@ class Pipeline(object):
                             keep_temp, release_jobs, force_conditional_steps,
                             delay, email_address, error_email_address,
                             walltime_multiplier, write_pipeline_files,
-                            tool_exec_mode)
+                            tool_exec_mode, error_email)
         except civet_exceptions.ParseError as e:
             print("\nError parsing XML:  {}".format(e), file=sys.stderr)
             sys.exit(1)
@@ -106,7 +106,7 @@ class Pipeline(object):
                    error_email_address=None, walltime_multiplier=1,
                    write_pipeline_files=False,
                    tool_exec_mode=ToolExecModes.BATCH_STANDARD,
-                   job_name_prefix="CIVET__"):
+                   error_email=True, job_name_prefix="CIVET__"):
         try:
             pipe = ET.parse(xmlfile).getroot()
         except ET.ParseError as e:
@@ -171,6 +171,7 @@ class Pipeline(object):
         self.queue = queue
         self.submit_jobs = submit_jobs
         self.completion_mail = completion_mail
+        self.error_email = error_email
         self.keep_temp = keep_temp
         self.release_jobs = release_jobs
         self.force_conditional_steps = force_conditional_steps
@@ -473,7 +474,8 @@ class Pipeline(object):
                                                validation_file=self.validation_file,
                                                pipeline_bin=os.path.abspath(os.path.join(self.master_XML_dir, "bin")),
                                                queue=self.queue, submit=self.submit_jobs,
-                                               pipeline_path=self.path)
+                                               pipeline_path=self.path,
+                                               send_failure_email=self.error_email)
         return self._job_runner
 
     def collect_files_to_validate(self):

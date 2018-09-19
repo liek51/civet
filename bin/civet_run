@@ -69,6 +69,8 @@ def main():
                         help="write a file containing information about Civet "
                              "file objects used in this pipeline into the log "
                              "directory")
+    parser.add_argument('--no-email', action='store_true',
+                        help="suppress email messages sent by Civet")
     parser.add_argument('-p', '--job-prefix',
                         help="Prefix for batch job names (default 'CIVET__')",
                         default="CIVET__")
@@ -89,12 +91,14 @@ def main():
                       queue=args.queue, submit_jobs=args.submit,
                       search_path=os.environ.get('CIVET_PATH'),
                       user_override_file=args.option_file,
+                      completion_mail=not args.no_email,
                       keep_temp=args.keep_temp, release_jobs=args.release_jobs,
                       force_conditional_steps=args.force_conditional,
                       delay=args.delay, email_address=args.email_address,
                       error_email_address=args.error_email_address,
                       walltime_multiplier=args.walltime_multiplier,
                       write_pipeline_files=args.write_file_summary,
+                      error_email=not args.no_email,
                       job_name_prefix=args.job_prefix)
     except civet_exceptions.ParseError as e:
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
