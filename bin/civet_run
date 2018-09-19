@@ -94,7 +94,8 @@ def main():
                       delay=args.delay, email_address=args.email_address,
                       error_email_address=args.error_email_address,
                       walltime_multiplier=args.walltime_multiplier,
-                      write_pipeline_files=args.write_file_summary)
+                      write_pipeline_files=args.write_file_summary,
+                      error_email=not args.no_email)
     except civet_exceptions.ParseError as e:
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)
