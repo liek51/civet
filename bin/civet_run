@@ -71,6 +71,9 @@ def main():
                              "directory")
     parser.add_argument('--no-email', action='store_true',
                         help="suppress email messages sent by Civet")
+    parser.add_argument('-p', '--job-prefix',
+                        help="Prefix for batch job names (default 'CIVET__')",
+                        default="CIVET__")
     parser.add_argument('--json', action='store_true',
                         help="stdout written in json format")
     parser.add_argument('pipeline', help="pipeline XML definition", nargs=1)
@@ -95,7 +98,8 @@ def main():
                       error_email_address=args.error_email_address,
                       walltime_multiplier=args.walltime_multiplier,
                       write_pipeline_files=args.write_file_summary,
-                      error_email=not args.no_email)
+                      error_email=not args.no_email,
+                      job_name_prefix=args.job_prefix)
     except civet_exceptions.ParseError as e:
         print("\nError parsing XML:  {}\n".format(e), file=sys.stderr)
         sys.exit(1)

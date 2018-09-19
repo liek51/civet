@@ -106,11 +106,13 @@ class Pipeline(object):
                    error_email_address=None, walltime_multiplier=1,
                    write_pipeline_files=False,
                    tool_exec_mode=ToolExecModes.BATCH_STANDARD,
-                   error_email=True):
+                   error_email=True, job_name_prefix="CIVET__"):
         try:
             pipe = ET.parse(xmlfile).getroot()
         except ET.ParseError as e:
             raise civet_exceptions.ParseError("XML ParseError when parsing {}: {}".format(xmlfile, e))
+
+        self.job_name_prefix = job_name_prefix if job_name_prefix is not None else ""
 
         # Register the directory of the master (pipeline) XML.
         # We'll use it to locate tool XML files.
@@ -141,8 +143,7 @@ class Pipeline(object):
             self.parse_override_file(user_override_file, "user")
 
         self.execution_mode = tool_exec_mode
-            
-           
+
         # Register the parameters that may be file paths
         PipelineFile.register_params(params)
         
@@ -375,7 +376,8 @@ class Pipeline(object):
         invocation = 0
         for step in self._steps:
             invocation += 1
-            name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
+            name_prefix = '{}{}_{}{}'.format(self.job_name_prefix, self.name,
+                                             step.code, invocation)
             job_id = step.submit(name_prefix, silent)
             for j in job_id:
                 self.all_batch_jobs.append(j)
@@ -430,7 +432,8 @@ class Pipeline(object):
         all_tasks = []
         for step in self._steps:
             invocation += 1
-            name_prefix = '{0}_{1}{2}'.format(self.name, step.code, invocation)
+            name_prefix = '{}{}_{}{}'.format(self.job_name_prefix, self.name,
+                                             step.code, invocation)
             step_tasks = step.create_tasks(name_prefix, self.execution_mode)
             all_tasks.extend(step_tasks)
 
@@ -575,7 +578,8 @@ class Pipeline(object):
 
         batch_job = BatchJob(cmd, workdir=PipelineFile.get_output_dir(),
                              depends_on=self.all_batch_jobs,
-                             name="rm_temps_consolidate_logs",
+                             name="{}{}_rm_temps_consolidate_logs".format(
+                                 self.job_name_prefix, self.name),
                              mail_option='a',
                              email_list=self.error_email_address,
                              walltime="00:10:00")
@@ -593,7 +597,8 @@ class Pipeline(object):
         cmd = self._create_cleanup_cmd()
 
         task = {}
-        task['name'] = "rm_temps_consolidate_logs"
+        task['name'] = "{}{}_rm_temps_consolidate_logs".format(
+            self.job_name_prefix, self.name)
         task['command'] = cmd
         task['walltime'] = "00:10:00"
         task['mem'] = 1

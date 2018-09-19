@@ -8,6 +8,8 @@ Version 1.10.0
 --------------
 Features
  - add --no-email option to civet_run
+ - Add prefix to submitted job names (Defaults to "CIVET__", can be changed with
+   civet_run --job-prefix option)
 
 
 Version 1.9.3
@@ -18,6 +20,8 @@ Bug Fixes
  - Fix potential civet_status race condition where it could try to read a
    status.txt file before it is finished being written. Race condition could
    also cause the civet_managed_batch_master process to terminate.
+
+Features
  - Use full path to python for validation and consolidate log scripts,
    path is set in config file. If not set, default to python in path. This
    allows a tool to load a Python modulefile that is not compatible with

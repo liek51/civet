@@ -397,12 +397,13 @@ class Tool(object):
 
         return verify_file_list
 
-    def submit(self, name_prefix, silent):
+    def submit(self, job_name, silent):
         """
         Submit the commands that comprise the tool as a single cluster job.
 
 
-        :param name_prefix:  a unique (to the pipeline) job name.
+        :param job_name:  a unique (to the pipeline) job name.
+        :param silent: if true, don't print job ID after it's submitted
         :return: job_id: a value which can be passed in as a depends_on list
                 element in a subsequent tool submission.
         """
@@ -455,7 +456,7 @@ class Tool(object):
                              files_to_validate=verify_file_list,
                              ppn=submit_threads, walltime=self.walltime,
                              modules=self.modules, depends_on=depends_on,
-                             name=name_prefix, error_strings=self.error_strings,
+                             name=job_name, error_strings=self.error_strings,
                              version_cmds=self.collect_version_commands(),
                              files_to_test=self.exit_if_exists,
                              file_test_logic=self.exit_test_logic, mem=self.mem,
