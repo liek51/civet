@@ -15,6 +15,7 @@
 Enumerations for tracking Civet jobs in the incremental submission system
 """
 
+
 #
 # CAUTION: The class list NAME must be maintained in parallel with the
 #    enumeration values.  YOU HAVE BEEN WARNED!

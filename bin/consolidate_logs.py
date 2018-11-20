@@ -29,6 +29,7 @@ if len(sys.argv) != 2:
     print >> sys.stderr, 'USAGE:', sys.argv[0], 'path-to-log-dir'
     sys.exit(1)
 
+
 def get_file_names(dir):
     """
     Return lists of *-run.log, *.o *-err.log and *.e.
@@ -45,7 +46,7 @@ def get_file_names(dir):
     pattern = re.compile(r'^.*\.e$')
 
     for f in os.listdir(dir):
-        if f.startswith("rm_temps_consolidate_logs"):
+        if "rm_temps_consolidate_logs" in f:
             continue
         elif pattern.match(f):
             batch_stderr.append(f)
