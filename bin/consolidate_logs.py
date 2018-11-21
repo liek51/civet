@@ -21,12 +21,14 @@ with header sections separating the content from different input
 logs.
 """
 
+from __future__ import print_function
+
 import sys
 import os
 import re
 
 if len(sys.argv) != 2:
-    print >> sys.stderr, 'USAGE:', sys.argv[0], 'path-to-log-dir'
+    print('USAGE:', sys.argv[0], 'path-to-log-dir', file=sys.stderr)
     sys.exit(1)
 
 
@@ -83,14 +85,14 @@ def write_header(of, fn):
         of: the already opened file object
         fn: the name of the file to be logged in the header.
     """
-    print >> of, '#'*80
-    print >> of, '#'*80
-    print >> of, '#'*8
-    print >> of, '#'*8, 'Log info from:'
-    print >> of, '#'*8, '   ', fn
-    print >> of, '#'*8
-    print >> of, '#'*80
-    print >> of, '#'*80
+    print('#'*80, file=of)
+    print('#'*80, file=of)
+    print('#'*8, file=of)
+    print('#'*8, 'Log info from:', file=of)
+    print('#'*8, '   ', fn, file=of)
+    print('#'*8, file=of)
+    print('#'*80, file=of)
+    print('#'*80, file=of)
 
 
 def write_end_record(of, fn):
@@ -99,15 +101,15 @@ def write_end_record(of, fn):
         of: the already opened file object
         fn: the name of the file to be logged in the end record.
     """
-    print >> of, '#'*80
-    print >> of, '#'*80
-    print >> of, '#'*8
-    print >> of, '#'*8, 'End of log info from:'
-    print >> of, '#'*8, '   ', fn
-    print >> of, '#'*8
-    print >> of, '#'*80
-    print >> of, '#'*80
-    print >> of
+    print('#'*80, file=of)
+    print('#'*80, file=of)
+    print('#'*8, file=of)
+    print('#'*8, 'End of log info from:', file=of)
+    print('#'*8, '   ', fn, file=of)
+    print('#'*8, file=of)
+    print('#'*80, file=of)
+    print('#'*80, '\n', file=of)
+
 
 def output_file(fn, dir, of):
     """
@@ -153,7 +155,6 @@ def handle_batch_errs(dir, list):
             os.remove(os.path.join(dir, fn))
 
 
-
 def main():
     """
     The main... clean up the logs directory by consolidating the
@@ -169,4 +170,6 @@ def main():
 
     handle_batch_errs(dir, batch_stderr)
 
-main()
+
+if __name__ == "__main__":
+    main()
