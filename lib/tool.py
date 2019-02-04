@@ -80,7 +80,7 @@ class Tool(object):
         self.skip_validation = PL.skip_validation
         self.option_overrides = {}
         self.thread_option_max = 0
-        self.modules = config.default_modules
+        self.modules = list(config.default_modules)
         self.name_from_pipeline = name
 
         self.verify_files = []
