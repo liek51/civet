@@ -103,6 +103,7 @@ class JobManager(object):
     E_STATE = 15018
 
     CANCELED_EXIT_STATUS = 271
+    WALLTIME_LIMIT_EXIT_STATUS = -11
 
     def __init__(self, pbs_server=None):
         self.pbsq = None

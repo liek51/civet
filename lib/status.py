@@ -59,6 +59,10 @@ class ManagedJobStatus(object):
                                        name + job_runner.common.JOB_STATUS_SUFFIX)
 
         if os.path.exists(status_filename):
+            # status.txt file exists for this job.
+            # if we're configured to do io_sync_sleep, then don't trust the
+            # file unless it hasn't been modified for at least
+            # config.io_sync_sleep seconds
             if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
                 status = job_runner.common.get_status_from_file(log_dir, name)
 
@@ -98,11 +102,14 @@ class Status(object):
         status_filename = os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)
 
         if os.path.exists(status_filename):
+            # status.txt file exists for this job.
+            # if we're configured to do io_sync_sleep, then don't trust the
+            # file unless it hasn't been modified for at least
+            # config.io_sync_sleep seconds
             if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
                 status = job_runner.common.get_status_from_file(log_dir, name)
 
         if status:
-
             # with old versions of Civet, it's possible for there it be an empty
             # or incomplete -status.txt file if the job was canceled/qdel'd
             # this will be the state if we can't determine otherwise
@@ -116,22 +123,20 @@ class Status(object):
                 self.state = "CANCELED"
                 self.state_at_cancel = "Running"
 
-            elif 'exit_status' in status:
-                if status['exit_status'] == '0':
-                    self.state = "SUCCESS"
-                elif status['exit_status'] == '-11':
-                    self.state = "FAILED (WALLTIME)"
-                elif status['exit_status'] == '271':
-                    # running torque jobs canceled with qdel have exit status 271
-                    self.state = "CANCELED"
-                    self.state_at_cancel = "Running"
-                else:
-                    self.state = "FAILED"
-
             self.exit_status = status.get('exit_status', None)
             if self.exit_status:
                 # exit status is a string pulled from a file, turn it into an integer
                 self.exit_status = int(self.exit_status)
+
+                if self.exit_status == 0:
+                    self.state = "SUCCESS"
+                elif self.exit_status == job_manager.WALLTIME_LIMIT_EXIT_STATUS:
+                    self.state = "FAILED (WALLTIME)"
+                elif self.exit_status == job_manager.CANCELED_EXIT_STATUS:
+                    self.state = "CANCELED"
+                    self.state_at_cancel = "Running"
+                else:
+                    self.state = "FAILED"
 
             if 'walltime' in status:
                 self.walltime = status['walltime']
