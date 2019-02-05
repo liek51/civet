@@ -55,6 +55,8 @@ class ManagedJobStatus(object):
         self.state = "Deleted"
 
         status = None
+        status_filename = os.path.join(log_dir,
+                                       name + job_runner.common.JOB_STATUS_SUFFIX)
 
         if os.path.exists(status_filename):
             if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
