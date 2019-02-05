@@ -53,11 +53,15 @@ class ManagedJobStatus(object):
         # file if the compute node crashed with the job running
         # this will be the state if we can't determine otherwise
         self.state = "Deleted"
-        status = job_manager.query_job(str(batch_id))
 
-        if status:
-            # always use information from Torque if the job still exists
-            # in the queue.
+        status = None
+
+        if os.path.exists(status_filename):
+            if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
+                status = job_runner.common.get_status_from_file(log_dir, name)
+
+        if not status:
+            status = job_manager.query_job(str(batch_id))
 
             if status.state == 'C':
                 if status.exit_status == '0':
@@ -69,14 +73,9 @@ class ManagedJobStatus(object):
                 # it's state is not C, we consider its state to be "Submitted"
                 # (could be in ['Q', 'H', 'W', 'R', 'E'])
                 self.state = "Submitted"
-
         else:
-            # no information for job in the queue. check to see if there is
-            # a status file
-            if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
-                status = job_runner.common.get_status_from_file(log_dir, name)
-                if 'exit_status' in status:
-                    self.state = "Completed" if status['exit_status'] == '0' else "Failed"
+            if 'exit_status' in status:
+                self.state = "Completed" if status['exit_status'] == '0' else "Failed"
 
 
 class Status(object):
