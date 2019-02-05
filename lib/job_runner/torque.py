@@ -343,7 +343,7 @@ class TorqueJobRunner(object):
         $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1; VERSION_STATUS=$$?
 
         # GB
-        # temporarily require version comand to have zero exit status. 
+        # temporarily remove requirement for version command to have zero exit status. 
         # this breaks some pipelines
         #if [ $$VERSION_STATUS -ne 0 ]; then
         #    MESSAGE="Command not run, version command returned non-zero value."
