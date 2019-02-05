@@ -289,11 +289,26 @@ def main():
             if dir_status.complete_jobs_failure:
                 print_header = True
                 for job in dir_status.jobs:
-                    if job.state not in ['QUEUED', 'RUNNING', 'WAITING', 'HELD', 'MANAGED'] and job.exit_status != 0 and job.exit_status != 271:
-                        if print_header:
-                            print("\tFailed Jobs:")
-                            print_header = False
-                        print("\t\t{} ({}): exit_status={}".format(job.name, job.id, job.exit_status))
+                    # don't show jobs that aren't in a terminated state
+                    if job.state in ['QUEUED', 'RUNNING', 'WAITING', 'HELD',
+                                     'MANAGED']:
+                        continue
+
+                    # skip jobs that exited normally (0) or were canceled
+                    # through the batch system:
+                    if job.exit_status == 0 or job.exit_status == job_manager.CANCELED_EXIT_STATUS:
+                        continue
+
+                    # skip jobs with that are no longer in the queue and have
+                    # no exit status, these were canceled while they were still
+                    # queued as part of the abort process
+                    if dir_status.aborted and job.exit_status is None:
+                        continue
+
+                    if print_header:
+                        print("\tFailed Jobs:")
+                        print_header = False
+                    print("\t\t{} ({}): exit_status={}".format(job.name, job.id, job.exit_status))
 
         if remove_statuses:
             check_remove_run(dir_status, remove_statuses)

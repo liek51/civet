@@ -33,8 +33,8 @@ import tempfile
 import pbs
 import PBSQuery
 
-#make sure we look in the parent directory for modules when running as a script
-#so that we can find the utilities module
+# make sure we look in the parent directory for modules when running as a script
+# so that we can find the utilities module
 if __name__ == "__main__":
     sys.path.insert(0, "..")
     
@@ -96,11 +96,13 @@ class JobManager(object):
     """
 
 
-    #constants with the return codes for unknown job id and invalid state (complete)
+    # constants with the return codes for unknown job id and invalid state (complete)
     # these are valid for TORQUE 4.x,  pbs_python has outdated error 
     # codes -> error string mappings
     E_UNKNOWN = 15001
     E_STATE = 15018
+
+    CANCELED_EXIT_STATUS = 271
 
     def __init__(self, pbs_server=None):
         self.pbsq = None
