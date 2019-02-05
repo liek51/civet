@@ -55,6 +55,8 @@ class ManagedJobStatus(object):
         self.state = "Deleted"
 
         status = None
+        status_filename = os.path.join(log_dir,
+                                       name + job_runner.common.JOB_STATUS_SUFFIX)
 
         if os.path.exists(status_filename):
             # status.txt file exists for this job.
