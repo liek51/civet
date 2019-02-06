@@ -25,8 +25,17 @@ CIVET_HOME = os.path.normpath(os.path.join(os.path.realpath(os.path.abspath(os.p
 
 
 def get_status_from_file(logdir, job_name):
-    return dict(line.strip().split('=') for line in open(os.path.join(logdir, job_name + JOB_STATUS_SUFFIX)))
-    
+    try:
+        # try to turn a file full of key=value lines into a dictionary
+        return dict(line.strip().split('=') for line in open(os.path.join(logdir, job_name + JOB_STATUS_SUFFIX)))
+    except ValueError:
+        # if one of the lines isn't of the form key=value then the above dict()
+        # method will return a ValueError. This indicates that the file was
+        # incomplete. Returning None will cause the caller to fall back to
+        # querying torque (the job may be in the process of writing the file)
+        return None
+
+
 def jobs_from_logdir(logdir):
     batch_jobs = []
     for line in open(os.path.join(logdir, BATCH_ID_LOG)):
