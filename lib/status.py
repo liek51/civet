@@ -69,19 +69,20 @@ class ManagedJobStatus(object):
         if not status:
             status = job_manager.query_job(str(batch_id))
 
-            if status.state == 'C':
-                if status.exit_status == '0':
-                    self.state = "Complete"
+            if status:
+                if status.state == 'C':
+                    if status.exit_status == '0':
+                        self.state = "Complete"
+                    else:
+                        self.state = "Failed"
                 else:
-                    self.state = "Failed"
-            else:
-                # as far as we are concerned, if the job is in the queue and
-                # it's state is not C, we consider its state to be "Submitted"
-                # (could be in ['Q', 'H', 'W', 'R', 'E'])
-                self.state = "Submitted"
+                    # as far as we are concerned, if the job is in the queue and
+                    # it's state is not C, we consider its state to be "Submitted"
+                    # (could be in ['Q', 'H', 'W', 'R', 'E'])
+                    self.state = "Submitted"
         else:
             if 'exit_status' in status:
-                self.state = "Completed" if status['exit_status'] == '0' else "Failed"
+                self.state = "Complete" if status['exit_status'] == '0' else "Failed"
 
 
 class Status(object):
