@@ -19,7 +19,9 @@ import sys
 import os
 import glob
 import json
+import time
 
+import config
 import job_runner.torque as batch_system
 import job_runner.common
 from exec_modes import ToolExecModes
@@ -51,11 +53,21 @@ class ManagedJobStatus(object):
         # file if the compute node crashed with the job running
         # this will be the state if we can't determine otherwise
         self.state = "Deleted"
-        status = job_manager.query_job(str(batch_id))
 
-        if status:
-            # always use information from Torque if the job still exists
-            # in the queue.
+        status = None
+        status_filename = os.path.join(log_dir,
+                                       name + job_runner.common.JOB_STATUS_SUFFIX)
+
+        if os.path.exists(status_filename):
+            # status.txt file exists for this job.
+            # if we're configured to do io_sync_sleep, then don't trust the
+            # file unless it hasn't been modified for at least
+            # config.io_sync_sleep seconds
+            if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
+                status = job_runner.common.get_status_from_file(log_dir, name)
+
+        if not status:
+            status = job_manager.query_job(str(batch_id))
 
             if status.state == 'C':
                 if status.exit_status == '0':
@@ -67,20 +79,15 @@ class ManagedJobStatus(object):
                 # it's state is not C, we consider its state to be "Submitted"
                 # (could be in ['Q', 'H', 'W', 'R', 'E'])
                 self.state = "Submitted"
-
         else:
-            # no information for job in the queue. check to see if there is
-            # a status file
-            if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
-                status = job_runner.common.get_status_from_file(log_dir, name)
-                if 'exit_status' in status:
-                    self.state = "Completed" if status['exit_status'] == '0' else "Failed"
+            if 'exit_status' in status:
+                self.state = "Completed" if status['exit_status'] == '0' else "Failed"
 
 
 class Status(object):
 
     def __init__(self, log_dir, name, id, deps, job_manager, running_at_cancel,
-                 execution_mode):
+                 excution_mode):
 
         self.state = None
         self.exit_status = None
@@ -89,9 +96,54 @@ class Status(object):
         self.dependencies = deps
         self.id = id
         self.name = name
-        self.execution_mode = execution_mode
+        self.excution_mode = excution_mode
 
-        if self.execution_mode == ToolExecModes.BATCH_MANAGED:
+        status = None
+        status_filename = os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)
+
+        if os.path.exists(status_filename):
+            # status.txt file exists for this job.
+            # if we're configured to do io_sync_sleep, then don't trust the
+            # file unless it hasn't been modified for at least
+            # config.io_sync_sleep seconds
+            if not config.io_sync_sleep or time.time() - os.path.getmtime(status_filename) >= config.io_sync_sleep:
+                status = job_runner.common.get_status_from_file(log_dir, name)
+
+        if status:
+            # with old versions of Civet, it's possible for there it be an empty
+            # or incomplete -status.txt file if the job was canceled/qdel'd
+            # this will be the state if we can't determine otherwise
+            self.state = "DELETED"
+
+            if 'canceled' in status or 'cancelled' in status:
+                self.state = "CANCELED"
+                self.state_at_cancel = format_state(status['state_at_cancel'])
+
+            elif id in running_at_cancel:
+                self.state = "CANCELED"
+                self.state_at_cancel = "Running"
+
+            self.exit_status = status.get('exit_status', None)
+            if self.exit_status:
+                # exit status is a string pulled from a file, turn it into an integer
+                self.exit_status = int(self.exit_status)
+
+                if self.exit_status == 0:
+                    self.state = "SUCCESS"
+                elif self.exit_status == job_manager.WALLTIME_LIMIT_EXIT_STATUS:
+                    self.state = "FAILED (WALLTIME)"
+                elif self.exit_status == job_manager.CANCELED_EXIT_STATUS:
+                    self.state = "CANCELED"
+                    self.state_at_cancel = "Running"
+                else:
+                    self.state = "FAILED"
+
+            if 'walltime' in status:
+                self.walltime = status['walltime']
+            if 'requested_walltime' in status:
+                self.walltime_requested = status['requested_walltime']
+
+        elif self.excution_mode == ToolExecModes.BATCH_MANAGED:
             # if the pipeline is being run in managed mode, there will be no
             # status information for unfinished jobs
             self.state = "MANAGED"
@@ -101,9 +153,11 @@ class Status(object):
 
             if status:
                 if status.state == 'C':
+
                     if status.exit_status == '0':
-                        # if we find a status file below, this will get
-                        # changed to the state found there
+                        # as of Civet 1.7.0 this shouldn't happen, even for
+                        # failed jobs. If this happens, then the job completed
+                        # without the job epilogue script running
                         self.state = "EXIT_NO_EPILOGUE"
                     elif status.exit_status is None:
                         self.state = "DELETED"
@@ -122,55 +176,20 @@ class Status(object):
                 self.exit_status = status.exit_status
                 if self.exit_status is not None:
                     self.exit_status = int(self.exit_status)
-
-            if not status or status.state == 'C':
-
-                # it's possible for there be an empty or incomplete -status.txt
-                # file if the compute node crashed with the job running
-                # this will be the state until we determine otherwise
+            else:
+                # no information for job, as of Civet 1.7.0 this should only be
+                # possible if the job is deleted (cancelled because of failed
+                # dependency or qdel'd) prior to running or if the node it is
+                # running on crashes.  As of Civet 1.7.0 all jobs that enter the
+                # R state should produce a -status.txt file
                 self.state = "DELETED"
-
-                if os.path.exists(os.path.join(log_dir, name + job_runner.common.JOB_STATUS_SUFFIX)):
-                    status = job_runner.common.get_status_from_file(log_dir, name)
-
-                    if 'canceled' in status or 'cancelled' in status:
-                        self.state = "CANCELED"
-                        self.state_at_cancel = format_state(status['state_at_cancel'])
-
-                    elif id in running_at_cancel:
-                        self.state = "CANCELED"
-                        self.state_at_cancel = "Running"
-
-                    elif 'exit_status' in status:
-                        if status['exit_status'] == '0':
-                            self.state = "SUCCESS"
-                        elif status['exit_status'] == '-11':
-                            self.state = "FAILED (WALLTIME)"
-                        elif status['exit_status'] == '271':
-                            # running torque jobs canceled with qdel have exit
-                            # status 271
-                            self.state = "CANCELED"
-                            self.state_at_cancel = "Running"
-                        else:
-                            self.state = "FAILED"
-
-                    self.exit_status = status.get('exit_status', None)
-                    if self.exit_status:
-                        # exit status is a string pulled from a file, turn it
-                        # into an integer
-                        self.exit_status = int(self.exit_status)
-
-                    if 'walltime' in status:
-                        self.walltime = status['walltime']
-                    if 'requested_walltime' in status:
-                        self.walltime_requested = status['requested_walltime']
 
     def __str__(self):
         return "{}, {}, {}, {}".format(self.state, self.exit_status,
                                        self.walltime, self.walltime_requested)
 
     def to_json_serializable(self):
-        return self.__dict__
+       return self.__dict__
 
 
 class PipelineStatus(object):
@@ -310,6 +329,7 @@ class PipelineStatus(object):
     @staticmethod
     def get_job_manager():
         return batch_system.JobManager()
+
 
 def main():
     """
