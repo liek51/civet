@@ -12,6 +12,13 @@ Features
    civet_run --job-prefix option)
 
 
+Version 1.9.3.2
+---------------
+Features
+ - revert requirement for version commands to have a zero exit status
+ - fix bug where civet_status was contacting torque more often than it needs to
+
+
 Version 1.9.3.1
 ---------------
 Bug Fixes
