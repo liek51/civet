@@ -82,7 +82,7 @@ class ManagedJobStatus(object):
                     self.state = "Submitted"
         else:
             if 'exit_status' in status:
-                self.state = "Completed" if status['exit_status'] == '0' else "Failed"
+                self.state = "Complete" if status['exit_status'] == '0' else "Failed"
 
 
 class Status(object):
