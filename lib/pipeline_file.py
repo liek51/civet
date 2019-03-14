@@ -91,7 +91,8 @@ class PipelineFile(object):
         'input',
         'description',
         'paired',
-        'extensions'
+        'extensions',
+        'display_name'
     ]
 
     # Track the master output directory.
