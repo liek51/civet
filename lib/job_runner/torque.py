@@ -347,13 +347,16 @@ class TorqueJobRunner(object):
         VERSION_STATUS=0
         $VERSION_CMDS > $LOG_DIR/$${PBS_JOBNAME}-version.log 2>&1; VERSION_STATUS=$$?
 
-        if [ $$VERSION_STATUS -ne 0 ]; then
-            MESSAGE="Command not run, version command returned non-zero value."
-            echo "$$MESSAGE  Aborting pipeline!" >&2
-            send_failure_email $EMAIL_LIST "$$MESSAGE"
-            check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
-            exit $$VERSION_STATUS
-        fi
+        # GB
+        # temporarily remove requirement for version command to have zero exit status. 
+        # this breaks some pipelines
+        #if [ $$VERSION_STATUS -ne 0 ]; then
+        #    MESSAGE="Command not run, version command returned non-zero value."
+        #    echo "$$MESSAGE  Aborting pipeline!" >&2
+        #    send_failure_email $EMAIL_LIST "$$MESSAGE"
+        #    check_epilogue $LOG_DIR/submitted_shell_scripts/epilogue.sh
+        #    exit $$VERSION_STATUS
+        #fi
 
         # command(s) passed into BatchJob:
         $CMD
