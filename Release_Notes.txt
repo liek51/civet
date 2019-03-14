@@ -10,6 +10,7 @@ Features
  - add --no-email option to civet_run
  - Add prefix to submitted job names (Defaults to "CIVET__", can be changed with
    civet_run --job-prefix option)
+ - add display_name attribute for filelist
 
 
 Version 1.9.3.2
