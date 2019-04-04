@@ -4,8 +4,11 @@ release to release.  It is cumulative, with the most recent changes listed
 first.  The most up-to-date version is in the civet git repository
 
 
-Version 1.10.0
+Version 1.9.4
 --------------
+Bug Fixes
+ - Fix bug in civet_manged_batch_master where it wouldn't always restart itself
+   if it got close to its walltime limit.
 Features
  - add --no-email option to civet_run
  - Add prefix to submitted job names (Defaults to "CIVET__", can be changed with
