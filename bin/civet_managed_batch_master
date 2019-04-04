@@ -310,21 +310,21 @@ def main():
                     job.job_name, job.pipeline.log_directory))
                 submit_job(job)
 
-            if not check_walltime(max_walltime_minutes):
-                logging.info(
-                    "Approaching maximum walltime, submitting new management "
-                    "job.")
-                print(
-                    "\tApproaching maximum walltime, submitting new management "
-                    "job.")
-                dispose_engine()
-                job_id = submit_management_job(args.task_db, args.queue,
-                                               args.max_walltime,
-                                               args.max_queued, args.log_level)
-                write_batch_id_to_log_dir(job_id)
-                logging.info("New management job submitted: " + job_id)
-                print("\tNew management job submitted: " + job_id)
-                break
+        if not check_walltime(max_walltime_minutes):
+            logging.info(
+                "Approaching maximum walltime, submitting new management "
+                "job.")
+            print(
+                "\tApproaching maximum walltime, submitting new management "
+                "job.")
+            dispose_engine()
+            job_id = submit_management_job(args.task_db, args.queue,
+                                           args.max_walltime,
+                                           args.max_queued, args.log_level)
+            write_batch_id_to_log_dir(job_id)
+            logging.info("New management job submitted: " + job_id)
+            print("\tNew management job submitted: " + job_id)
+            break
 
         # done iteration.  Sleep for a little while.
         time.sleep(30)
