@@ -1019,7 +1019,7 @@ class Command(object):
                         return f.path.replace(',', ' ')
                     else:
                         # Emit the code to invoke a file filter.
-                        return "$({} process_filelist.py {0} '{1}')".format(config.civet_python, f.path, f.pattern)
+                        return "$(process_filelist.py {0} '{1}')".format(f.path, f.pattern)
                 return f.path
 
             # We didn't match a known option, or a file id. Put out an error.
