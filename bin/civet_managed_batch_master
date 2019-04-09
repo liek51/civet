@@ -307,7 +307,12 @@ def main():
                 logging.info("Iteration {}: Starting {} jobs".format(
                     iteration, len(ready_jobs)))
                 for job in ready_jobs:
-                    with open(os.path.join(job.pipeline.log_directory, job_runner.common.BATCH_ID_LOG), mode='a+') as job_list:
+                    # unfortunately we need to open this file for each job,
+                    # because we may be running multiple pipelines so the
+                    # log directory could change from one job to the next
+                    with open(os.path.join(job.pipeline.log_directory,
+                                           job_runner.common.BATCH_ID_LOG),
+                              mode='a+') as job_list:
                         logging.info("\tStarting {} (log dir: {})".format(
                             job.job_name, job.pipeline.log_directory))
                         job_id = submit_job(job)
