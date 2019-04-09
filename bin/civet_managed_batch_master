@@ -108,6 +108,7 @@ def submit_job(job):
     batch_id = BatchRunner.submit_managed_job(task)
     # mark job as submitted
     job.mark_submitted(batch_id)
+    return batch_id
 
 
 def all_complete():
@@ -300,15 +301,17 @@ def main():
 
         # if we have available slots, see if we have any jobs ready to run
         if available_job_slots:
-            logging.info("Iteration {}: {} slots available, looking for "
-                         "eligible jobs".format(iteration, available_job_slots))
-            ready_jobs = Job.scan_for_runnable(limit=available_job_slots)
-            logging.info("Iteration {}: Starting {} jobs".format(
-                iteration, len(ready_jobs)))
-            for job in ready_jobs:
-                logging.info("\tStarting {} (log dir: {})".format(
-                    job.job_name, job.pipeline.log_directory))
-                submit_job(job)
+                logging.info("Iteration {}: {} slots available, looking for "
+                             "eligible jobs".format(iteration, available_job_slots))
+                ready_jobs = Job.scan_for_runnable(limit=available_job_slots)
+                logging.info("Iteration {}: Starting {} jobs".format(
+                    iteration, len(ready_jobs)))
+                for job in ready_jobs:
+                    with open(os.path.join(job.pipeline.log_directory, job_runner.common.BATCH_ID_LOG), mode='a+') as job_list:
+                        logging.info("\tStarting {} (log dir: {})".format(
+                            job.job_name, job.pipeline.log_directory))
+                        job_id = submit_job(job)
+                        job_list.write(job_id + '\t' + job.job_name + '\n')
 
         if not check_walltime(max_walltime_minutes):
             logging.info(

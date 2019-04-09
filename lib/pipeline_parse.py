@@ -452,11 +452,15 @@ class Pipeline(object):
         tasks = self.create_task_list()
 
         # create the pipeline_batch_id_list.txt file (normally created when
-        # submitting jobs -- this is needed by civet_status
+        # submitting jobs -- this is needed by civet_status)
         with open(os.path.join(self.log_dir, job_runner.common.BATCH_ID_LOG), mode='w') as job_list:
+            pass
+
+        # also log all the managed taskes and their dependencies
+        with open(os.path.join(self.log_dir, job_runner.common.TASK_LOG), mode='w') as task_file:
             idx = 0
             for task in tasks:
-                job_list.write(task['name'] + ".managed_task" + '\t' + task['name'] + '\t[' + ", ".join(task['dependencies']) + ']\n')
+                task_file.write(task['name'] + '\t[' + ", ".join(task['dependencies']) + ']\n')
                 idx += 1
 
         return tasks

@@ -64,12 +64,19 @@ function abort_pipeline {
     # canceled, but we can't see the cancel.log file yet.  Not much
     # we can do about that.  The civet_status code can still figure it out if
     # the job was canceled while running.
-    if [ -f $LOG_DIR/cancel.log ]; then
+    if [ -f ${LOGDIR}/cancel.log ]; then
         echo "canceled=TRUE" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
         echo "state_at_cancel=R" >> ${LOGDIR}/${PBS_JOBNAME}-status.txt
     fi
 
     echo "Aborting pipeline" > ${LOGDIR}/${PBS_JOBNAME}-abort.log
+
+    # if this pipeline is "managed" then the pipeline manager will take care
+    # of deleting the rest of the running pipeline jobs
+    if [ -f ${LOGDIR}/MANAGED_BATCH ]; then
+        return
+    fi
+
     echo "calling qdel on all jobs (ignoring previous job state)" >> ${LOGDIR}/${PBS_JOBNAME}-abort.log
     
     # just iterate over all of the job ids in this pipeline and try to 

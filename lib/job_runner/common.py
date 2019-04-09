@@ -15,6 +15,7 @@ import os
 import inspect
 
 BATCH_ID_LOG = "pipeline_batch_id_list.txt"
+TASK_LOG = "pipeline_task_list.txt"
 JOB_STATUS_SUFFIX = "-status.txt"
 CANCEL_LOG_FILENAME = "cancel.log"
 NO_SUB_FLAG = "NO_SUBMIT"

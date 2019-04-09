@@ -9,11 +9,15 @@ Version 1.9.4
 Bug Fixes
  - Fix bug in civet_manged_batch_master where it wouldn't always restart itself
    if it got close to its walltime limit.
+ - Job epilog doesn't abort function doesn't try to qdel all jobs when running
+   in managed mode.
 Features
  - add --no-email option to civet_run
  - Add prefix to submitted job names (Defaults to "CIVET__", can be changed with
    civet_run --job-prefix option)
  - add display_name attribute for filelist
+ - managed mode pipelines now log job IDs of batch jobs as they are submitted
+ - managed mode pipelines
 
 
 Version 1.9.3.2
