@@ -255,7 +255,12 @@ class PipelineStatus(object):
             self.jobs_running_at_cancel = cancel_info.get('RUNNING_JOBS', [])
 
         for job in batch_jobs:
-            job_status = Status(log_dir, job[1], job[0], job[2], jm,
+
+            deps = []
+            if len(job) > 2:
+                deps = job[2]
+
+            job_status = Status(log_dir, job[1], job[0], deps, jm,
                                 self.jobs_running_at_cancel, self.execution_mode)
             self.jobs.append(job_status)
 
