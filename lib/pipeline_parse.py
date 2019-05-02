@@ -24,6 +24,7 @@ import os
 import getpass
 import xml.etree.ElementTree as ET
 import json
+import errno
 
 from foreach import *
 from pipeline_file import *
@@ -139,8 +140,11 @@ class Pipeline(object):
         if os.path.exists(override_file):
             self.parse_override_file(override_file, "pipeline")
             
-        if user_override_file and os.path.exists(user_override_file):
-            self.parse_override_file(user_override_file, "user")
+        try:
+            if user_override_file:
+                self.parse_override_file(user_override_file, "user")
+        except IOError as e:
+            sys.exit("Error opening options file '{}':\n\t".format(user_override_file) + os.strerror(e.errno))
 
         self.execution_mode = tool_exec_mode
 
@@ -520,7 +524,7 @@ class Pipeline(object):
 
                 # trim off in line comments
                 # TODO swith to a regex that will match space or tabs before the #
-                line = line.split(' #')[0]
+                line = line.replace('\t', ' ').split(' #')[0]
                 prefix = line.split('.', 1)[0]
                 opt, val = line.split('.', 1)[1].split('=')
                 opt = opt.strip()
