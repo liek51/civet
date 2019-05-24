@@ -6,7 +6,7 @@ first.  The most up-to-date version is in the civet git repository
 Version 1.9.4.2
 ---------------
 Bug Fixes
- - Make exit with error if user passes option file that does not exist
+ - exit with error if user passes option file that does not exist
 
 Version 1.9.4.1
 ---------------
