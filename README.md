@@ -1,6 +1,17 @@
 # Civet
 A Lightweight Pipeline Framework
 
+## *NOTE*
+While Civet has served us well since 2013, there are now many alternatives 
+that may be better suited for your needs. Currently Civet only receives 
+infrequent maintenance updates. We are considering adding SLURM support 
+in the near future but longer-term we may consider community-supported 
+alternatives as a replacement for Civet.
+
+If you do attempt to install Civet in your local HPC environment, please
+note the requirements and disclaimer below. We are unable to offer support 
+for HPC environments that differ from ours.
+
 ## Overview
 Civet is a framework for developing command line analysis pipelines 
 that execute through a batch system on High Performance 
@@ -63,7 +74,9 @@ https://oss.trac.surfsara.nl/pbs_python and must be installed before
 you can use Civet.
 
 ### Disclaimer
-We’ve provided this software with the hopes that others may find it useful. However, this software may not work, and in fact will likely not work as-is, if your HPC environment differs significantly from ours. 
+We’ve provided this software with the hopes that others may find it useful.
+However, this software may not work (and in fact will likely not work for you
+as-is) if your HPC environment differs significantly from ours. 
 
 ### Installing Civet
 To install civet, you simply need a copy of the Civet source code. We 
