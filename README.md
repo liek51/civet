@@ -1,7 +1,7 @@
-# Civet
-A Lightweight Pipeline Framework
 
-## *NOTE*
+---
+*NOTICE*
+
 While Civet has served us well since 2013, there are now many alternatives 
 that may be better suited for your needs. Currently Civet only receives 
 infrequent maintenance updates. We are considering adding SLURM support 
@@ -11,6 +11,10 @@ alternatives as a replacement for Civet.
 If you do attempt to install Civet in your local HPC environment, please
 note the requirements and disclaimer below. We are unable to offer support 
 for HPC environments that differ from ours.
+---
+
+# Civet
+A Lightweight Pipeline Framework
 
 ## Overview
 Civet is a framework for developing command line analysis pipelines 
